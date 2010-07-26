@@ -16,7 +16,6 @@ import Prelude hiding (FilePath)
 import Data.Word (Word8)
 import Data.Data (Data)
 import Data.Typeable (Typeable)
-import qualified Data.Text as T
 import qualified Data.ByteString as B
 
 -------------------------------------------------------------------------------
@@ -49,7 +48,7 @@ empty = FilePath Nothing [] Nothing []
 -------------------------------------------------------------------------------
 
 data Rules = Rules
-	{ rulesName :: T.Text
+	{ rulesName :: String
 	, toByteChunks :: FilePath -> [B.ByteString]
 	, fromBytes :: B.ByteString -> FilePath
 	, caseSensitive :: Bool

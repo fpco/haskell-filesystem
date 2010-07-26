@@ -30,7 +30,6 @@ module System.FilePath.Rules
 import Prelude hiding (FilePath)
 import Data.Char (toUpper, chr)
 import Data.List (intersperse)
-import qualified Data.Text as T
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy as BL
@@ -81,7 +80,7 @@ byteComponents path = pathComponents path ++ [name] where
 
 posix :: Rules
 posix = Rules
-	{ rulesName = T.pack "POSIX"
+	{ rulesName = "POSIX"
 	, toByteChunks = posixToByteChunks
 	, fromBytes = posixFromBytes
 	, caseSensitive = True
@@ -132,7 +131,7 @@ posixSplitSearch = map (posixFromBytes . normSearch) . B.split 0x3A where
 
 windows :: Rules
 windows = Rules
-	{ rulesName = T.pack "Windows"
+	{ rulesName = "Windows"
 	, toByteChunks = winToByteChunks
 	, fromBytes = winFromBytes
 	, caseSensitive = False
