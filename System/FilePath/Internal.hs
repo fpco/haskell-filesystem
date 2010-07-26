@@ -29,6 +29,8 @@ type Extension = B.ByteString
 
 data Root
 	= RootPosix
+	| RootWindowsVolume Char
+	| RootWindowsCurrentVolume
 	deriving (Eq, Data, Typeable)
 
 data FilePath = FilePath

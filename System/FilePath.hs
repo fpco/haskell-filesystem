@@ -58,11 +58,14 @@ instance M.Monoid FilePath where
 
 absolute :: FilePath -> Bool
 absolute p = case pathRoot p of
-	Just _ -> True
+	Just RootPosix -> True
+	Just (RootWindowsVolume _) -> True
 	_ -> False
 
 relative :: FilePath -> Bool
-relative = not . absolute
+relative p = case pathRoot p of
+	Just _ -> False
+	_ -> True
 
 append :: FilePath -> FilePath -> FilePath
 append x y = if absolute y then y else xy where

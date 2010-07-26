@@ -37,7 +37,11 @@ import qualified System.FilePath as F
 import qualified System.FilePath.Rules as R
 
 currentOS :: R.Rules
+#if defined(mingw32_HOST_OS) || defined(__MINGW32__)
+currentOS = R.windows
+#else
 currentOS = R.posix
+#endif
 
 instance S.IsString F.FilePath where
 	fromString = R.fromString currentOS

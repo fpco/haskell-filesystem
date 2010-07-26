@@ -12,6 +12,7 @@
 module System.FilePath.Rules
 	( Rules
 	, posix
+	, windows
 	, valid
 	
 	-- * Parsing file paths
@@ -27,6 +28,7 @@ module System.FilePath.Rules
 	) where
 
 import Prelude hiding (FilePath)
+import Data.Char (toUpper, chr)
 import Data.List (intersperse)
 import qualified Data.Text as T
 import qualified Data.ByteString as B
@@ -61,6 +63,8 @@ fromString r = fromBytes r . B8.pack
 rootBytes :: Maybe Root -> B.ByteString
 rootBytes r = B8.pack $ flip (maybe "") r $ \r' -> case r' of
 	RootPosix -> "/"
+	RootWindowsVolume c -> c : ":\\"
+	RootWindowsCurrentVolume -> "\\"
 
 byteComponents :: FilePath -> [B.ByteString]
 byteComponents path = pathComponents path ++ [name] where
@@ -121,3 +125,76 @@ posixValid p = validRoot && validComponents where
 posixSplitSearch :: B.ByteString -> [FilePath]
 posixSplitSearch = map (posixFromBytes . normSearch) . B.split 0x3A where
 	normSearch bytes = if B.null bytes then (B8.pack ".") else bytes
+
+-------------------------------------------------------------------------------
+-- Windows
+-------------------------------------------------------------------------------
+
+windows :: Rules
+windows = Rules
+	{ rulesName = T.pack "Windows"
+	, toByteChunks = winToByteChunks
+	, fromBytes = winFromBytes
+	, caseSensitive = False
+	, valid = winValid
+	, splitSearchPath = map winFromBytes . filter (not . B.null) . B.split 0x3B
+	}
+
+winToByteChunks :: FilePath -> [B.ByteString]
+winToByteChunks p = [root] ++ chunks where
+	root = rootBytes $ pathRoot p
+	chunks = intersperse (B8.pack "\\") $ byteComponents p
+
+winFromBytes :: B.ByteString -> FilePath
+winFromBytes bytes = if B.null bytes then empty else path where
+	path = FilePath root cs name exts
+	split' = B.splitWith isSep bytes
+	isSep b = b == 0x2F || b == 0x5C
+	
+	(root, pastRoot) = let
+		head' = head split'
+		tail' = tail split'
+		in if B.null head'
+			then (Just RootWindowsCurrentVolume, tail')
+			else if B.elem 0x3A head'
+				then (Just (parseDrive head'), tail')
+				else (Nothing, split')
+	
+	parseDrive bytes = RootWindowsVolume c where
+		c = chr . fromIntegral . B.head $ bytes
+	
+	cs = if null pastRoot
+		then []
+		else filter (not . B.null) $ if B.null (last pastRoot)
+			then pastRoot
+			else init pastRoot
+	
+	(name, exts) = case B.split 0x2E (last split') of
+		[] -> (Nothing, [])
+		(name':exts') -> (Just name', exts')
+
+winValid :: FilePath -> Bool
+winValid p = validRoot && noReserved && validCharacters where
+	reservedChars = [0..0x1F] ++ [0x2F, 0x5C, 0x3F, 0x2A, 0x3A, 0x7C, 0x22, 0x3C, 0x3E]
+	reservedNames = map B8.pack
+		[ "AUX", "CLOCK$", "COM1", "COM2", "COM3", "COM4"
+		, "COM5", "COM6", "COM7", "COM8", "COM9", "CON"
+		, "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6"
+		, "LPT7", "LPT8", "LPT9", "NUL", "PRN"
+		]
+	
+	validRoot = case pathRoot p of
+		Nothing -> True
+		Just RootWindowsCurrentVolume -> True
+		Just (RootWindowsVolume v) -> elem (toUpper v) ['A'..'Z']
+		_ -> False
+	
+	noExt = p { pathExtensions = [] }
+	upperBytes bytes = (`B.map` bytes) $ \b -> if b >= 0x61 && b <= 0x7A
+		then b + 0x20
+		else b
+	noReserved = flip all (byteComponents noExt)
+		$ \c -> not (elem (upperBytes c) reservedNames)
+	
+	validCharacters = flip all (byteComponents p)
+		$ not . B.any (\b -> elem b reservedChars)
