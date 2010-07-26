@@ -159,8 +159,8 @@ winFromBytes bytes = if B.null bytes then empty else path where
 				then (Just (parseDrive head'), tail')
 				else (Nothing, split')
 	
-	parseDrive bytes = RootWindowsVolume c where
-		c = chr . fromIntegral . B.head $ bytes
+	parseDrive bytes' = RootWindowsVolume c where
+		c = chr . fromIntegral . B.head $ bytes'
 	
 	cs = if null pastRoot
 		then []

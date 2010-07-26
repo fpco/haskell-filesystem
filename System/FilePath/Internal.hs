@@ -13,7 +13,6 @@
 module System.FilePath.Internal where
 
 import Prelude hiding (FilePath)
-import Data.Word (Word8)
 import Data.Data (Data)
 import Data.Typeable (Typeable)
 import qualified Data.ByteString as B
