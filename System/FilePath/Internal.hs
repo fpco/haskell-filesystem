@@ -50,9 +50,9 @@ data Rules = Rules
 	{ rulesName :: T.Text
 	, toByteChunks :: FilePath -> [B.ByteString]
 	, fromBytes :: B.ByteString -> FilePath
-	, searchPathSeparator :: Word8
 	, caseSensitive :: Bool
 	, valid :: FilePath -> Bool
+	, splitSearchPath :: B.ByteString -> [FilePath]
 	}
 
 instance Show Rules where

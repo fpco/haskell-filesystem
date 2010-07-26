@@ -59,9 +59,6 @@ toString r = BL8.unpack . toLazyBytes r
 fromString :: Rules -> String -> FilePath
 fromString r = fromBytes r . B8.pack
 
-splitSearchPath :: Rules -> BL.ByteString -> [FilePath]
-splitSearchPath r = map (fromLazyBytes r) . BL.split (searchPathSeparator r)
-
 -------------------------------------------------------------------------------
 -- POSIX
 -------------------------------------------------------------------------------
@@ -71,9 +68,9 @@ posix = Rules
 	{ rulesName = T.pack "POSIX"
 	, toByteChunks = posixToByteChunks
 	, fromBytes = posixFromBytes
-	, searchPathSeparator = 0x3A -- ':'
 	, caseSensitive = True
 	, valid = posixValid
+	, splitSearchPath = posixSplitSearch
 	}
 
 posixComponents :: FilePath -> [B.ByteString]
@@ -119,3 +116,7 @@ posixValid p = validRoot && validComponents where
 		Nothing -> True
 		Just RootPosix -> True
 		_ -> False
+
+posixSplitSearch :: B.ByteString -> [FilePath]
+posixSplitSearch = map (posixFromBytes . normSearch) . B.split 0x3A where
+	normSearch bytes = if B.null bytes then (B8.pack ".") else bytes

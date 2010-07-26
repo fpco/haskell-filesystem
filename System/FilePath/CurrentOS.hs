@@ -67,5 +67,5 @@ fromString = R.fromString currentOS
 valid :: F.FilePath -> Bool
 valid = R.valid currentOS
 
-splitSearchPath :: BL.ByteString -> [F.FilePath]
+splitSearchPath :: B.ByteString -> [F.FilePath]
 splitSearchPath = R.splitSearchPath currentOS
