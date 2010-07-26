@@ -37,13 +37,8 @@ import qualified Data.ByteString.Lazy.Char8 as BL8
 import System.FilePath.Internal
 
 -------------------------------------------------------------------------------
--- Generic
+-- Public helpers
 -------------------------------------------------------------------------------
-
-rootBytes :: Root -> B.ByteString
-rootBytes r = case r of
-	RootPosix -> B8.pack ""
-
 toBytes :: Rules -> FilePath -> B.ByteString
 toBytes r = B.concat . toByteChunks r
 
@@ -60,6 +55,23 @@ fromString :: Rules -> String -> FilePath
 fromString r = fromBytes r . B8.pack
 
 -------------------------------------------------------------------------------
+-- Generic
+-------------------------------------------------------------------------------
+
+rootBytes :: Maybe Root -> B.ByteString
+rootBytes r = B8.pack $ flip (maybe "") r $ \r' -> case r' of
+	RootPosix -> "/"
+
+byteComponents :: FilePath -> [B.ByteString]
+byteComponents path = pathComponents path ++ [name] where
+	name = (`B.append` ext) $ case pathBasename path of
+		Nothing -> B.empty
+		Just name' -> name'
+	ext = case pathExtensions path of
+		[] -> B.empty
+		exts -> B.intercalate (B8.pack ".") (B.empty:exts)
+
+-------------------------------------------------------------------------------
 -- POSIX
 -------------------------------------------------------------------------------
 
@@ -73,21 +85,10 @@ posix = Rules
 	, splitSearchPath = posixSplitSearch
 	}
 
-posixComponents :: FilePath -> [B.ByteString]
-posixComponents path =  dirs ++ [name] where
-	cs = pathComponents path
-	dirs = case pathRoot path of
-		Nothing -> cs
-		Just root' -> (rootBytes root'):cs
-	name = (`B.append` ext) $ case pathBasename path of
-		Nothing -> B.empty
-		Just name' -> name'
-	ext = case pathExtensions path of
-		[] -> B.empty
-		exts -> B.intercalate (B8.pack ".") (B.empty:exts)
-
 posixToByteChunks :: FilePath -> [B.ByteString]
-posixToByteChunks = intersperse (B8.pack "/") . posixComponents
+posixToByteChunks p = [root] ++ chunks where
+	root = rootBytes $ pathRoot p
+	chunks = intersperse (B8.pack "/") $ byteComponents p
 
 posixFromBytes :: B.ByteString -> FilePath
 posixFromBytes bytes = if B.null bytes then empty else path where
@@ -110,7 +111,7 @@ posixFromBytes bytes = if B.null bytes then empty else path where
 
 posixValid :: FilePath -> Bool
 posixValid p = validRoot && validComponents where
-	validComponents = flip all (posixComponents p)
+	validComponents = flip all (byteComponents p)
 		$ not . B.any (\b -> b == 0 || b == 0x2F)
 	validRoot = case pathRoot p of
 		Nothing -> True
