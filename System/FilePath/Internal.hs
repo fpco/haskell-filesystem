@@ -53,6 +53,7 @@ data Rules = Rules
 	, caseSensitive :: Bool
 	, valid :: FilePath -> Bool
 	, splitSearchPath :: B.ByteString -> [FilePath]
+	, normalise :: FilePath -> FilePath
 	}
 
 instance Show Rules where

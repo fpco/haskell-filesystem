@@ -10,16 +10,15 @@
 -----------------------------------------------------------------------------
 
 module System.FilePath
-	( FilePath
+	(
+	-- * Types
+	  FilePath
 	, Extension
+	, empty
 	
 	-- * Basic path operations
-	-- ** Predicates
 	, absolute
 	, relative
-	
-	-- ** ??
-	, empty
 	, append
 	, (</>)
 	, concat

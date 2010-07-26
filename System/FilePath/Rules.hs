@@ -13,7 +13,11 @@ module System.FilePath.Rules
 	( Rules
 	, posix
 	, windows
+	
+	-- * Rule-specific path properties
 	, valid
+	, normalise
+	, equivalent
 	
 	-- * Parsing file paths
 	, toBytes
@@ -36,6 +40,24 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Lazy.Char8 as BL8
 
 import System.FilePath.Internal
+
+-------------------------------------------------------------------------------
+-- Rule-specific path properties
+-------------------------------------------------------------------------------
+equivalent :: Rules -> FilePath -> FilePath -> Bool
+equivalent r x y = n x == n y where
+	n p = if caseSensitive r
+		then normalise r p
+		else casefold (normalise r p)
+	
+	-- TODO: use proper unicode case folding here? I'm not sure there's
+	-- any way to do correct case-insensitive comparison without knowing
+	-- the filename's encoding.
+	casefold p = p
+		{ pathComponents = map upperBytes $ pathComponents p
+		, pathBasename = fmap upperBytes $ pathBasename p
+		, pathExtensions = map upperBytes $ pathExtensions p
+		}
 
 -------------------------------------------------------------------------------
 -- Public helpers
@@ -74,6 +96,11 @@ byteComponents path = pathComponents path ++ [name] where
 		[] -> B.empty
 		exts -> B.intercalate (B8.pack ".") (B.empty:exts)
 
+upperBytes :: B.ByteString -> B.ByteString
+upperBytes bytes = (`B.map` bytes) $ \b -> if b >= 0x41 && b <= 0x5A
+	then b + 0x20
+	else b
+
 -------------------------------------------------------------------------------
 -- POSIX
 -------------------------------------------------------------------------------
@@ -86,6 +113,7 @@ posix = Rules
 	, caseSensitive = True
 	, valid = posixValid
 	, splitSearchPath = posixSplitSearch
+	, normalise = posixNormalise
 	}
 
 posixToByteChunks :: FilePath -> [B.ByteString]
@@ -125,6 +153,10 @@ posixSplitSearch :: B.ByteString -> [FilePath]
 posixSplitSearch = map (posixFromBytes . normSearch) . B.split 0x3A where
 	normSearch bytes = if B.null bytes then (B8.pack ".") else bytes
 
+posixNormalise :: FilePath -> FilePath
+posixNormalise p = p { pathComponents = components } where
+	components = filter (\c -> c /= (B8.pack ".")) $ pathComponents p
+
 -------------------------------------------------------------------------------
 -- Windows
 -------------------------------------------------------------------------------
@@ -137,6 +169,7 @@ windows = Rules
 	, caseSensitive = False
 	, valid = winValid
 	, splitSearchPath = map winFromBytes . filter (not . B.null) . B.split 0x3B
+	, normalise = winNormalise
 	}
 
 winToByteChunks :: FilePath -> [B.ByteString]
@@ -189,11 +222,19 @@ winValid p = validRoot && noReserved && validCharacters where
 		_ -> False
 	
 	noExt = p { pathExtensions = [] }
-	upperBytes bytes = (`B.map` bytes) $ \b -> if b >= 0x61 && b <= 0x7A
-		then b + 0x20
-		else b
 	noReserved = flip all (byteComponents noExt)
 		$ \c -> not (elem (upperBytes c) reservedNames)
 	
 	validCharacters = flip all (byteComponents p)
 		$ not . B.any (\b -> elem b reservedChars)
+
+winNormalise :: FilePath -> FilePath
+winNormalise p = p' where
+	p' = p
+		{ pathComponents = components
+		, pathRoot = root
+		}
+	components = filter (\c -> c /= (B8.pack ".")) $ pathComponents p
+	root = case pathRoot p of
+		Just (RootWindowsVolume c) -> Just (RootWindowsVolume (toUpper c))
+		r -> r
