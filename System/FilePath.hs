@@ -2,7 +2,7 @@
 -- |
 -- Module: System.FilePath
 -- Copyright: 2010 John Millikin
--- License: X11
+-- License: MIT
 --
 -- Maintainer:  jmillikin@gmail.com
 -- Portability:  portable
