@@ -1,6 +1,6 @@
-name: filepath-alt
+name: system-filepath
 version: 0.1
-synopsis: ByteString-based file and directory manipulation
+synopsis: High-level file and directory path manipulations
 license: MIT
 license-file: license.txt
 author: John Millikin <jmillikin@gmail.com>
@@ -10,13 +10,13 @@ build-type: Simple
 cabal-version: >=1.6
 category: System
 stability: experimental
-homepage: http://ianen.org/haskell/filepath-alt/
+homepage: http://ianen.org/haskell/system-filepath/
 bug-reports: mailto:jmillikin@gmail.com
 tested-with: GHC==6.12.1
 
 source-repository head
   type: darcs
-  location: http://ianen.org/haskell/filepath-alt/
+  location: http://ianen.org/haskell/system-filepath/
 
 library
   ghc-options: -Wall -fno-warn-unused-do-bind -fno-warn-orphans
