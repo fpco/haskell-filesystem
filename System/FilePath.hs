@@ -124,7 +124,7 @@ commonPrefix ps = foldr1 step ps where
 	common [] _ = []
 	common _ [] = []
 	common (x:xs) (y:ys) = if x == y
-		then x:(common xs ys)
+		then x : common xs ys
 		else []
 
 -------------------------------------------------------------------------------

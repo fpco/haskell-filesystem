@@ -117,7 +117,7 @@ posix = Rules
 	}
 
 posixToByteChunks :: FilePath -> [B.ByteString]
-posixToByteChunks p = [root] ++ chunks where
+posixToByteChunks p = root : chunks where
 	root = rootBytes $ pathRoot p
 	chunks = intersperse (B8.pack "/") $ byteComponents p
 
@@ -151,11 +151,11 @@ posixValid p = validRoot && validComponents where
 
 posixSplitSearch :: B.ByteString -> [FilePath]
 posixSplitSearch = map (posixFromBytes . normSearch) . B.split 0x3A where
-	normSearch bytes = if B.null bytes then (B8.pack ".") else bytes
+	normSearch bytes = if B.null bytes then B8.pack "." else bytes
 
 posixNormalise :: FilePath -> FilePath
 posixNormalise p = p { pathComponents = components } where
-	components = filter (\c -> c /= (B8.pack ".")) $ pathComponents p
+	components = filter (/= B8.pack ".") $ pathComponents p
 
 -------------------------------------------------------------------------------
 -- Windows
@@ -173,7 +173,7 @@ windows = Rules
 	}
 
 winToByteChunks :: FilePath -> [B.ByteString]
-winToByteChunks p = [root] ++ chunks where
+winToByteChunks p = root : chunks where
 	root = rootBytes $ pathRoot p
 	chunks = intersperse (B8.pack "\\") $ byteComponents p
 
@@ -223,10 +223,10 @@ winValid p = validRoot && noReserved && validCharacters where
 	
 	noExt = p { pathExtensions = [] }
 	noReserved = flip all (byteComponents noExt)
-		$ \c -> not (elem (upperBytes c) reservedNames)
+		$ \c -> notElem (upperBytes c) reservedNames
 	
 	validCharacters = flip all (byteComponents p)
-		$ not . B.any (\b -> elem b reservedChars)
+		$ not . B.any (`elem` reservedChars)
 
 winNormalise :: FilePath -> FilePath
 winNormalise p = p' where
@@ -234,7 +234,7 @@ winNormalise p = p' where
 		{ pathComponents = components
 		, pathRoot = root
 		}
-	components = filter (\c -> c /= (B8.pack ".")) $ pathComponents p
+	components = filter (/= B8.pack ".") $ pathComponents p
 	root = case pathRoot p of
 		Just (RootWindowsVolume c) -> Just (RootWindowsVolume (toUpper c))
 		r -> r
