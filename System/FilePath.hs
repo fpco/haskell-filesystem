@@ -20,6 +20,7 @@ module System.FilePath
 	, null
 	, absolute
 	, relative
+	, root
 	, basename
 	, dirname
 	
@@ -73,6 +74,9 @@ relative :: FilePath -> Bool
 relative p = case pathRoot p of
 	Just _ -> False
 	_ -> True
+
+root :: FilePath -> FilePath
+root p = empty { pathRoot = pathRoot p }
 
 basename :: FilePath -> FilePath
 basename p = p
