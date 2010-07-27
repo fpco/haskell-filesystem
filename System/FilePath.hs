@@ -14,15 +14,20 @@ module System.FilePath
 	-- * Types
 	  FilePath
 	, Extension
-	, empty
 	
-	-- * Basic path operations
+	-- * Basic properties
+	, empty
+	, null
 	, absolute
 	, relative
+	, basename
+	, dirname
+	
+	-- * Basic operations
 	, append
 	, (</>)
 	, concat
-	, splitName
+	, commonPrefix
 	
 	-- * Extensions
 	, extension
@@ -42,7 +47,7 @@ module System.FilePath
 	, splitExtensions
 	) where
 
-import Prelude hiding (FilePath, concat)
+import Prelude hiding (FilePath, concat, null)
 import qualified Data.Monoid as M
 import System.FilePath.Internal
 
@@ -52,8 +57,11 @@ instance M.Monoid FilePath where
 	mconcat = concat
 
 -------------------------------------------------------------------------------
--- Basic path operations
+-- Basic properties
 -------------------------------------------------------------------------------
+
+null :: FilePath -> Bool
+null = (== empty)
 
 absolute :: FilePath -> Bool
 absolute p = case pathRoot p of
@@ -65,6 +73,22 @@ relative :: FilePath -> Bool
 relative p = case pathRoot p of
 	Just _ -> False
 	_ -> True
+
+basename :: FilePath -> FilePath
+basename p = p
+	{ pathRoot = Nothing
+	, pathComponents = []
+	}
+
+dirname :: FilePath -> FilePath
+dirname p = p
+	{ pathBasename = Nothing
+	, pathExtensions = []
+	}
+
+-------------------------------------------------------------------------------
+-- Basic operations
+-------------------------------------------------------------------------------
 
 append :: FilePath -> FilePath -> FilePath
 append x y = if absolute y then y else xy where
@@ -81,16 +105,27 @@ concat :: [FilePath] -> FilePath
 concat [] = empty
 concat ps = foldr1 append ps
 
-splitName :: FilePath -> (FilePath, FilePath)
-splitName p = (withPath, withName) where
-	withPath = p
-		{ pathBasename = Nothing
-		, pathExtensions = []
-		}
-	withName = p
-		{ pathRoot = Nothing
-		, pathComponents = []
-		}
+commonPrefix :: [FilePath] -> FilePath
+commonPrefix [] = empty
+commonPrefix ps = foldr1 step ps where
+	step x y = if pathRoot x /= pathRoot y
+		then empty
+		else let cs = commonComponents x y in
+			if cs /= pathComponents x
+				then empty { pathRoot = pathRoot x, pathComponents = cs }
+				else if pathBasename x /= pathBasename y
+					then empty { pathRoot = pathRoot x, pathComponents = cs }
+					else let exts = commonExtensions x y in
+						x { pathExtensions = exts }
+	
+	commonComponents x y = common (pathComponents x) (pathComponents y)
+	commonExtensions x y = common (pathExtensions x) (pathExtensions y)
+	
+	common [] _ = []
+	common _ [] = []
+	common (x:xs) (y:ys) = if x == y
+		then x:(common xs ys)
+		else []
 
 -------------------------------------------------------------------------------
 -- Extensions
