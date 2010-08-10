@@ -156,15 +156,8 @@ posixSplitSearch = map (posixFromBytes . normSearch) . B.split 0x3A where
 	normSearch bytes = if B.null bytes then B8.pack "." else bytes
 
 posixNormalise :: FilePath -> FilePath
-posixNormalise p = normalised where
-	noDots = filter (/= B8.pack ".") $ pathComponents p
-	lastComponent = posixFromBytes (last (pathComponents p))
-	
-	normalised = if null (filename p)
-		then if P.null noDots
-			then p { pathComponents = [] }
-			else append (p { pathComponents = init noDots }) lastComponent
-		else p { pathComponents = noDots }
+posixNormalise p = p { pathComponents = components } where
+	components = filter (/= B8.pack ".") $ pathComponents p
 
 -------------------------------------------------------------------------------
 -- Windows

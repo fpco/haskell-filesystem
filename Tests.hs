@@ -152,9 +152,9 @@ testEquivalent =
 	, tp "//" "/"
 	, tp "/." "/."
 	, tp "/./" "/"
-	, tp "foo/" "foo"
 	, tp "foo/" "./foo/"
 	, tp "foo/./bar" "foo/bar"
+	, not $ tp "foo/" "foo"
 	, not $ tp "foo/bar/../baz" "foo/baz"
 	
 	, tw "" ""
@@ -245,7 +245,7 @@ testNormalise =
 	, tp "//" "/"
 	, tp "/." "/."
 	, tp "/./" "/"
-	, tp "foo/bar.d/" "foo/bar.d"
+	, tp "foo/bar.d/" "foo/bar.d/"
 	
 	, tw "" ""
 	, tw "/" "\\"
