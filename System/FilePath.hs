@@ -49,7 +49,7 @@ module System.FilePath
 
 import Prelude hiding (FilePath, concat, null)
 import qualified Prelude as P
-import Data.Maybe (isNothing)
+import Data.Maybe (isNothing, listToMaybe)
 import qualified Data.Monoid as M
 import System.FilePath.Internal
 import qualified Data.ByteString as B
@@ -155,6 +155,10 @@ commonPrefix ps = foldr1 step ps where
 		else []
 
 -------------------------------------------------------------------------------
+-- Basenames
+-------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------
 -- Extensions
 -------------------------------------------------------------------------------
 
@@ -179,9 +183,7 @@ addExtensions p exts = p { pathExtensions = pathExtensions p ++ exts }
 (<.>) = addExtension
 
 dropExtension :: FilePath -> FilePath
-dropExtension p = case pathExtensions p of
-	[] -> p
-	es -> p { pathExtensions = init es }
+dropExtension p = p { pathExtensions = safeInit (pathExtensions p) }
 
 dropExtensions :: FilePath -> FilePath
 dropExtensions p = p { pathExtensions = [] }

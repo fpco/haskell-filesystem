@@ -1,6 +1,6 @@
 name: system-filepath
 version: 0.1
-synopsis: High-level file and directory path manipulations
+synopsis: High-level, byte-based file and directory path manipulations
 license: MIT
 license-file: license.txt
 author: John Millikin <jmillikin@gmail.com>
