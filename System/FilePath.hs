@@ -10,19 +10,18 @@
 -----------------------------------------------------------------------------
 
 module System.FilePath
-	(
-	-- * Types
-	  FilePath
-	, Extension
+	( FilePath
+	, empty
 	
 	-- * Basic properties
-	, empty
 	, null
+	, root
+	, directory
+	, parent
+	, filename
+	, basename
 	, absolute
 	, relative
-	, root
-	, basename
-	, dirname
 	
 	-- * Basic operations
 	, append
@@ -49,8 +48,12 @@ module System.FilePath
 	) where
 
 import Prelude hiding (FilePath, concat, null)
+import qualified Prelude as P
+import Data.Maybe (isNothing)
 import qualified Data.Monoid as M
 import System.FilePath.Internal
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as B8
 
 instance M.Monoid FilePath where
 	mempty = empty
@@ -64,6 +67,38 @@ instance M.Monoid FilePath where
 null :: FilePath -> Bool
 null = (== empty)
 
+root :: FilePath -> FilePath
+root p = empty { pathRoot = pathRoot p }
+
+directory :: FilePath -> FilePath
+directory p = empty
+	{ pathRoot = pathRoot p
+	, pathComponents = if P.null (pathComponents p) && isNothing (pathRoot p)
+		then [B8.pack "."]
+		else pathComponents p
+	}
+
+parent :: FilePath -> FilePath
+parent p = empty
+	{ pathRoot = pathRoot p
+	, pathComponents = if P.null (pathComponents p) && isNothing (pathRoot p)
+		then [B8.pack "."]
+		else if null (filename p)
+			then safeInit (pathComponents p)
+			else pathComponents p
+	}
+
+filename :: FilePath -> FilePath
+filename p = empty
+	{ pathBasename = pathBasename p
+	, pathExtensions = pathExtensions p
+	}
+
+basename :: FilePath -> FilePath
+basename p = empty
+	{ pathBasename = pathBasename p
+	}
+
 absolute :: FilePath -> Bool
 absolute p = case pathRoot p of
 	Just RootPosix -> True
@@ -75,21 +110,6 @@ relative p = case pathRoot p of
 	Just _ -> False
 	_ -> True
 
-root :: FilePath -> FilePath
-root p = empty { pathRoot = pathRoot p }
-
-basename :: FilePath -> FilePath
-basename p = p
-	{ pathRoot = Nothing
-	, pathComponents = []
-	}
-
-dirname :: FilePath -> FilePath
-dirname p = p
-	{ pathBasename = Nothing
-	, pathExtensions = []
-	}
-
 -------------------------------------------------------------------------------
 -- Basic operations
 -------------------------------------------------------------------------------
@@ -100,7 +120,10 @@ append x y = if absolute y then y else xy where
 		{ pathRoot = pathRoot x
 		, pathComponents = components
 		}
-	components = pathComponents x ++ pathComponents y
+	components = xComponents ++ pathComponents y
+	xComponents = (pathComponents x ++) $ if null (filename x)
+		then []
+		else [B.concat $ [maybe (B8.pack "") id (pathBasename x)] ++ pathExtensions x]
 
 (</>) :: FilePath -> FilePath -> FilePath
 (</>) = append
@@ -135,23 +158,24 @@ commonPrefix ps = foldr1 step ps where
 -- Extensions
 -------------------------------------------------------------------------------
 
-extension :: FilePath -> Maybe Extension
-extension p = case pathExtensions p of
+extension :: FilePath -> Maybe B.ByteString
+extension p = case extensions p of
 	[] -> Nothing
 	es -> Just (last es)
 
-extensions :: FilePath -> [Extension]
+extensions :: FilePath -> [B.ByteString]
 extensions = pathExtensions
 
-hasExtension :: FilePath -> Extension -> Bool
-hasExtension p e = case pathExtensions p of
-	[] -> False
-	es -> last es == e
+hasExtension :: FilePath -> B.ByteString -> Bool
+hasExtension p e = extension p == Just e
 
-addExtension :: FilePath -> Extension -> FilePath
+addExtension :: FilePath -> B.ByteString -> FilePath
 addExtension p ext = addExtensions p [ext]
 
-(<.>) :: FilePath -> Extension -> FilePath
+addExtensions :: FilePath -> [B.ByteString] -> FilePath
+addExtensions p exts = p { pathExtensions = pathExtensions p ++ exts }
+
+(<.>) :: FilePath -> B.ByteString -> FilePath
 (<.>) = addExtension
 
 dropExtension :: FilePath -> FilePath
@@ -159,22 +183,26 @@ dropExtension p = case pathExtensions p of
 	[] -> p
 	es -> p { pathExtensions = init es }
 
-replaceExtension :: FilePath -> Extension -> FilePath
-replaceExtension = addExtension . dropExtension
-
-addExtensions :: FilePath -> [Extension] -> FilePath
-addExtensions p exts = p { pathExtensions = pathExtensions p ++ exts }
-
 dropExtensions :: FilePath -> FilePath
 dropExtensions p = p { pathExtensions = [] }
 
-replaceExtensions :: FilePath -> [Extension] -> FilePath
-replaceExtensions p exts = p { pathExtensions = exts }
+replaceExtension :: FilePath -> B.ByteString -> FilePath
+replaceExtension = addExtension . dropExtension
 
-splitExtension :: FilePath -> (FilePath, Maybe Extension)
-splitExtension p = case pathExtensions p of
-	[] -> (p, Nothing)
-	exts -> (p { pathExtensions = init exts }, Just (last exts))
+replaceExtensions :: FilePath -> [B.ByteString] -> FilePath
+replaceExtensions = addExtensions . dropExtensions
 
-splitExtensions :: FilePath -> (FilePath, [Extension])
-splitExtensions p = (dropExtensions p, pathExtensions p)
+splitExtension :: FilePath -> (FilePath, Maybe B.ByteString)
+splitExtension p = (dropExtension p, extension p)
+
+splitExtensions :: FilePath -> (FilePath, [B.ByteString])
+splitExtensions p = (dropExtensions p, extensions p)
+
+-------------------------------------------------------------------------------
+-- Utils
+-------------------------------------------------------------------------------
+
+safeInit :: [a] -> [a]
+safeInit xs = case xs of
+	[] -> []
+	_ -> init xs

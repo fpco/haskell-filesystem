@@ -31,7 +31,8 @@ module System.FilePath.Rules
 	, splitSearchPath
 	) where
 
-import Prelude hiding (FilePath)
+import Prelude hiding (FilePath, null)
+import qualified Prelude as P
 import Data.Char (toUpper, chr)
 import Data.List (intersperse)
 import qualified Data.ByteString as B
@@ -39,6 +40,7 @@ import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Lazy.Char8 as BL8
 
+import System.FilePath
 import System.FilePath.Internal
 
 -------------------------------------------------------------------------------
@@ -130,7 +132,7 @@ posixFromBytes bytes = if B.null bytes then empty else path where
 		then (Just RootPosix, tail split')
 		else (Nothing, split')
 	
-	cs = if null pastRoot
+	cs = if P.null pastRoot
 		then []
 		else filter (not . B.null) $ if B.null (last pastRoot)
 			then pastRoot
@@ -154,8 +156,15 @@ posixSplitSearch = map (posixFromBytes . normSearch) . B.split 0x3A where
 	normSearch bytes = if B.null bytes then B8.pack "." else bytes
 
 posixNormalise :: FilePath -> FilePath
-posixNormalise p = p { pathComponents = components } where
-	components = filter (/= B8.pack ".") $ pathComponents p
+posixNormalise p = normalised where
+	noDots = filter (/= B8.pack ".") $ pathComponents p
+	lastComponent = posixFromBytes (last (pathComponents p))
+	
+	normalised = if null (filename p)
+		then if P.null noDots
+			then p { pathComponents = [] }
+			else append (p { pathComponents = init noDots }) lastComponent
+		else p { pathComponents = noDots }
 
 -------------------------------------------------------------------------------
 -- Windows
@@ -195,7 +204,7 @@ winFromBytes bytes = if B.null bytes then empty else path where
 	parseDrive bytes' = RootWindowsVolume c where
 		c = chr . fromIntegral . B.head $ bytes'
 	
-	cs = if null pastRoot
+	cs = if P.null pastRoot
 		then []
 		else filter (not . B.null) $ if B.null (last pastRoot)
 			then pastRoot
