@@ -7,6 +7,10 @@
 -- Maintainer:  jmillikin@gmail.com
 -- Portability:  portable
 --
+-- High-level, byte-based file and directory path manipulations. You probably
+-- want to import "System.FilePath.CurrentOS" instead, since it handles
+-- detecting which rules to use in the current compilation.
+--
 -----------------------------------------------------------------------------
 
 module System.FilePath
@@ -64,12 +68,16 @@ instance M.Monoid FilePath where
 -- Basic properties
 -------------------------------------------------------------------------------
 
+-- | @null p == (p == 'empty')@
 null :: FilePath -> Bool
 null = (== empty)
 
+-- | Retrieves the 'FilePath'&#x27;s root.
 root :: FilePath -> FilePath
 root p = empty { pathRoot = pathRoot p }
 
+-- | Retrieves the 'FilePath'&#x27;s directory. If the path is already a
+-- directory, it is returned unchanged.
 directory :: FilePath -> FilePath
 directory p = empty
 	{ pathRoot = pathRoot p
@@ -83,6 +91,7 @@ directory p = empty
 		in dot ++ pathComponents p
 	}
 
+-- | Retrieves the 'FilePath'&#x27;s parent directory.
 parent :: FilePath -> FilePath
 parent p = empty
 	{ pathRoot = pathRoot p
@@ -101,23 +110,29 @@ parent p = empty
 		in dot ++ components
 	}
 
+-- | Retrieve the filename component of a 'FilePath'.
+-- @filename \"foo/bar.txt\" == \"bar.txt\"@.
 filename :: FilePath -> FilePath
 filename p = empty
 	{ pathBasename = pathBasename p
 	, pathExtensions = pathExtensions p
 	}
 
+-- | Retrieve the basename component of a 'FilePath'.
+-- @filename \"foo/bar.txt\" == \"bar\"@.
 basename :: FilePath -> FilePath
 basename p = empty
 	{ pathBasename = pathBasename p
 	}
 
+-- | Return whether the path is absolute.
 absolute :: FilePath -> Bool
 absolute p = case pathRoot p of
 	Just RootPosix -> True
 	Just (RootWindowsVolume _) -> True
 	_ -> False
 
+-- | Return whether the path is relative.
 relative :: FilePath -> Bool
 relative p = case pathRoot p of
 	Just _ -> False
@@ -127,6 +142,8 @@ relative p = case pathRoot p of
 -- Basic operations
 -------------------------------------------------------------------------------
 
+-- | Appends two 'FilePath's. If the second path is absolute, it is returned
+-- unchanged.
 append :: FilePath -> FilePath -> FilePath
 append x y = if absolute y then y else xy where
 	xy = y
@@ -138,13 +155,16 @@ append x y = if absolute y then y else xy where
 		then []
 		else [filenameBytes x]
 
+-- | An alias for 'append'.
 (</>) :: FilePath -> FilePath -> FilePath
 (</>) = append
 
+-- | A fold over 'append'.
 concat :: [FilePath] -> FilePath
 concat [] = empty
 concat ps = foldr1 append ps
 
+-- | Find the greatest common prefix between two 'FilePath's.
 commonPrefix :: [FilePath] -> FilePath
 commonPrefix [] = empty
 commonPrefix ps = foldr1 step ps where
@@ -168,48 +188,58 @@ commonPrefix ps = foldr1 step ps where
 		else []
 
 -------------------------------------------------------------------------------
--- Basenames
--------------------------------------------------------------------------------
-
--------------------------------------------------------------------------------
 -- Extensions
 -------------------------------------------------------------------------------
 
+-- | Get a 'FilePath'&#x27;s last extension, or 'Nothing' if it has no
+-- extensions.
 extension :: FilePath -> Maybe B.ByteString
 extension p = case extensions p of
 	[] -> Nothing
 	es -> Just (last es)
 
+-- | Get a 'FilePath'&#x27;s full extension list.
 extensions :: FilePath -> [B.ByteString]
 extensions = pathExtensions
 
+-- | Get whether a 'FilePath'&#x27;s last extension is the predicate.
 hasExtension :: FilePath -> B.ByteString -> Bool
 hasExtension p e = extension p == Just e
 
+-- | Append an extension to the end of a 'FilePath'.
 addExtension :: FilePath -> B.ByteString -> FilePath
 addExtension p ext = addExtensions p [ext]
 
+-- | Append many extensions to the end of a 'FilePath'.
 addExtensions :: FilePath -> [B.ByteString] -> FilePath
 addExtensions p exts = p { pathExtensions = pathExtensions p ++ exts }
 
+-- | An alias for 'addExtension'.
 (<.>) :: FilePath -> B.ByteString -> FilePath
 (<.>) = addExtension
 
+-- | Remove a 'FilePath'&#x27;s last extension.
 dropExtension :: FilePath -> FilePath
 dropExtension p = p { pathExtensions = safeInit (pathExtensions p) }
 
+-- | Remove all extensions from a 'FilePath'.
 dropExtensions :: FilePath -> FilePath
 dropExtensions p = p { pathExtensions = [] }
 
+-- | Replace a 'FilePath'&#x27;s last extension.
 replaceExtension :: FilePath -> B.ByteString -> FilePath
 replaceExtension = addExtension . dropExtension
 
+-- | Remove all extensions from a 'FilePath', and replace them with a new
+-- list.
 replaceExtensions :: FilePath -> [B.ByteString] -> FilePath
 replaceExtensions = addExtensions . dropExtensions
 
+-- | @splitExtension p = ('dropExtension' p, 'extension' p)@
 splitExtension :: FilePath -> (FilePath, Maybe B.ByteString)
 splitExtension p = (dropExtension p, extension p)
 
+-- | @splitExtensions p = ('dropExtensions' p, 'extensions' p)@
 splitExtensions :: FilePath -> (FilePath, [B.ByteString])
 splitExtensions p = (dropExtensions p, extensions p)
 

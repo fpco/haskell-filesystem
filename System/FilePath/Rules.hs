@@ -46,6 +46,10 @@ import System.FilePath.Internal
 -------------------------------------------------------------------------------
 -- Rule-specific path properties
 -------------------------------------------------------------------------------
+
+-- | Check if two different 'FilePath's refer to the same file. This does
+-- not perform any link resolution, so some equivalent files might be
+-- missed.
 equivalent :: Rules -> FilePath -> FilePath -> Bool
 equivalent r x y = n x == n y where
 	n p = if caseSensitive r
@@ -64,18 +68,32 @@ equivalent r x y = n x == n y where
 -------------------------------------------------------------------------------
 -- Public helpers
 -------------------------------------------------------------------------------
+
+-- | Convert a 'FilePath' into a strict 'B.ByteString', suitable for passing
+-- to OS libraries.
 toBytes :: Rules -> FilePath -> B.ByteString
 toBytes r = B.concat . toByteChunks r
 
+-- | Convert a 'FilePath' into a lazy 'BL.ByteString'.
 toLazyBytes :: Rules -> FilePath -> BL.ByteString
 toLazyBytes r = BL.fromChunks . toByteChunks r
 
+-- | Parse a lazy 'BL.ByteString' into a 'FilePath'.
 fromLazyBytes :: Rules -> BL.ByteString -> FilePath
 fromLazyBytes r = fromBytes r . B.concat . BL.toChunks
 
+-- | Convert a 'FilePath' into a lazy 'String'. This is useful for
+-- interoperating with legacy libraries. No decoding is performed; the
+-- string's character ordinals are equal to the path's original bytes. If you
+-- need to display a 'FilePath' to the user, use 'toLazyBytes' and an
+-- appropriate decoding function.
 toString :: Rules -> FilePath -> String
 toString r = BL8.unpack . toLazyBytes r
 
+-- | Parse a lazy 'String' into a 'FilePath'. This is useful for
+-- interoperating with legacy libraries. No encoding is performed;
+-- characters are truncated to 8 bits. If you need to accept a 'FilePath'
+-- from the user, use 'fromLazyBytes' and an appropriate encoding function.
 fromString :: Rules -> String -> FilePath
 fromString r = fromBytes r . B8.pack
 

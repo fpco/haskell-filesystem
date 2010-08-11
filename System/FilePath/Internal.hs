@@ -40,6 +40,7 @@ data FilePath = FilePath
 	}
 	deriving (Eq, Data, Typeable)
 
+-- | A file path with no root, components, or filename
 empty :: FilePath
 empty = FilePath Nothing [] Nothing []
 
@@ -59,10 +60,23 @@ filenameBytes p = B.append name ext where
 data Rules = Rules
 	{ rulesName :: String
 	, toByteChunks :: FilePath -> [B.ByteString]
+	
+	-- | Parse a strict 'B.ByteString', such as  those received from
+	-- OS libraries, into a 'FilePath'.
 	, fromBytes :: B.ByteString -> FilePath
 	, caseSensitive :: Bool
+	
+	-- | Check if a 'FilePath' is valid; that is, it must not contain
+	-- any illegal characters, and must have a root appropriate to the
+	-- current 'Rules'.
 	, valid :: FilePath -> Bool
+	
+	-- | Split a search path, such as @$PATH@ or @$PYTHONPATH@, into
+	-- a list of 'FilePath's.
 	, splitSearchPath :: B.ByteString -> [FilePath]
+	
+	-- | Remove redundant characters. On case-insensitive platforms,
+	-- also lowercases any ASCII uppercase characters.
 	, normalise :: FilePath -> FilePath
 	}
 

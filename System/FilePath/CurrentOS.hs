@@ -7,8 +7,10 @@
 -- Maintainer:  jmillikin@gmail.com
 -- Portability:  portable
 --
--- Re-exports contents of "System.FilePath", defaulting to the current OS's
--- rules when needed.
+-- Re-exports contents of "System.FilePath.Rules", defaulting to the
+-- current OS's rules when needed.
+--
+-- Also enables 'Show' and 'S.IsString' instances for 'F.FilePath'.
 --
 -----------------------------------------------------------------------------
 
@@ -54,32 +56,42 @@ instance Show F.FilePath where
 	showsPrec d path = showParen (d > 10) $
 		showString "FilePath " . shows (toBytes path)
 
+-- | See 'R.valid'
 valid :: F.FilePath -> Bool
 valid = R.valid currentOS
 
+-- | See 'R.normalise'
 normalise :: F.FilePath -> F.FilePath
 normalise = R.normalise currentOS
 
+-- | See 'R.equivalent'
 equivalent :: F.FilePath -> F.FilePath -> Bool
 equivalent = R.equivalent currentOS
 
+-- | See 'R.toBytes'
 toBytes :: F.FilePath -> B.ByteString
 toBytes = R.toBytes currentOS
 
+-- | See 'R.toLazyBytes'
 toLazyBytes :: F.FilePath -> BL.ByteString
 toLazyBytes = R.toLazyBytes currentOS
 
+-- | See 'R.toString'
 toString :: F.FilePath -> String
 toString = R.toString currentOS
 
+-- | See 'R.fromBytes'
 fromBytes :: B.ByteString -> F.FilePath
 fromBytes = R.fromBytes currentOS
 
+-- | See 'R.fromLazyBytes'
 fromLazyBytes :: BL.ByteString -> F.FilePath
 fromLazyBytes = R.fromLazyBytes currentOS
 
+-- | See 'R.fromString'
 fromString :: String -> F.FilePath
 fromString = R.fromString currentOS
 
+-- | See 'R.splitSearchPath'
 splitSearchPath :: B.ByteString -> [F.FilePath]
 splitSearchPath = R.splitSearchPath currentOS
