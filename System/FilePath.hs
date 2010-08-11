@@ -49,7 +49,7 @@ module System.FilePath
 
 import Prelude hiding (FilePath, concat, null)
 import qualified Prelude as P
-import Data.Maybe (isNothing, listToMaybe)
+import Data.Maybe (isNothing)
 import qualified Data.Monoid as M
 import System.FilePath.Internal
 import qualified Data.ByteString as B

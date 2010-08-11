@@ -40,7 +40,7 @@ import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Lazy.Char8 as BL8
 
-import System.FilePath
+import System.FilePath hiding (root, filename)
 import System.FilePath.Internal
 
 -------------------------------------------------------------------------------
