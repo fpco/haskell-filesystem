@@ -16,6 +16,7 @@ import Prelude hiding (FilePath)
 import Data.Data (Data)
 import Data.Typeable (Typeable)
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Char8 as B8
 
 -------------------------------------------------------------------------------
 -- File Paths
@@ -41,6 +42,15 @@ data FilePath = FilePath
 
 empty :: FilePath
 empty = FilePath Nothing [] Nothing []
+
+filenameBytes :: FilePath -> B.ByteString
+filenameBytes p = B.append name ext where
+	name = case pathBasename p of
+		Nothing -> B.empty
+		Just name' -> name'
+	ext = case pathExtensions p of
+		[] -> B.empty
+		exts -> B.intercalate (B8.pack ".") (B.empty:exts)
 
 -------------------------------------------------------------------------------
 -- Rules

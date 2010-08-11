@@ -90,13 +90,7 @@ rootBytes r = B8.pack $ flip (maybe "") r $ \r' -> case r' of
 	RootWindowsCurrentVolume -> "\\"
 
 byteComponents :: FilePath -> [B.ByteString]
-byteComponents path = pathComponents path ++ [name] where
-	name = (`B.append` ext) $ case pathBasename path of
-		Nothing -> B.empty
-		Just name' -> name'
-	ext = case pathExtensions path of
-		[] -> B.empty
-		exts -> B.intercalate (B8.pack ".") (B.empty:exts)
+byteComponents path = pathComponents path ++ [filenameBytes path]
 
 upperBytes :: B.ByteString -> B.ByteString
 upperBytes bytes = (`B.map` bytes) $ \b -> if b >= 0x41 && b <= 0x5A
@@ -138,9 +132,12 @@ posixFromBytes bytes = if B.null bytes then empty else path where
 			then pastRoot
 			else init pastRoot
 	
-	(name, exts) = case B.split 0x2E (last split') of
-		[] -> (Nothing, [])
-		(name':exts') -> (Just name', exts')
+	filename = last split'
+	(name, exts) = if elem filename [B8.pack ".", B8.pack ".."]
+		then (Just filename, [])
+		else case B.split 0x2E (last split') of
+			[] -> (Nothing, [])
+			(name':exts') -> (Just name', exts')
 
 posixValid :: FilePath -> Bool
 posixValid p = validRoot && validComponents where
@@ -203,9 +200,12 @@ winFromBytes bytes = if B.null bytes then empty else path where
 			then pastRoot
 			else init pastRoot
 	
-	(name, exts) = case B.split 0x2E (last split') of
-		[] -> (Nothing, [])
-		(name':exts') -> (Just name', exts')
+	filename = last split'
+	(name, exts) = if elem filename [B8.pack ".", B8.pack ".."]
+		then (Just filename, [])
+		else case B.split 0x2E (last split') of
+			[] -> (Nothing, [])
+			(name':exts') -> (Just name', exts')
 
 winValid :: FilePath -> Bool
 winValid p = validRoot && noReserved && validCharacters where

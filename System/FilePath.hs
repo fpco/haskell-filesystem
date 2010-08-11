@@ -123,7 +123,7 @@ append x y = if absolute y then y else xy where
 	components = xComponents ++ pathComponents y
 	xComponents = (pathComponents x ++) $ if null (filename x)
 		then []
-		else [B.concat $ [maybe (B8.pack "") id (pathBasename x)] ++ pathExtensions x]
+		else [filenameBytes x]
 
 (</>) :: FilePath -> FilePath -> FilePath
 (</>) = append

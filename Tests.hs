@@ -115,11 +115,17 @@ testFilename =
 
 testBasename :: F.Test
 testBasename =
-	let t x y = propPosix $ \p -> basename (p x) == p y in
+	let tp x y = propPosix $ \p -> basename (p x) == p y in
+	let tw x y = propWindows $ \p -> basename (p x) == p y in
 	
 	testProperties "basename"
-	[ t "/foo/bar" "bar"
-	, t "/foo/bar.txt" "bar"
+	[ tp "/foo/bar" "bar"
+	, tp "/foo/bar.txt" "bar"
+	, tp "." "."
+	, tp ".." ".."
+	
+	, tw "." "."
+	, tw ".." ".."
 	]
 
 testAbsolute :: F.Test
@@ -176,6 +182,9 @@ testAppend =
 	-- Relative to a directory
 	, t "a/" "" "a/"
 	, t "a/" "b/" "a/b/"
+	, t "a/" "b.txt" "a/b.txt"
+	, t "a.txt" "b.txt" "a.txt/b.txt"
+	, t "." "a" "./a"
 	
 	-- Relative to a file
 	, t "a" "" "a/"
