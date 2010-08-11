@@ -84,7 +84,10 @@ testDirectory =
 	, t "/foo/bar/" "/foo/bar/"
 	, t "." "./"
 	, t ".." "./"
+	, t "../foo" "../"
+	, t "../foo/" "../foo/"
 	, t "foo" "./"
+	, t "foo/bar" "./foo/"
 	]
 
 testParent :: F.Test
@@ -98,7 +101,10 @@ testParent =
 	, t "/foo/bar/" "/foo/"
 	, t "." "./"
 	, t ".." "./"
+	, t "../foo/bar" "../foo/"
+	, t "../foo/bar" "../foo/"
 	, t "foo" "./"
+	, t "foo/bar" "./foo/"
 	]
 
 testFilename :: F.Test

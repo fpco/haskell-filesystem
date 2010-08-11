@@ -73,19 +73,32 @@ root p = empty { pathRoot = pathRoot p }
 directory :: FilePath -> FilePath
 directory p = empty
 	{ pathRoot = pathRoot p
-	, pathComponents = if P.null (pathComponents p) && isNothing (pathRoot p)
-		then [B8.pack "."]
-		else pathComponents p
+	, pathComponents = let
+		starts = map (Just . B8.pack) [".", ".."]
+		dot = if safeHead (pathComponents p) `elem` starts
+			then []
+			else if isNothing (pathRoot p)
+				then [B8.pack "."]
+				else []
+		in dot ++ pathComponents p
 	}
 
 parent :: FilePath -> FilePath
 parent p = empty
 	{ pathRoot = pathRoot p
-	, pathComponents = if P.null (pathComponents p) && isNothing (pathRoot p)
-		then [B8.pack "."]
-		else if null (filename p)
+	, pathComponents = let
+		starts = map (Just . B8.pack) [".", ".."]
+		components = if null (filename p)
 			then safeInit (pathComponents p)
 			else pathComponents p
+		
+		dot = if safeHead components `elem` starts
+			then []
+			else if isNothing (pathRoot p)
+				then [B8.pack "."]
+				else []
+		
+		in dot ++ components
 	}
 
 filename :: FilePath -> FilePath
@@ -208,3 +221,7 @@ safeInit :: [a] -> [a]
 safeInit xs = case xs of
 	[] -> []
 	_ -> init xs
+
+safeHead :: [a] -> Maybe a
+safeHead [] = Nothing
+safeHead (x:_) = Just x
