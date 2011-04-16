@@ -30,7 +30,7 @@ data Root
 	= RootPosix
 	| RootWindowsVolume Char
 	| RootWindowsCurrentVolume
-	deriving (Eq, Data, Typeable)
+	deriving (Eq, Ord, Data, Typeable)
 
 data FilePath = FilePath
 	{ pathRoot :: (Maybe Root)
@@ -38,7 +38,7 @@ data FilePath = FilePath
 	, pathBasename :: (Maybe Basename)
 	, pathExtensions :: [Extension]
 	}
-	deriving (Eq, Data, Typeable)
+	deriving (Eq, Ord, Data, Typeable)
 
 -- | A file path with no root, components, or filename
 empty :: FilePath
