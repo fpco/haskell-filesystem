@@ -30,7 +30,6 @@ module System.FilePath.CurrentOS
 	, splitSearchPath
 	) where
 import qualified Data.ByteString as B
-import qualified Data.ByteString.Char8 as B8
 import qualified Data.String as S
 import qualified Data.Text as T
 import System.FilePath
@@ -45,7 +44,7 @@ currentOS = R.posix
 #endif
 
 instance S.IsString F.FilePath where
-	fromString = R.fromBytes currentOS . B8.pack
+	fromString = R.fromText currentOS . T.pack
 
 instance Show F.FilePath where
 	showsPrec d path = showParen (d > 10) $

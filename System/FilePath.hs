@@ -52,7 +52,6 @@ module System.FilePath
 	) where
 
 import Prelude hiding (FilePath, concat, null)
-import qualified Prelude as P
 import Data.Maybe (isNothing)
 import qualified Data.Monoid as M
 import System.FilePath.Internal
