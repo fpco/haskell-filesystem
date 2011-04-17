@@ -306,3 +306,6 @@ windowsPaths = sized $ \n -> genComponents n >>= merge where
 		return $ case label of
 			Just c -> [c, ':', '\\']
 			Nothing -> "\\"
+
+fromString :: Rules -> String -> FilePath
+fromString r = fromBytes r . B8.pack
