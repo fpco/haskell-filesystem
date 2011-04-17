@@ -29,8 +29,7 @@ tests =
 	  ]
 	
 	, F.testGroup "Basic operations"
-	  [ testEquivalent
-	  , testAppend
+	  [ testAppend
 	  , testCommonPrefix
 	  , testSplitExtension
 	  ]
@@ -46,7 +45,6 @@ tests =
 	  ]
 	
 	, testSplitSearchPath
-	, testNormalise
 	]
 
 propPosix :: ((String -> FilePath) -> a) -> a
@@ -153,30 +151,6 @@ testRelative = testProperties "relative"
 testIdentity :: F.TestName -> Rules -> Gen FilePath -> F.Test
 testIdentity name r gen = testProperty name $ forAll gen $ \p -> p == fromBytes r (toBytes r p)
 
-testEquivalent :: F.Test
-testEquivalent =
-	let tp x y = propPosix $ \p -> equivalent posix (p x) (p y) in
-	let tw x y = propWindows $ \p -> equivalent windows (p x) (p y) in
-	
-	testProperties "equivalent"
-	[ tp "" ""
-	, tp "/" "/"
-	, tp "//" "/"
-	, tp "/." "/."
-	, tp "/./" "/"
-	, tp "foo/" "./foo/"
-	, tp "foo/./bar" "foo/bar"
-	, not $ tp "foo/" "foo"
-	, not $ tp "foo/bar/../baz" "foo/baz"
-	
-	, tw "" ""
-	, tw "/" "\\"
-	, tw "//" "\\"
-	, tw "/." "\\."
-	, tw "/./" "\\"
-	, tw "c://a//bc.txt" "C:\\A\\BC.TXT"
-	]
-
 testAppend :: F.Test
 testAppend =
 	let t x y z = propPosix $ \p -> append (p x) (p y) == p z in
@@ -247,27 +221,6 @@ testSplitSearchPath =
 	, tp "a::b:c" ["a", ".", "b", "c"]
 	, tw "a;b;c" ["a", "b", "c"]
 	, tw "a;;b;c" ["a", "b", "c"]
-	]
-
-testNormalise :: F.Test
-testNormalise =
-	let tp x y = propPosix $ \p -> normalise posix (p x) == p y in
-	let tw x y = propWindows $ \p -> normalise windows (p x) == p y in
-	
-	testProperties "normalise"
-	[ tp "" ""
-	, tp "/" "/"
-	, tp "//" "/"
-	, tp "/." "/."
-	, tp "/./" "/"
-	, tp "foo/bar.d/" "foo/bar.d/"
-	
-	, tw "" ""
-	, tw "/" "\\"
-	, tw "//" "\\"
-	, tw "/." "\\."
-	, tw "/./" "\\"
-	, tw "c://a//bc.txt" "C:\\a\\bc.txt"
 	]
 
 instance Arbitrary Rules where

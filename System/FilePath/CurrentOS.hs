@@ -19,16 +19,12 @@ module System.FilePath.CurrentOS
 	( module System.FilePath
 	, currentOS
 	
-	-- * Rule-specific path properties
-	, valid
-	, normalise
-	, equivalent
-	
 	-- * Type conversions
 	, toBytes
 	, fromBytes
 	
-	-- * Search paths
+	-- * Rule-specific path properties
+	, valid
 	, splitSearchPath
 	) where
 import qualified Data.ByteString as B
@@ -52,18 +48,6 @@ instance Show F.FilePath where
 	showsPrec d path = showParen (d > 10) $
 		showString "FilePath " . shows (toBytes path)
 
--- | See 'R.valid'
-valid :: F.FilePath -> Bool
-valid = R.valid currentOS
-
--- | See 'R.normalise'
-normalise :: F.FilePath -> F.FilePath
-normalise = R.normalise currentOS
-
--- | See 'R.equivalent'
-equivalent :: F.FilePath -> F.FilePath -> Bool
-equivalent = R.equivalent currentOS
-
 -- | See 'R.toBytes'
 toBytes :: F.FilePath -> B.ByteString
 toBytes = R.toBytes currentOS
@@ -71,6 +55,10 @@ toBytes = R.toBytes currentOS
 -- | See 'R.fromBytes'
 fromBytes :: B.ByteString -> F.FilePath
 fromBytes = R.fromBytes currentOS
+
+-- | See 'R.valid'
+valid :: F.FilePath -> Bool
+valid = R.valid currentOS
 
 -- | See 'R.splitSearchPath'
 splitSearchPath :: B.ByteString -> [F.FilePath]
