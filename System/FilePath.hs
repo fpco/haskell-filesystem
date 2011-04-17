@@ -82,11 +82,9 @@ directory p = empty
 	{ pathRoot = pathRoot p
 	, pathComponents = let
 		starts = map (Just . B8.pack) [".", ".."]
-		dot = if safeHead (pathComponents p) `elem` starts
-			then []
-			else if isNothing (pathRoot p)
-				then [B8.pack "."]
-				else []
+		dot | safeHead (pathComponents p) `elem` starts = []
+		    | isNothing (pathRoot p) = [B8.pack "."]
+		    | otherwise = []
 		in dot ++ pathComponents p
 	}
 
@@ -100,12 +98,9 @@ parent p = empty
 			then safeInit (pathComponents p)
 			else pathComponents p
 		
-		dot = if safeHead components `elem` starts
-			then []
-			else if isNothing (pathRoot p)
-				then [B8.pack "."]
-				else []
-		
+		dot | safeHead components `elem` starts = []
+		    | isNothing (pathRoot p) = [B8.pack "."]
+		    | otherwise = []
 		in dot ++ components
 	}
 
@@ -174,12 +169,10 @@ commonPrefix ps = foldr1 step ps where
 	step x y = if pathRoot x /= pathRoot y
 		then empty
 		else let cs = commonComponents x y in
-			if cs /= pathComponents x
+			if cs /= pathComponents x || pathBasename x /= pathBasename y
 				then empty { pathRoot = pathRoot x, pathComponents = cs }
-				else if pathBasename x /= pathBasename y
-					then empty { pathRoot = pathRoot x, pathComponents = cs }
-					else let exts = commonExtensions x y in
-						x { pathExtensions = exts }
+				else let exts = commonExtensions x y in
+					x { pathExtensions = exts }
 	
 	commonComponents x y = common (pathComponents x) (pathComponents y)
 	commonExtensions x y = common (pathExtensions x) (pathExtensions y)

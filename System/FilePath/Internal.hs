@@ -33,9 +33,9 @@ data Root
 	deriving (Eq, Ord, Data, Typeable)
 
 data FilePath = FilePath
-	{ pathRoot :: (Maybe Root)
+	{ pathRoot :: Maybe Root
 	, pathComponents :: [Component]
-	, pathBasename :: (Maybe Basename)
+	, pathBasename :: Maybe Basename
 	, pathExtensions :: [Extension]
 	}
 	deriving (Eq, Ord, Data, Typeable)
@@ -46,9 +46,7 @@ empty = FilePath Nothing [] Nothing []
 
 filenameBytes :: FilePath -> B.ByteString
 filenameBytes p = B.append name ext where
-	name = case pathBasename p of
-		Nothing -> B.empty
-		Just name' -> name'
+	name = maybe B.empty id (pathBasename p)
 	ext = case pathExtensions p of
 		[] -> B.empty
 		exts -> B.intercalate (B8.pack ".") (B.empty:exts)
