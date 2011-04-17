@@ -16,8 +16,8 @@ module System.FilePath.Rules
 	
 	-- * Type conversions
 	, toBytes
-	, toText
 	, fromBytes
+	, toText
 	, fromText
 	
 	-- * Rule-specific path properties
@@ -60,8 +60,8 @@ toBytes r = B.concat . toByteChunks r
 -- should be accompanied by some warning that the path has an invalid
 -- encoding. Approximated text cannot be converted back to the original path.
 --
--- This function ignores the user's locale, and assumes all file paths are
--- encoded in UTF8. If you need to display file paths with an unusual or
+-- This function ignores the user&#x2019;s locale, and assumes all file paths
+-- are encoded in UTF8. If you need to display file paths with an unusual or
 -- obscure encoding, use 'toBytes' and then decode them manually.
 --
 -- Since: 0.2
@@ -74,8 +74,8 @@ toText r path = encoded where
 
 -- | Convert human-readable text into a 'FilePath'.
 --
--- This function ignores the user's locale, and assumes all file paths are
--- encoded in UTF8. If you need to create file paths with an unusual or
+-- This function ignores the user&#x2019;s locale, and assumes all file paths
+-- are encoded in UTF8. If you need to create file paths with an unusual or
 -- obscure encoding, encode them manually and then use 'fromBytes'.
 --
 -- Since: 0.2
@@ -114,6 +114,7 @@ maybeDecodeUtf8 = excToMaybe . TE.decodeUtf8 where
 -- POSIX
 -------------------------------------------------------------------------------
 
+-- | Linux, BSD, OS X, and other UNIX or UNIX-like operating systems.
 posix :: Rules
 posix = Rules
 	{ rulesName = "POSIX"
@@ -167,6 +168,7 @@ posixSplitSearch = map (posixFromBytes . normSearch) . B.split 0x3A where
 -- Windows
 -------------------------------------------------------------------------------
 
+-- | Windows and DOS
 windows :: Rules
 windows = Rules
 	{ rulesName = "Windows"

@@ -65,7 +65,7 @@ data Rules = Rules
 	-- OS libraries, into a 'FilePath'.
 	, fromBytes :: B.ByteString -> FilePath
 	
-	-- | Check if a 'FilePath' is valid; that is, it must not contain
+	-- | Check if a 'FilePath' is valid; it must not contain
 	-- any illegal characters, and must have a root appropriate to the
 	-- current 'Rules'.
 	, valid :: FilePath -> Bool

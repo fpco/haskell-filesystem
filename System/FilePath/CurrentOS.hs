@@ -21,8 +21,8 @@ module System.FilePath.CurrentOS
 	
 	-- * Type conversions
 	, toBytes
-	, toText
 	, fromBytes
+	, toText
 	, fromText
 	
 	-- * Rule-specific path properties
@@ -51,26 +51,51 @@ instance Show F.FilePath where
 	showsPrec d path = showParen (d > 10) $
 		showString "FilePath " . shows (toBytes path)
 
--- | See 'R.toBytes'
+-- | Convert a 'FilePath' into a strict 'B.ByteString', suitable for passing
+-- to OS libraries.
 toBytes :: F.FilePath -> B.ByteString
 toBytes = R.toBytes currentOS
 
--- | See 'R.toText'
-toText :: F.FilePath -> Either T.Text T.Text
-toText = R.toText currentOS
-
--- | See 'R.fromBytes'
+-- | Parse a strict 'B.ByteString', such as  those received from OS libraries,
+-- into a 'FilePath'.
 fromBytes :: B.ByteString -> F.FilePath
 fromBytes = R.fromBytes currentOS
 
--- | See 'R.fromText'
+-- | Attempt to convert a 'FilePath' to human-readable text.
+--
+-- If the path is decoded successfully, the result is a 'Right' containing
+-- the decoded text. Successfully decoded text can be converted back to a
+-- path using 'fromText'.
+--
+-- If the path cannot be decoded, the result is a 'Left' containing an
+-- approximation of the original path. If displayed to the user, this value
+-- should be accompanied by some warning that the path has an invalid
+-- encoding. Approximated text cannot be converted back to the original path.
+--
+-- This function ignores the user&#x2019;s locale, and assumes all file paths
+-- are encoded in UTF8. If you need to display file paths with an unusual or
+-- obscure encoding, use 'toBytes' and then decode them manually.
+--
+-- Since: 0.2
+toText :: F.FilePath -> Either T.Text T.Text
+toText = R.toText currentOS
+
+-- | Convert human-readable text into a 'FilePath'.
+--
+-- This function ignores the user&#x2019;s locale, and assumes all file paths
+-- are encoded in UTF8. If you need to create file paths with an unusual or
+-- obscure encoding, encode them manually and then use 'fromBytes'.
+--
+-- Since: 0.2
 fromText :: T.Text -> F.FilePath
 fromText = R.fromText currentOS
 
--- | See 'R.valid'
+-- | Check if a 'FilePath' is valid; it must not contain any illegal
+-- characters, and must have a root appropriate to the current 'R.Rules'.
 valid :: F.FilePath -> Bool
 valid = R.valid currentOS
 
--- | See 'R.splitSearchPath'
+-- | Split a search path, such as @$PATH@ or @$PYTHONPATH@, into a list
+-- of 'FilePath's.
 splitSearchPath :: B.ByteString -> [F.FilePath]
 splitSearchPath = R.splitSearchPath currentOS

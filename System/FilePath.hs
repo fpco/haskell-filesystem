@@ -68,15 +68,15 @@ instance M.Monoid FilePath where
 -- Basic properties
 -------------------------------------------------------------------------------
 
--- | @null p == (p == 'empty')@
+-- | @null p = (p == 'empty')@
 null :: FilePath -> Bool
 null = (== empty)
 
--- | Retrieves the 'FilePath'&#x27;s root.
+-- | Retrieves the 'FilePath'&#x2019;s root.
 root :: FilePath -> FilePath
 root p = empty { pathRoot = pathRoot p }
 
--- | Retrieves the 'FilePath'&#x27;s directory. If the path is already a
+-- | Retrieves the 'FilePath'&#x2019;s directory. If the path is already a
 -- directory, it is returned unchanged.
 directory :: FilePath -> FilePath
 directory p = empty
@@ -91,7 +91,7 @@ directory p = empty
 		in dot ++ pathComponents p
 	}
 
--- | Retrieves the 'FilePath'&#x27;s parent directory.
+-- | Retrieves the 'FilePath'&#x2019;s parent directory.
 parent :: FilePath -> FilePath
 parent p = empty
 	{ pathRoot = pathRoot p
@@ -110,7 +110,8 @@ parent p = empty
 		in dot ++ components
 	}
 
--- | Retrieve the filename component of a 'FilePath'.
+-- | Retrieve a 'FilePath'&#x2019;s filename component.
+--
 -- @filename \"foo/bar.txt\" == \"bar.txt\"@.
 filename :: FilePath -> FilePath
 filename p = empty
@@ -118,21 +119,24 @@ filename p = empty
 	, pathExtensions = pathExtensions p
 	}
 
--- | Retrieve the basename component of a 'FilePath'.
--- @filename \"foo/bar.txt\" == \"bar\"@.
+-- | Retrieve a 'FilePath'&#x2019;s basename component.
+--
+-- @
+-- filename \"foo/bar.txt\" == \"bar\"
+-- @
 basename :: FilePath -> FilePath
 basename p = empty
 	{ pathBasename = pathBasename p
 	}
 
--- | Return whether the path is absolute.
+-- | Test whether a path is absolute.
 absolute :: FilePath -> Bool
 absolute p = case pathRoot p of
 	Just RootPosix -> True
 	Just (RootWindowsVolume _) -> True
 	_ -> False
 
--- | Return whether the path is relative.
+-- | Test whether a path is relative.
 relative :: FilePath -> Bool
 relative p = case pathRoot p of
 	Just _ -> False
@@ -191,18 +195,18 @@ commonPrefix ps = foldr1 step ps where
 -- Extensions
 -------------------------------------------------------------------------------
 
--- | Get a 'FilePath'&#x27;s last extension, or 'Nothing' if it has no
+-- | Get a 'FilePath'&#x2019;s last extension, or 'Nothing' if it has no
 -- extensions.
 extension :: FilePath -> Maybe B.ByteString
 extension p = case extensions p of
 	[] -> Nothing
 	es -> Just (last es)
 
--- | Get a 'FilePath'&#x27;s full extension list.
+-- | Get a 'FilePath'&#x2019;s full extension list.
 extensions :: FilePath -> [B.ByteString]
 extensions = pathExtensions
 
--- | Get whether a 'FilePath'&#x27;s last extension is the predicate.
+-- | Get whether a 'FilePath'&#x2019;s last extension is the predicate.
 hasExtension :: FilePath -> B.ByteString -> Bool
 hasExtension p e = extension p == Just e
 
@@ -218,7 +222,7 @@ addExtensions p exts = p { pathExtensions = pathExtensions p ++ exts }
 (<.>) :: FilePath -> B.ByteString -> FilePath
 (<.>) = addExtension
 
--- | Remove a 'FilePath'&#x27;s last extension.
+-- | Remove a 'FilePath'&#x2019;s last extension.
 dropExtension :: FilePath -> FilePath
 dropExtension p = p { pathExtensions = safeInit (pathExtensions p) }
 
@@ -226,7 +230,7 @@ dropExtension p = p { pathExtensions = safeInit (pathExtensions p) }
 dropExtensions :: FilePath -> FilePath
 dropExtensions p = p { pathExtensions = [] }
 
--- | Replace a 'FilePath'&#x27;s last extension.
+-- | Replace a 'FilePath'&#x2019;s last extension.
 replaceExtension :: FilePath -> B.ByteString -> FilePath
 replaceExtension = addExtension . dropExtension
 
