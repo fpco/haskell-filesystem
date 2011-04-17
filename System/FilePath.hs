@@ -1,4 +1,3 @@
------------------------------------------------------------------------------
 -- |
 -- Module: System.FilePath
 -- Copyright: 2010 John Millikin
@@ -11,8 +10,6 @@
 -- want to import "System.FilePath.CurrentOS" instead, since it handles
 -- detecting which rules to use in the current compilation.
 --
------------------------------------------------------------------------------
-
 module System.FilePath
 	( FilePath
 	, empty
@@ -51,12 +48,14 @@ module System.FilePath
 	, splitExtensions
 	) where
 
-import Prelude hiding (FilePath, concat, null)
-import Data.Maybe (isNothing)
-import qualified Data.Monoid as M
-import System.FilePath.Internal
+import           Prelude hiding (FilePath, concat, null)
+
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
+import           Data.Maybe (isNothing)
+import qualified Data.Monoid as M
+
+import           System.FilePath.Internal
 
 instance M.Monoid FilePath where
 	mempty = empty

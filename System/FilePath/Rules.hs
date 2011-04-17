@@ -1,4 +1,3 @@
------------------------------------------------------------------------------
 -- |
 -- Module: System.FilePath.Rules
 -- Copyright: 2010 John Millikin
@@ -7,8 +6,6 @@
 -- Maintainer:  jmillikin@gmail.com
 -- Portability:  portable
 --
------------------------------------------------------------------------------
-
 module System.FilePath.Rules
 	( Rules
 	, posix
@@ -25,20 +22,21 @@ module System.FilePath.Rules
 	, splitSearchPath
 	) where
 
-import Prelude hiding (FilePath, null)
+import           Prelude hiding (FilePath, null)
 import qualified Prelude as P
-import Data.Char (toUpper, chr)
-import Data.List (intersperse)
+
+import qualified Control.Exception as Exc
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
+import           Data.Char (toUpper, chr)
+import           Data.List (intersperse)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Data.Text.Encoding.Error (UnicodeException)
-import qualified Control.Exception as Exc
-import System.IO.Unsafe (unsafePerformIO)
+import           Data.Text.Encoding.Error (UnicodeException)
+import           System.IO.Unsafe (unsafePerformIO)
 
-import System.FilePath hiding (root, filename)
-import System.FilePath.Internal
+import           System.FilePath hiding (root, filename)
+import           System.FilePath.Internal
 
 -------------------------------------------------------------------------------
 -- Public helpers

@@ -1,4 +1,5 @@
------------------------------------------------------------------------------
+{-# LANGUAGE DeriveDataTypeable #-}
+
 -- |
 -- Module: System.FilePath.Internal
 -- Copyright: 2010 John Millikin
@@ -7,16 +8,14 @@
 -- Maintainer:  jmillikin@gmail.com
 -- Portability:  portable
 --
------------------------------------------------------------------------------
-
-{-# LANGUAGE DeriveDataTypeable #-}
 module System.FilePath.Internal where
 
 import Prelude hiding (FilePath)
-import Data.Data (Data)
-import Data.Typeable (Typeable)
+
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
+import           Data.Data (Data)
+import           Data.Typeable (Typeable)
 
 -------------------------------------------------------------------------------
 -- File Paths

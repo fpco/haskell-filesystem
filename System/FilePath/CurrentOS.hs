@@ -1,4 +1,5 @@
------------------------------------------------------------------------------
+{-# LANGUAGE CPP #-}
+
 -- |
 -- Module: System.FilePath.CurrentOS
 -- Copyright: 2010 John Millikin
@@ -12,9 +13,6 @@
 --
 -- Also enables 'Show' and 'S.IsString' instances for 'F.FilePath'.
 --
------------------------------------------------------------------------------
-
-{-# LANGUAGE CPP #-}
 module System.FilePath.CurrentOS
 	( module System.FilePath
 	, currentOS
@@ -29,10 +27,12 @@ module System.FilePath.CurrentOS
 	, valid
 	, splitSearchPath
 	) where
+
 import qualified Data.ByteString as B
 import qualified Data.String as S
 import qualified Data.Text as T
-import System.FilePath
+
+import           System.FilePath
 import qualified System.FilePath as F
 import qualified System.FilePath.Rules as R
 
