@@ -6,8 +6,10 @@ import Data.List (intercalate)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
 import Test.QuickCheck
+import Test.HUnit (assert, (@?=))
 import qualified Test.Framework as F
 import Test.Framework.Providers.QuickCheck2 (testProperty)
+import Test.Framework.Providers.HUnit (testCase)
 import System.FilePath as P
 import System.FilePath.CurrentOS ()
 import System.FilePath.Rules
@@ -47,24 +49,26 @@ tests =
 	, testSplitSearchPath
 	]
 
-propPosix :: ((String -> FilePath) -> a) -> a
-propPosix k = k (fromString posix)
+casePosix :: ((String -> FilePath) -> a) -> a
+casePosix k = k (fromString posix)
 
-propWindows :: ((String -> FilePath) -> a) -> a
-propWindows k = k (fromString windows)
+caseWindows :: ((String -> FilePath) -> a) -> a
+caseWindows k = k (fromString windows)
 
-testProperties :: Testable t => F.TestName -> [t] -> F.Test
-testProperties name = F.testGroup name . zipWith testProperty labels where
+testCases :: F.TestName -> [Bool] -> F.Test
+testCases name = F.testGroup name . zipWith (\n -> testCase n . assert) labels where
 	labels = map show $ iterate (+ 1) 1
 
 testNull :: F.Test
-testNull = testProperty "null" $ P.null empty
+testNull = testCases "null"
+	[ P.null empty
+	]
 
 testRoot :: F.Test
 testRoot =
-	let t x y = propPosix $ \p -> root (p x) == p y in
+	let t x y = casePosix $ \p -> root (p x) == p y in
 	
-	testProperties "root"
+	testCases "root"
 	[ t "" ""
 	, t "/" "/"
 	, t "foo" ""
@@ -73,9 +77,9 @@ testRoot =
 
 testDirectory :: F.Test
 testDirectory =
-	let t x y = propPosix $ \p -> directory (p x) == p y in
+	let t x y = casePosix $ \p -> directory (p x) == p y in
 	
-	testProperties "directory"
+	testCases "directory"
 	[ t "" "./"
 	, t "/" "/"
 	, t "/foo/bar" "/foo/"
@@ -90,9 +94,9 @@ testDirectory =
 
 testParent :: F.Test
 testParent =
-	let t x y = propPosix $ \p -> parent (p x) == p y in
+	let t x y = casePosix $ \p -> parent (p x) == p y in
 	
-	testProperties "parent"
+	testCases "parent"
 	[ t "" "./"
 	, t "/" "/"
 	, t "/foo/bar" "/foo/"
@@ -107,9 +111,9 @@ testParent =
 
 testFilename :: F.Test
 testFilename =
-	let t x y = propPosix $ \p -> filename (p x) == p y in
+	let t x y = casePosix $ \p -> filename (p x) == p y in
 	
-	testProperties "filename"
+	testCases "filename"
 	[ t "" ""
 	, t "/" ""
 	, t "/foo/" ""
@@ -119,10 +123,10 @@ testFilename =
 
 testBasename :: F.Test
 testBasename =
-	let tp x y = propPosix $ \p -> basename (p x) == p y in
-	let tw x y = propWindows $ \p -> basename (p x) == p y in
+	let tp x y = casePosix $ \p -> basename (p x) == p y in
+	let tw x y = caseWindows $ \p -> basename (p x) == p y in
 	
-	testProperties "basename"
+	testCases "basename"
 	[ tp "/foo/bar" "bar"
 	, tp "/foo/bar.txt" "bar"
 	, tp "." "."
@@ -133,7 +137,7 @@ testBasename =
 	]
 
 testAbsolute :: F.Test
-testAbsolute = testProperties "absolute"
+testAbsolute = testCases "absolute"
 	[ absolute (fromString posix "/")
 	, absolute (fromString posix "/foo/bar")
 	, not $ absolute (fromString posix "")
@@ -141,7 +145,7 @@ testAbsolute = testProperties "absolute"
 	]
 
 testRelative :: F.Test
-testRelative = testProperties "relative"
+testRelative = testCases "relative"
 	[ not $ relative (fromString posix "/")
 	, not $ relative (fromString posix "/foo/bar")
 	, relative (fromString posix "")
@@ -153,9 +157,9 @@ testIdentity name r gen = testProperty name $ forAll gen $ \p -> p == fromBytes 
 
 testAppend :: F.Test
 testAppend =
-	let t x y z = propPosix $ \p -> append (p x) (p y) == p z in
+	let t x y z = casePosix $ \p -> append (p x) (p y) == p z in
 	
-	testProperties "append"
+	testCases "append"
 	[ t "" "" ""
 	, t "" "b/" "b/"
 	
@@ -184,9 +188,9 @@ testAppend =
 
 testCommonPrefix :: F.Test
 testCommonPrefix =
-	let t xs y = propPosix $ \p -> commonPrefix (map p xs) == p y in
+	let t xs y = casePosix $ \p -> commonPrefix (map p xs) == p y in
 	
-	testProperties "commonPrefix"
+	testCases "commonPrefix"
 	[ t ["", ""] ""
 	, t ["/", ""] ""
 	, t ["/", "/"] "/"
@@ -198,9 +202,9 @@ testCommonPrefix =
 
 testSplitExtension :: F.Test
 testSplitExtension =
-	let t x (y1, y2) = propPosix $ \p -> splitExtension (p x) == (p y1, fmap B8.pack y2) in
+	let t x (y1, y2) = casePosix $ \p -> splitExtension (p x) == (p y1, fmap B8.pack y2) in
 	
-	testProperties "splitExtension"
+	testCases "splitExtension"
 	[ t ""              ("", Nothing)
 	, t "foo"           ("foo", Nothing)
 	, t "foo."          ("foo", Just "")
@@ -213,10 +217,10 @@ testSplitExtension =
 
 testSplitSearchPath :: F.Test
 testSplitSearchPath =
-	let tp x y = propPosix $ \p -> splitSearchPath posix (B8.pack x) == map p y in
-	let tw x y = propWindows $ \p -> splitSearchPath windows (B8.pack x) == map p y in
+	let tp x y = casePosix $ \p -> splitSearchPath posix (B8.pack x) == map p y in
+	let tw x y = caseWindows $ \p -> splitSearchPath windows (B8.pack x) == map p y in
 	
-	testProperties "splitSearchPath"
+	testCases "splitSearchPath"
 	[ tp "a:b:c" ["a", "b", "c"]
 	, tp "a::b:c" ["a", ".", "b", "c"]
 	, tw "a;b;c" ["a", "b", "c"]
