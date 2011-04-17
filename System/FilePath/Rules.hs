@@ -16,7 +16,9 @@ module System.FilePath.Rules
 	
 	-- * Type conversions
 	, toBytes
+	, toText
 	, fromBytes
+	, fromText
 	
 	-- * Rule-specific path properties
 	, valid
@@ -29,6 +31,11 @@ import Data.Char (toUpper, chr)
 import Data.List (intersperse)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
+import Data.Text.Encoding.Error (UnicodeException)
+import qualified Control.Exception as Exc
+import System.IO.Unsafe (unsafePerformIO)
 
 import System.FilePath hiding (root, filename)
 import System.FilePath.Internal
@@ -41,6 +48,39 @@ import System.FilePath.Internal
 -- to OS libraries.
 toBytes :: Rules -> FilePath -> B.ByteString
 toBytes r = B.concat . toByteChunks r
+
+-- | Attempt to convert a 'FilePath' to human-readable text.
+--
+-- If the path is decoded successfully, the result is a 'Right' containing
+-- the decoded text. Successfully decoded text can be converted back to a
+-- path using 'fromText'.
+--
+-- If the path cannot be decoded, the result is a 'Left' containing an
+-- approximation of the original path. If displayed to the user, this value
+-- should be accompanied by some warning that the path has an invalid
+-- encoding. Approximated text cannot be converted back to the original path.
+--
+-- This function ignores the user's locale, and assumes all file paths are
+-- encoded in UTF8. If you need to display file paths with an unusual or
+-- obscure encoding, use 'toBytes' and then decode them manually.
+--
+-- Since: 0.2
+toText :: Rules -> FilePath -> Either T.Text T.Text
+toText r path = encoded where
+	bytes = toBytes r path
+	encoded = case maybeDecodeUtf8 bytes of
+		Just text -> Right text
+		Nothing -> Left (T.pack (B8.unpack bytes))
+
+-- | Convert human-readable text into a 'FilePath'.
+--
+-- This function ignores the user's locale, and assumes all file paths are
+-- encoded in UTF8. If you need to create file paths with an unusual or
+-- obscure encoding, encode them manually and then use 'fromBytes'.
+--
+-- Since: 0.2
+fromText :: Rules -> T.Text -> FilePath
+fromText r text = fromBytes r (TE.encodeUtf8 text)
 
 -------------------------------------------------------------------------------
 -- Generic
@@ -59,6 +99,16 @@ upperBytes :: B.ByteString -> B.ByteString
 upperBytes bytes = (`B.map` bytes) $ \b -> if b >= 0x41 && b <= 0x5A
 	then b + 0x20
 	else b
+
+maybeDecodeUtf8 :: B.ByteString -> Maybe T.Text
+maybeDecodeUtf8 = excToMaybe . TE.decodeUtf8 where
+	excToMaybe :: a -> Maybe a
+	excToMaybe x = unsafePerformIO $ Exc.catch
+		(fmap Just (Exc.evaluate x))
+		unicodeError
+	
+	unicodeError :: UnicodeException -> IO (Maybe a)
+	unicodeError _ = return Nothing
 
 -------------------------------------------------------------------------------
 -- POSIX

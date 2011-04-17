@@ -21,7 +21,9 @@ module System.FilePath.CurrentOS
 	
 	-- * Type conversions
 	, toBytes
+	, toText
 	, fromBytes
+	, fromText
 	
 	-- * Rule-specific path properties
 	, valid
@@ -30,6 +32,7 @@ module System.FilePath.CurrentOS
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.String as S
+import qualified Data.Text as T
 import System.FilePath
 import qualified System.FilePath as F
 import qualified System.FilePath.Rules as R
@@ -52,9 +55,17 @@ instance Show F.FilePath where
 toBytes :: F.FilePath -> B.ByteString
 toBytes = R.toBytes currentOS
 
+-- | See 'R.toText'
+toText :: F.FilePath -> Either T.Text T.Text
+toText = R.toText currentOS
+
 -- | See 'R.fromBytes'
 fromBytes :: B.ByteString -> F.FilePath
 fromBytes = R.fromBytes currentOS
+
+-- | See 'R.fromText'
+fromText :: T.Text -> F.FilePath
+fromText = R.fromText currentOS
 
 -- | See 'R.valid'
 valid :: F.FilePath -> Bool

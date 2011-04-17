@@ -5,6 +5,7 @@ import Data.Word (Word8)
 import Data.List (intercalate)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
+import qualified Data.Text as T
 import Test.QuickCheck
 import Test.HUnit (assert, (@?=))
 import qualified Test.Framework as F
@@ -41,6 +42,11 @@ tests =
 	  , testIdentity "Windows" windows windowsPaths
 	  ]
 	
+	, F.testGroup "To/From text"
+	  [ testToText
+	  , testFromText
+	  ]
+	
 	, F.testGroup "Validity"
 	  [ testProperty "POSIX" $ forAll posixPaths $ valid posix
 	  , testProperty "Windows" $ forAll windowsPaths $ valid windows
@@ -50,10 +56,10 @@ tests =
 	]
 
 casePosix :: ((String -> FilePath) -> a) -> a
-casePosix k = k (fromString posix)
+casePosix k = k (fromChar8 posix)
 
 caseWindows :: ((String -> FilePath) -> a) -> a
-caseWindows k = k (fromString windows)
+caseWindows k = k (fromChar8 windows)
 
 testCases :: F.TestName -> [Bool] -> F.Test
 testCases name = F.testGroup name . zipWith (\n -> testCase n . assert) labels where
@@ -138,22 +144,40 @@ testBasename =
 
 testAbsolute :: F.Test
 testAbsolute = testCases "absolute"
-	[ absolute (fromString posix "/")
-	, absolute (fromString posix "/foo/bar")
-	, not $ absolute (fromString posix "")
-	, not $ absolute (fromString posix "foo/bar")
+	[ absolute (fromChar8 posix "/")
+	, absolute (fromChar8 posix "/foo/bar")
+	, not $ absolute (fromChar8 posix "")
+	, not $ absolute (fromChar8 posix "foo/bar")
 	]
 
 testRelative :: F.Test
 testRelative = testCases "relative"
-	[ not $ relative (fromString posix "/")
-	, not $ relative (fromString posix "/foo/bar")
-	, relative (fromString posix "")
-	, relative (fromString posix "foo/bar")
+	[ not $ relative (fromChar8 posix "/")
+	, not $ relative (fromChar8 posix "/foo/bar")
+	, relative (fromChar8 posix "")
+	, relative (fromChar8 posix "foo/bar")
 	]
 
 testIdentity :: F.TestName -> Rules -> Gen FilePath -> F.Test
 testIdentity name r gen = testProperty name $ forAll gen $ \p -> p == fromBytes r (toBytes r p)
+
+testToText :: F.Test
+testToText = testCase "toText" $ do
+	let t x y = casePosix $ \p -> toText posix (p x) @?= emap T.pack T.pack y
+	
+	t "" (Right "")
+	t "ascii" (Right "ascii")
+	t "\xF0\x9D\x84\x9E" (Right "\x1D11E")
+	t "\xED\xA0\x80" (Left "\xED\xA0\x80")
+
+testFromText :: F.Test
+testFromText = testCase "fromText" $ do
+	let t x y = casePosix $ \p -> fromText posix (T.pack x) @?= p y
+	
+	t "" ""
+	t "\x1D11E" "\xF0\x9D\x84\x9E"
+	t "\xED\xA0\x80" "\xC3\xAD\xC2\xA0\xC2\x80"
+	return ()
 
 testAppend :: F.Test
 testAppend =
@@ -232,7 +256,7 @@ instance Arbitrary Rules where
 
 posixPaths :: Gen FilePath
 posixPaths = sized $ fmap merge . genComponents where
-	merge = fromString posix . intercalate "/"
+	merge = fromChar8 posix . intercalate "/"
 	validChar c = not $ elem c ['\x00', '/']
 	component = do
 		size <- choose (0, 10)
@@ -246,7 +270,7 @@ windowsPaths = sized $ \n -> genComponents n >>= merge where
 	merge cs = do
 		root <- genRoot
 		let path = intercalate "\\" cs
-		return $ fromString windows $ root ++ path
+		return $ fromChar8 windows $ root ++ path
 		
 	reserved = ['\x00'..'\x1F'] ++ ['/', '\\', '?', '*', ':', '|', '"', '<', '>']
 	validChar c = not $ elem c reserved
@@ -264,5 +288,8 @@ windowsPaths = sized $ \n -> genComponents n >>= merge where
 			Just c -> [c, ':', '\\']
 			Nothing -> "\\"
 
-fromString :: Rules -> String -> FilePath
-fromString r = fromBytes r . B8.pack
+fromChar8 :: Rules -> String -> FilePath
+fromChar8 r = fromBytes r . B8.pack
+
+emap :: (a -> c) -> (b -> d) -> Either a b -> Either c d
+emap f1 f2 = either (Left . f1) (Right . f2)
