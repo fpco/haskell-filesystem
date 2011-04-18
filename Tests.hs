@@ -53,6 +53,7 @@ tests =
 	  ]
 	
 	, testSplitSearchPath
+	, testParsing
 	]
 
 testCases :: F.TestName -> [Assertion] -> F.Test
@@ -87,7 +88,7 @@ testDirectory =
 	, t "/foo/bar" "/foo/"
 	, t "/foo/bar/" "/foo/bar/"
 	, t "." "./"
-	, t ".." "./"
+	, t ".." "../"
 	, t "../foo" "../"
 	, t "../foo/" "../foo/"
 	, t "foo" "./"
@@ -131,11 +132,13 @@ testBasename =
 	testCases "basename"
 	[ tp "/foo/bar" "bar"
 	, tp "/foo/bar.txt" "bar"
-	, tp "." "."
-	, tp ".." ".."
+	, tp "." ""
+	, tp ".." ""
 	
-	, tw "." "."
-	, tw ".." ".."
+	, tw "c:\\foo\\bar" "bar"
+	, tw "c:\\foo\\bar.txt" "bar"
+	, tw "." ""
+	, tw ".." ""
 	]
 
 testAbsolute :: F.Test
@@ -239,6 +242,38 @@ testSplitExtension =
 	, t "foo.a/bar.b.c" ("foo.a/bar.b", Just "c")
 	]
 
+testParsing :: F.Test
+testParsing =
+	let tp x y = toChar8 posix (fromChar8 posix x) @?= y in
+	let tw x y = toChar8 windows (fromChar8 windows x) @?= y in
+	
+	testCases "parsing"
+	[ tp "" ""
+	, tp "/" "/"
+	, tp "/a" "/a"
+	, tp "/a/" "/a/"
+	, tp "a" "a"
+	, tp "a/" "a/"
+	, tp "a/b" "a/b"
+	, tp "a//b" "a/b"
+	, tp "a/./b" "a/b"
+	, tp "." "./"
+	, tp ".." "../"
+	
+	, tw "" ""
+	, tw "c:\\" "C:\\"
+	, tw "c:\\a" "C:\\a"
+	, tw "c:\\a\\" "C:\\a\\"
+	, tw "a" "a"
+	, tw "a/" "a\\"
+	, tw "a\\" "a\\"
+	, tw "a\\b" "a\\b"
+	, tw "a\\\\b" "a\\b"
+	, tw "a\\.\\b" "a\\b"
+	, tw "." ".\\"
+	, tw ".." "..\\"
+	]
+
 testSplitSearchPath :: F.Test
 testSplitSearchPath =
 	let tp x y = map (toChar8 posix) (splitSearchPath posix (B8.pack x)) @?= y in
@@ -246,7 +281,7 @@ testSplitSearchPath =
 	
 	testCases "splitSearchPath"
 	[ tp "a:b:c" ["a", "b", "c"]
-	, tp "a::b:c" ["a", ".", "b", "c"]
+	, tp "a::b:c" ["a", "./", "b", "c"]
 	, tw "a;b;c" ["a", "b", "c"]
 	, tw "a;;b;c" ["a", "b", "c"]
 	]

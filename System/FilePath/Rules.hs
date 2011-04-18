@@ -129,23 +129,26 @@ posixToByteChunks p = root : chunks where
 
 posixFromBytes :: B.ByteString -> FilePath
 posixFromBytes bytes = if B.null bytes then empty else path where
-	path = FilePath root cs name exts
-	split' = B.split 0x2F bytes
+	path = FilePath root directories basename exts
 	
-	(root, pastRoot) = if B.null (head split')
-		then (Just RootPosix, tail split')
-		else (Nothing, split')
+	split = B.split 0x2F bytes
 	
-	cs = if P.null pastRoot
-		then []
-		else filter (not . B.null) $ if B.null (last pastRoot)
-			then pastRoot
-			else init pastRoot
+	(root, pastRoot) = if B.null (head split)
+		then (Just RootPosix, tail split)
+		else (Nothing, split)
 	
-	filename = last split'
-	(name, exts) = if elem filename [B8.pack ".", B8.pack ".."]
-		then (Just filename, [])
-		else case B.split 0x2E (last split') of
+	(directories, filename)
+		| P.null pastRoot = ([], B.empty)
+		| otherwise = case last pastRoot of
+			fn | fn == B8.pack "." -> (goodDirs pastRoot ++ [fn], B.empty)
+			fn | fn == B8.pack ".." -> (goodDirs pastRoot, B.empty)
+			fn -> (goodDirs (init pastRoot), fn)
+	
+	goodDirs = filter (\x -> not (x == B8.pack "." || B.null x))
+	
+	(basename, exts) = if B.null filename
+		then (Nothing, [])
+		else case B.split 0x2E filename of
 			[] -> (Nothing, [])
 			(name':exts') -> (Just name', exts')
 
@@ -183,32 +186,34 @@ winToByteChunks p = root : chunks where
 
 winFromBytes :: B.ByteString -> FilePath
 winFromBytes bytes = if B.null bytes then empty else path where
-	path = FilePath root cs name exts
-	split' = B.splitWith isSep bytes
-	isSep b = b == 0x2F || b == 0x5C
+	path = FilePath root directories basename exts
+	
+	split = B.splitWith (\b -> b == 0x2F || b == 0x5C) bytes
 	
 	(root, pastRoot) = let
-		head' = head split'
-		tail' = tail split'
+		head' = head split
+		tail' = tail split
 		in if B.null head'
 			then (Just RootWindowsCurrentVolume, tail')
 			else if B.elem 0x3A head'
 				then (Just (parseDrive head'), tail')
-				else (Nothing, split')
+				else (Nothing, split)
 	
 	parseDrive bytes' = RootWindowsVolume c where
-		c = chr . fromIntegral . B.head $ bytes'
+		c = (toUpper . chr . fromIntegral . B.head) bytes'
 	
-	cs = if P.null pastRoot
-		then []
-		else filter (not . B.null) $ if B.null (last pastRoot)
-			then pastRoot
-			else init pastRoot
+	(directories, filename)
+		| P.null pastRoot = ([], B.empty)
+		| otherwise = case last pastRoot of
+			fn | fn == B8.pack "." -> (goodDirs pastRoot ++ [fn], B.empty)
+			fn | fn == B8.pack ".." -> (goodDirs pastRoot, B.empty)
+			fn -> (goodDirs (init pastRoot), fn)
 	
-	filename = last split'
-	(name, exts) = if elem filename [B8.pack ".", B8.pack ".."]
-		then (Just filename, [])
-		else case B.split 0x2E (last split') of
+	goodDirs = filter (\x -> not (x == B8.pack "." || B.null x))
+	
+	(basename, exts) = if B.null filename
+		then (Nothing, [])
+		else case B.split 0x2E filename of
 			[] -> (Nothing, [])
 			(name':exts') -> (Just name', exts')
 
