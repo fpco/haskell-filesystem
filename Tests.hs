@@ -7,7 +7,7 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.Text as T
 import Test.QuickCheck
-import Test.HUnit (assert, (@?=))
+import Test.HUnit (Assertion, assert, (@?=))
 import qualified Test.Framework as F
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.Framework.Providers.HUnit (testCase)
@@ -55,20 +55,20 @@ tests =
 	, testSplitSearchPath
 	]
 
-testCases :: F.TestName -> [Bool] -> F.Test
+testCases :: F.TestName -> [Assertion] -> F.Test
 testCases name = F.testGroup name . zipWith (\n -> testCase n . assert) labels where
 	labels = map show $ iterate (+ 1) 1
 
 testNull :: F.Test
 testNull = testCases "null"
-	[ P.null empty
-	, toChar8 posix empty == ""
-	, toChar8 windows empty == ""
+	[ assert (P.null empty)
+	, toChar8 posix empty @?= ""
+	, toChar8 windows empty @?= ""
 	]
 
 testRoot :: F.Test
 testRoot =
-	let t x y = toChar8 posix (root (fromChar8 posix x)) == y in
+	let t x y = toChar8 posix (root (fromChar8 posix x)) @?= y in
 	
 	testCases "root"
 	[ t "" ""
@@ -79,7 +79,7 @@ testRoot =
 
 testDirectory :: F.Test
 testDirectory =
-	let t x y = toChar8 posix (directory (fromChar8 posix x)) == y in
+	let t x y = toChar8 posix (directory (fromChar8 posix x)) @?= y in
 	
 	testCases "directory"
 	[ t "" "./"
@@ -96,7 +96,7 @@ testDirectory =
 
 testParent :: F.Test
 testParent =
-	let t x y = toChar8 posix (parent (fromChar8 posix x)) == y in
+	let t x y = toChar8 posix (parent (fromChar8 posix x)) @?= y in
 	
 	testCases "parent"
 	[ t "" "./"
@@ -113,7 +113,7 @@ testParent =
 
 testFilename :: F.Test
 testFilename =
-	let t x y = toChar8 posix (filename (fromChar8 posix x)) == y in
+	let t x y = toChar8 posix (filename (fromChar8 posix x)) @?= y in
 	
 	testCases "filename"
 	[ t "" ""
@@ -125,8 +125,8 @@ testFilename =
 
 testBasename :: F.Test
 testBasename =
-	let tp x y = toChar8 posix (basename (fromChar8 posix x)) == y in
-	let tw x y = toChar8 windows (basename (fromChar8 windows x)) == y in
+	let tp x y = toChar8 posix (basename (fromChar8 posix x)) @?= y in
+	let tw x y = toChar8 windows (basename (fromChar8 windows x)) @?= y in
 	
 	testCases "basename"
 	[ tp "/foo/bar" "bar"
@@ -140,18 +140,18 @@ testBasename =
 
 testAbsolute :: F.Test
 testAbsolute = testCases "absolute"
-	[ absolute (fromChar8 posix "/")
-	, absolute (fromChar8 posix "/foo/bar")
-	, not $ absolute (fromChar8 posix "")
-	, not $ absolute (fromChar8 posix "foo/bar")
+	[ assert $ absolute (fromChar8 posix "/")
+	, assert $ absolute (fromChar8 posix "/foo/bar")
+	, assert . not $ absolute (fromChar8 posix "")
+	, assert . not $ absolute (fromChar8 posix "foo/bar")
 	]
 
 testRelative :: F.Test
 testRelative = testCases "relative"
-	[ not $ relative (fromChar8 posix "/")
-	, not $ relative (fromChar8 posix "/foo/bar")
-	, relative (fromChar8 posix "")
-	, relative (fromChar8 posix "foo/bar")
+	[ assert . not $ relative (fromChar8 posix "/")
+	, assert . not $ relative (fromChar8 posix "/foo/bar")
+	, assert $ relative (fromChar8 posix "")
+	, assert $ relative (fromChar8 posix "foo/bar")
 	]
 
 testIdentity :: F.TestName -> Rules -> Gen FilePath -> F.Test
@@ -159,7 +159,7 @@ testIdentity name r gen = testProperty name $ forAll gen $ \p -> p == fromBytes 
 
 testToText :: F.Test
 testToText =
-	let t x y = toText posix (fromChar8 posix x) == emap T.pack T.pack y in
+	let t x y = toText posix (fromChar8 posix x) @?= emap T.pack T.pack y in
 	
 	testCases "toText"
 	[ t "" (Right "")
@@ -170,7 +170,7 @@ testToText =
 
 testFromText :: F.Test
 testFromText =
-	let t x y = fromText posix (T.pack x) == fromChar8 posix y in
+	let t x y = fromText posix (T.pack x) @?= fromChar8 posix y in
 	
 	testCases "fromText"
 	[ t "" ""
@@ -180,7 +180,7 @@ testFromText =
 
 testAppend :: F.Test
 testAppend =
-	let t x y z = toChar8 posix (append (fromChar8 posix x) (fromChar8 posix y)) == z in
+	let t x y z = toChar8 posix (append (fromChar8 posix x) (fromChar8 posix y)) @?= z in
 	
 	testCases "append"
 	[ t "" "" ""
@@ -211,7 +211,7 @@ testAppend =
 
 testCommonPrefix :: F.Test
 testCommonPrefix =
-	let t xs y = toChar8 posix (commonPrefix (map (fromChar8 posix) xs)) == y in
+	let t xs y = toChar8 posix (commonPrefix (map (fromChar8 posix) xs)) @?= y in
 	
 	testCases "commonPrefix"
 	[ t ["", ""] ""
@@ -226,7 +226,7 @@ testCommonPrefix =
 testSplitExtension :: F.Test
 testSplitExtension =
 	let t x (y1, y2) = case splitExtension (fromChar8 posix x) of
-		(base, ext) -> (toChar8 posix base, ext) == (y1, fmap B8.pack y2) in
+		(base, ext) -> (toChar8 posix base, ext) @?= (y1, fmap B8.pack y2) in
 	
 	testCases "splitExtension"
 	[ t ""              ("", Nothing)
@@ -241,8 +241,8 @@ testSplitExtension =
 
 testSplitSearchPath :: F.Test
 testSplitSearchPath =
-	let tp x y = map (toChar8 posix) (splitSearchPath posix (B8.pack x)) == y in
-	let tw x y = map (toChar8 windows) (splitSearchPath windows (B8.pack x)) == y in
+	let tp x y = map (toChar8 posix) (splitSearchPath posix (B8.pack x)) @?= y in
+	let tw x y = map (toChar8 windows) (splitSearchPath windows (B8.pack x)) @?= y in
 	
 	testCases "splitSearchPath"
 	[ tp "a:b:c" ["a", "b", "c"]
