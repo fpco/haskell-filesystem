@@ -55,12 +55,6 @@ tests =
 	, testSplitSearchPath
 	]
 
-casePosix :: ((String -> FilePath) -> a) -> a
-casePosix k = k (fromChar8 posix)
-
-caseWindows :: ((String -> FilePath) -> a) -> a
-caseWindows k = k (fromChar8 windows)
-
 testCases :: F.TestName -> [Bool] -> F.Test
 testCases name = F.testGroup name . zipWith (\n -> testCase n . assert) labels where
 	labels = map show $ iterate (+ 1) 1
@@ -68,11 +62,13 @@ testCases name = F.testGroup name . zipWith (\n -> testCase n . assert) labels w
 testNull :: F.Test
 testNull = testCases "null"
 	[ P.null empty
+	, toChar8 posix empty == ""
+	, toChar8 windows empty == ""
 	]
 
 testRoot :: F.Test
 testRoot =
-	let t x y = casePosix $ \p -> root (p x) == p y in
+	let t x y = toChar8 posix (root (fromChar8 posix x)) == y in
 	
 	testCases "root"
 	[ t "" ""
@@ -83,7 +79,7 @@ testRoot =
 
 testDirectory :: F.Test
 testDirectory =
-	let t x y = casePosix $ \p -> directory (p x) == p y in
+	let t x y = toChar8 posix (directory (fromChar8 posix x)) == y in
 	
 	testCases "directory"
 	[ t "" "./"
@@ -100,7 +96,7 @@ testDirectory =
 
 testParent :: F.Test
 testParent =
-	let t x y = casePosix $ \p -> parent (p x) == p y in
+	let t x y = toChar8 posix (parent (fromChar8 posix x)) == y in
 	
 	testCases "parent"
 	[ t "" "./"
@@ -117,7 +113,7 @@ testParent =
 
 testFilename :: F.Test
 testFilename =
-	let t x y = casePosix $ \p -> filename (p x) == p y in
+	let t x y = toChar8 posix (filename (fromChar8 posix x)) == y in
 	
 	testCases "filename"
 	[ t "" ""
@@ -129,8 +125,8 @@ testFilename =
 
 testBasename :: F.Test
 testBasename =
-	let tp x y = casePosix $ \p -> basename (p x) == p y in
-	let tw x y = caseWindows $ \p -> basename (p x) == p y in
+	let tp x y = toChar8 posix (basename (fromChar8 posix x)) == y in
+	let tw x y = toChar8 windows (basename (fromChar8 windows x)) == y in
 	
 	testCases "basename"
 	[ tp "/foo/bar" "bar"
@@ -162,26 +158,29 @@ testIdentity :: F.TestName -> Rules -> Gen FilePath -> F.Test
 testIdentity name r gen = testProperty name $ forAll gen $ \p -> p == fromBytes r (toBytes r p)
 
 testToText :: F.Test
-testToText = testCase "toText" $ do
-	let t x y = casePosix $ \p -> toText posix (p x) @?= emap T.pack T.pack y
+testToText =
+	let t x y = toText posix (fromChar8 posix x) == emap T.pack T.pack y in
 	
-	t "" (Right "")
-	t "ascii" (Right "ascii")
-	t "\xF0\x9D\x84\x9E" (Right "\x1D11E")
-	t "\xED\xA0\x80" (Left "\xED\xA0\x80")
+	testCases "toText"
+	[ t "" (Right "")
+	, t "ascii" (Right "ascii")
+	, t "\xF0\x9D\x84\x9E" (Right "\x1D11E")
+	, t "\xED\xA0\x80" (Left "\xED\xA0\x80")
+	]
 
 testFromText :: F.Test
-testFromText = testCase "fromText" $ do
-	let t x y = casePosix $ \p -> fromText posix (T.pack x) @?= p y
+testFromText =
+	let t x y = fromText posix (T.pack x) == fromChar8 posix y in
 	
-	t "" ""
-	t "\x1D11E" "\xF0\x9D\x84\x9E"
-	t "\xED\xA0\x80" "\xC3\xAD\xC2\xA0\xC2\x80"
-	return ()
+	testCases "fromText"
+	[ t "" ""
+	, t "\x1D11E" "\xF0\x9D\x84\x9E"
+	, t "\xED\xA0\x80" "\xC3\xAD\xC2\xA0\xC2\x80"
+	]
 
 testAppend :: F.Test
 testAppend =
-	let t x y z = casePosix $ \p -> append (p x) (p y) == p z in
+	let t x y z = toChar8 posix (append (fromChar8 posix x) (fromChar8 posix y)) == z in
 	
 	testCases "append"
 	[ t "" "" ""
@@ -212,7 +211,7 @@ testAppend =
 
 testCommonPrefix :: F.Test
 testCommonPrefix =
-	let t xs y = casePosix $ \p -> commonPrefix (map p xs) == p y in
+	let t xs y = toChar8 posix (commonPrefix (map (fromChar8 posix) xs)) == y in
 	
 	testCases "commonPrefix"
 	[ t ["", ""] ""
@@ -226,7 +225,8 @@ testCommonPrefix =
 
 testSplitExtension :: F.Test
 testSplitExtension =
-	let t x (y1, y2) = casePosix $ \p -> splitExtension (p x) == (p y1, fmap B8.pack y2) in
+	let t x (y1, y2) = case splitExtension (fromChar8 posix x) of
+		(base, ext) -> (toChar8 posix base, ext) == (y1, fmap B8.pack y2) in
 	
 	testCases "splitExtension"
 	[ t ""              ("", Nothing)
@@ -241,8 +241,8 @@ testSplitExtension =
 
 testSplitSearchPath :: F.Test
 testSplitSearchPath =
-	let tp x y = casePosix $ \p -> splitSearchPath posix (B8.pack x) == map p y in
-	let tw x y = caseWindows $ \p -> splitSearchPath windows (B8.pack x) == map p y in
+	let tp x y = map (toChar8 posix) (splitSearchPath posix (B8.pack x)) == y in
+	let tw x y = map (toChar8 windows) (splitSearchPath windows (B8.pack x)) == y in
 	
 	testCases "splitSearchPath"
 	[ tp "a:b:c" ["a", "b", "c"]
@@ -287,6 +287,9 @@ windowsPaths = sized $ \n -> genComponents n >>= merge where
 		return $ case label of
 			Just c -> [c, ':', '\\']
 			Nothing -> "\\"
+
+toChar8 :: Rules -> FilePath -> String
+toChar8 r = B8.unpack . toBytes r
 
 fromChar8 :: Rules -> String -> FilePath
 fromChar8 r = fromBytes r . B8.pack
