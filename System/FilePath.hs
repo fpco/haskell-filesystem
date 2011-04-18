@@ -6,9 +6,10 @@
 -- Maintainer:  jmillikin@gmail.com
 -- Portability:  portable
 --
--- High-level, byte-based file and directory path manipulations. You probably
--- want to import "System.FilePath.CurrentOS" instead, since it handles
--- detecting which rules to use in the current compilation.
+-- High&#x2010;level, byte&#x2010;based file and directory path
+-- manipulations. You probably want to import "System.FilePath.CurrentOS"
+-- instead, since it handles detecting which rules to use in the current
+-- compilation.
 --
 module System.FilePath
 	( FilePath
@@ -108,7 +109,9 @@ parent p = empty
 
 -- | Retrieve a 'FilePath'&#x2019;s filename component.
 --
--- @filename \"foo/bar.txt\" == \"bar.txt\"@.
+-- @
+-- filename \"foo/bar.txt\" == \"bar.txt\"
+-- @
 filename :: FilePath -> FilePath
 filename p = empty
 	{ pathBasename = pathBasename p
@@ -118,7 +121,7 @@ filename p = empty
 -- | Retrieve a 'FilePath'&#x2019;s basename component.
 --
 -- @
--- filename \"foo/bar.txt\" == \"bar\"
+-- basename \"foo/bar.txt\" == \"bar\"
 -- @
 basename :: FilePath -> FilePath
 basename p = empty
@@ -164,7 +167,7 @@ concat :: [FilePath] -> FilePath
 concat [] = empty
 concat ps = foldr1 append ps
 
--- | Find the greatest common prefix between two 'FilePath's.
+-- | Find the greatest common prefix between a list of 'FilePath's.
 commonPrefix :: [FilePath] -> FilePath
 commonPrefix [] = empty
 commonPrefix ps = foldr1 step ps where
@@ -185,7 +188,7 @@ commonPrefix ps = foldr1 step ps where
 		then x : common xs ys
 		else []
 
--- | Remove @"."@ and @".."@ directories from a path.
+-- | Remove @\".\"@ and @\"..\"@ directories from a path.
 --
 -- Note that if any of the elements are symbolic links, 'collapse' may change
 -- which file the path resolves to.

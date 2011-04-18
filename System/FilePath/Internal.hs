@@ -39,7 +39,7 @@ data FilePath = FilePath
 	}
 	deriving (Eq, Ord, Data, Typeable)
 
--- | A file path with no root, directories, or filename
+-- | A file path with no root, directory, or filename
 empty :: FilePath
 empty = FilePath Nothing [] Nothing []
 

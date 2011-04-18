@@ -17,7 +17,7 @@ module System.FilePath.Rules
 	, toText
 	, fromText
 	
-	-- * Rule-specific path properties
+	-- * Rule&#x2010;specific path properties
 	, valid
 	, splitSearchPath
 	) where
@@ -47,11 +47,11 @@ import           System.FilePath.Internal
 toBytes :: Rules -> FilePath -> B.ByteString
 toBytes r = B.concat . toByteChunks r
 
--- | Attempt to convert a 'FilePath' to human-readable text.
+-- | Attempt to convert a 'FilePath' to human&#x2010;readable text.
 --
 -- If the path is decoded successfully, the result is a 'Right' containing
--- the decoded text. Successfully decoded text can be converted back to a
--- path using 'fromText'.
+-- the decoded text. Successfully decoded text can be converted back to the
+-- original path using 'fromText'.
 --
 -- If the path cannot be decoded, the result is a 'Left' containing an
 -- approximation of the original path. If displayed to the user, this value
@@ -70,7 +70,7 @@ toText r path = encoded where
 		Just text -> Right text
 		Nothing -> Left (T.pack (B8.unpack bytes))
 
--- | Convert human-readable text into a 'FilePath'.
+-- | Convert human&#x2010;readable text into a 'FilePath'.
 --
 -- This function ignores the user&#x2019;s locale, and assumes all file paths
 -- are encoded in UTF8. If you need to create file paths with an unusual or

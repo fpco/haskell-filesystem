@@ -8,8 +8,8 @@
 -- Maintainer:  jmillikin@gmail.com
 -- Portability:  portable
 --
--- Re-exports contents of "System.FilePath.Rules", defaulting to the
--- current OS's rules when needed.
+-- Re&#x2010;exports contents of "System.FilePath.Rules", defaulting to the
+-- current OS&#x2019;s rules when needed.
 --
 -- Also enables 'Show' and 'S.IsString' instances for 'F.FilePath'.
 --
@@ -23,7 +23,7 @@ module System.FilePath.CurrentOS
 	, toText
 	, fromText
 	
-	-- * Rule-specific path properties
+	-- * Rule&#x2010;specific path properties
 	, valid
 	, splitSearchPath
 	) where
@@ -60,11 +60,11 @@ toBytes = R.toBytes currentOS
 fromBytes :: B.ByteString -> F.FilePath
 fromBytes = R.fromBytes currentOS
 
--- | Attempt to convert a 'FilePath' to human-readable text.
+-- | Attempt to convert a 'FilePath' to human&#x2010;readable text.
 --
 -- If the path is decoded successfully, the result is a 'Right' containing
--- the decoded text. Successfully decoded text can be converted back to a
--- path using 'fromText'.
+-- the decoded text. Successfully decoded text can be converted back to the
+-- original path using 'fromText'.
 --
 -- If the path cannot be decoded, the result is a 'Left' containing an
 -- approximation of the original path. If displayed to the user, this value
@@ -79,7 +79,7 @@ fromBytes = R.fromBytes currentOS
 toText :: F.FilePath -> Either T.Text T.Text
 toText = R.toText currentOS
 
--- | Convert human-readable text into a 'FilePath'.
+-- | Convert human&#x2010;readable text into a 'FilePath'.
 --
 -- This function ignores the user&#x2019;s locale, and assumes all file paths
 -- are encoded in UTF8. If you need to create file paths with an unusual or
