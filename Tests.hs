@@ -35,6 +35,7 @@ tests =
 	  [ testAppend
 	  , testCommonPrefix
 	  , testSplitExtension
+	  , testCollapse
 	  ]
 	
 	, F.testGroup "To/From bytes"
@@ -242,6 +243,20 @@ testSplitExtension =
 	, t "foo.a/bar.b.c" ("foo.a/bar.b", Just "c")
 	]
 
+testCollapse :: F.Test
+testCollapse =
+	let t x y = toChar8 posix (collapse (fromChar8 posix x)) @?= y in
+	
+	testCases "collapse"
+	[ t "./" "./"
+	, t "././" "./"
+	, t "../" "../"
+	, t ".././" "../"
+	, t "./../" "../"
+	, t "parent/foo/../bar" "parent/bar"
+	, t "parent/foo/.." "parent/"
+	]
+
 testParsing :: F.Test
 testParsing =
 	let tp x y = toChar8 posix (fromChar8 posix x) @?= y in
@@ -256,9 +271,11 @@ testParsing =
 	, tp "a/" "a/"
 	, tp "a/b" "a/b"
 	, tp "a//b" "a/b"
-	, tp "a/./b" "a/b"
+	, tp "a/./b" "a/./b"
 	, tp "." "./"
+	, tp "./" "./"
 	, tp ".." "../"
+	, tp "../" "../"
 	
 	, tw "" ""
 	, tw "c:\\" "C:\\"
@@ -269,9 +286,11 @@ testParsing =
 	, tw "a\\" "a\\"
 	, tw "a\\b" "a\\b"
 	, tw "a\\\\b" "a\\b"
-	, tw "a\\.\\b" "a\\b"
+	, tw "a\\.\\b" "a\\.\\b"
 	, tw "." ".\\"
+	, tw ".\\" ".\\"
 	, tw ".." "..\\"
+	, tw "..\\" "..\\"
 	]
 
 testSplitSearchPath :: F.Test

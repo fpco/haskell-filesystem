@@ -140,11 +140,11 @@ posixFromBytes bytes = if B.null bytes then empty else path where
 	(directories, filename)
 		| P.null pastRoot = ([], B.empty)
 		| otherwise = case last pastRoot of
-			fn | fn == B8.pack "." -> (goodDirs pastRoot ++ [fn], B.empty)
+			fn | fn == B8.pack "." -> (goodDirs pastRoot, B.empty)
 			fn | fn == B8.pack ".." -> (goodDirs pastRoot, B.empty)
 			fn -> (goodDirs (init pastRoot), fn)
 	
-	goodDirs = filter (\x -> not (x == B8.pack "." || B.null x))
+	goodDirs = filter (not . B.null)
 	
 	(basename, exts) = if B.null filename
 		then (Nothing, [])
@@ -205,11 +205,11 @@ winFromBytes bytes = if B.null bytes then empty else path where
 	(directories, filename)
 		| P.null pastRoot = ([], B.empty)
 		| otherwise = case last pastRoot of
-			fn | fn == B8.pack "." -> (goodDirs pastRoot ++ [fn], B.empty)
+			fn | fn == B8.pack "." -> (goodDirs pastRoot, B.empty)
 			fn | fn == B8.pack ".." -> (goodDirs pastRoot, B.empty)
 			fn -> (goodDirs (init pastRoot), fn)
 	
-	goodDirs = filter (\x -> not (x == B8.pack "." || B.null x))
+	goodDirs = filter (not . B.null)
 	
 	(basename, exts) = if B.null filename
 		then (Nothing, [])

@@ -29,6 +29,7 @@ module System.FilePath
 	, (</>)
 	, concat
 	, commonPrefix
+	, collapse
 	
 	-- * Extensions
 	, extension
@@ -49,9 +50,11 @@ module System.FilePath
 	) where
 
 import           Prelude hiding (FilePath, concat, null)
+import qualified Prelude as P
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
+import           Data.List (foldl')
 import           Data.Maybe (isNothing)
 import qualified Data.Monoid as M
 
@@ -181,6 +184,28 @@ commonPrefix ps = foldr1 step ps where
 	common (x:xs) (y:ys) = if x == y
 		then x : common xs ys
 		else []
+
+-- | Remove @"."@ and @".."@ directories from a path.
+--
+-- Note that if any of the elements are symbolic links, 'collapse' may change
+-- which file the path resolves to.
+--
+-- Since: 0.2
+collapse :: FilePath -> FilePath
+collapse p = p { pathDirectories = reverse newDirs } where
+	(_, newDirs) = foldl' step (True, []) (pathDirectories p)
+	
+	dot = B8.pack "."
+	dots = B8.pack ".."
+	
+	step (True, acc) c = (False, c:acc)
+	step (_, acc) c | c == dot = (False, acc)
+	step (_, acc) c | c == dots = case acc of
+		[] -> (False, c:acc)
+		(h:ts) | h == dot -> (False, c:ts)
+		       | h == dots -> (False, c:acc)
+		       | otherwise -> (False, ts)
+	step (_, acc) c = (False, c:acc)
 
 -------------------------------------------------------------------------------
 -- Extensions
