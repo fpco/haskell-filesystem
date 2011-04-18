@@ -90,8 +90,8 @@ rootBytes r = B8.pack $ flip (maybe "") r $ \r' -> case r' of
 	RootWindowsVolume c -> c : ":\\"
 	RootWindowsCurrentVolume -> "\\"
 
-byteComponents :: FilePath -> [B.ByteString]
-byteComponents path = pathComponents path ++ [filenameBytes path]
+byteDirectories :: FilePath -> [B.ByteString]
+byteDirectories path = pathDirectories path ++ [filenameBytes path]
 
 upperBytes :: B.ByteString -> B.ByteString
 upperBytes bytes = (`B.map` bytes) $ \b -> if b >= 0x41 && b <= 0x5A
@@ -125,7 +125,7 @@ posix = Rules
 posixToByteChunks :: FilePath -> [B.ByteString]
 posixToByteChunks p = root : chunks where
 	root = rootBytes $ pathRoot p
-	chunks = intersperse (B8.pack "/") $ byteComponents p
+	chunks = intersperse (B8.pack "/") $ byteDirectories p
 
 posixFromBytes :: B.ByteString -> FilePath
 posixFromBytes bytes = if B.null bytes then empty else path where
@@ -150,8 +150,8 @@ posixFromBytes bytes = if B.null bytes then empty else path where
 			(name':exts') -> (Just name', exts')
 
 posixValid :: FilePath -> Bool
-posixValid p = validRoot && validComponents where
-	validComponents = flip all (byteComponents p)
+posixValid p = validRoot && validDirectories where
+	validDirectories = flip all (byteDirectories p)
 		$ not . B.any (\b -> b == 0 || b == 0x2F)
 	validRoot = case pathRoot p of
 		Nothing -> True
@@ -179,7 +179,7 @@ windows = Rules
 winToByteChunks :: FilePath -> [B.ByteString]
 winToByteChunks p = root : chunks where
 	root = rootBytes $ pathRoot p
-	chunks = intersperse (B8.pack "\\") $ byteComponents p
+	chunks = intersperse (B8.pack "\\") $ byteDirectories p
 
 winFromBytes :: B.ByteString -> FilePath
 winFromBytes bytes = if B.null bytes then empty else path where
@@ -229,8 +229,8 @@ winValid p = validRoot && noReserved && validCharacters where
 		_ -> False
 	
 	noExt = p { pathExtensions = [] }
-	noReserved = flip all (byteComponents noExt)
+	noReserved = flip all (byteDirectories noExt)
 		$ \c -> notElem (upperBytes c) reservedNames
 	
-	validCharacters = flip all (byteComponents p)
+	validCharacters = flip all (byteDirectories p)
 		$ not . B.any (`elem` reservedChars)

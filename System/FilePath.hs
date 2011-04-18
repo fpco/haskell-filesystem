@@ -79,28 +79,28 @@ root p = empty { pathRoot = pathRoot p }
 directory :: FilePath -> FilePath
 directory p = empty
 	{ pathRoot = pathRoot p
-	, pathComponents = let
+	, pathDirectories = let
 		starts = map (Just . B8.pack) [".", ".."]
-		dot | safeHead (pathComponents p) `elem` starts = []
+		dot | safeHead (pathDirectories p) `elem` starts = []
 		    | isNothing (pathRoot p) = [B8.pack "."]
 		    | otherwise = []
-		in dot ++ pathComponents p
+		in dot ++ pathDirectories p
 	}
 
 -- | Retrieves the 'FilePath'&#x2019;s parent directory.
 parent :: FilePath -> FilePath
 parent p = empty
 	{ pathRoot = pathRoot p
-	, pathComponents = let
+	, pathDirectories = let
 		starts = map (Just . B8.pack) [".", ".."]
-		components = if null (filename p)
-			then safeInit (pathComponents p)
-			else pathComponents p
+		directories = if null (filename p)
+			then safeInit (pathDirectories p)
+			else pathDirectories p
 		
-		dot | safeHead components `elem` starts = []
+		dot | safeHead directories `elem` starts = []
 		    | isNothing (pathRoot p) = [B8.pack "."]
 		    | otherwise = []
-		in dot ++ components
+		in dot ++ directories
 	}
 
 -- | Retrieve a 'FilePath'&#x2019;s filename component.
@@ -145,10 +145,10 @@ append :: FilePath -> FilePath -> FilePath
 append x y = if absolute y then y else xy where
 	xy = y
 		{ pathRoot = pathRoot x
-		, pathComponents = components
+		, pathDirectories = directories
 		}
-	components = xComponents ++ pathComponents y
-	xComponents = (pathComponents x ++) $ if null (filename x)
+	directories = xDirectories ++ pathDirectories y
+	xDirectories = (pathDirectories x ++) $ if null (filename x)
 		then []
 		else [filenameBytes x]
 
@@ -167,13 +167,13 @@ commonPrefix [] = empty
 commonPrefix ps = foldr1 step ps where
 	step x y = if pathRoot x /= pathRoot y
 		then empty
-		else let cs = commonComponents x y in
-			if cs /= pathComponents x || pathBasename x /= pathBasename y
-				then empty { pathRoot = pathRoot x, pathComponents = cs }
+		else let cs = commonDirectories x y in
+			if cs /= pathDirectories x || pathBasename x /= pathBasename y
+				then empty { pathRoot = pathRoot x, pathDirectories = cs }
 				else let exts = commonExtensions x y in
 					x { pathExtensions = exts }
 	
-	commonComponents x y = common (pathComponents x) (pathComponents y)
+	commonDirectories x y = common (pathDirectories x) (pathDirectories y)
 	commonExtensions x y = common (pathExtensions x) (pathExtensions y)
 	
 	common [] _ = []

@@ -21,7 +21,7 @@ import           Data.Typeable (Typeable)
 -- File Paths
 -------------------------------------------------------------------------------
 
-type Component = B.ByteString
+type Directory = B.ByteString
 type Basename = B.ByteString
 type Extension = B.ByteString
 
@@ -33,13 +33,13 @@ data Root
 
 data FilePath = FilePath
 	{ pathRoot :: Maybe Root
-	, pathComponents :: [Component]
+	, pathDirectories :: [Directory]
 	, pathBasename :: Maybe Basename
 	, pathExtensions :: [Extension]
 	}
 	deriving (Eq, Ord, Data, Typeable)
 
--- | A file path with no root, components, or filename
+-- | A file path with no root, directories, or filename
 empty :: FilePath
 empty = FilePath Nothing [] Nothing []
 
