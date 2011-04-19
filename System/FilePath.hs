@@ -51,7 +51,6 @@ module System.FilePath
 	) where
 
 import           Prelude hiding (FilePath, concat, null)
-import qualified Prelude as P
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8

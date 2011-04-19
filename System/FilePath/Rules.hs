@@ -35,7 +35,7 @@ import qualified Data.Text.Encoding as TE
 import           Data.Text.Encoding.Error (UnicodeException)
 import           System.IO.Unsafe (unsafePerformIO)
 
-import           System.FilePath hiding (root, filename)
+import           System.FilePath hiding (root, filename, basename)
 import           System.FilePath.Internal
 
 -------------------------------------------------------------------------------
