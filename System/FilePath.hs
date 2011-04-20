@@ -52,10 +52,10 @@ module System.FilePath
 
 import           Prelude hiding (FilePath, concat, null)
 
-import qualified Data.ByteString as B
 import           Data.List (foldl')
 import           Data.Maybe (isNothing)
 import qualified Data.Monoid as M
+import qualified Data.Text as T
 
 import           System.FilePath.Internal
 
@@ -154,7 +154,7 @@ append x y = if absolute y then y else xy where
 	directories = xDirectories ++ pathDirectories y
 	xDirectories = (pathDirectories x ++) $ if null (filename x)
 		then []
-		else [filenameBytes x]
+		else [filenameChunk x]
 
 -- | An alias for 'append'.
 (</>) :: FilePath -> FilePath -> FilePath
@@ -211,29 +211,31 @@ collapse p = p { pathDirectories = reverse newDirs } where
 
 -- | Get a 'FilePath'&#x2019;s last extension, or 'Nothing' if it has no
 -- extensions.
-extension :: FilePath -> Maybe B.ByteString
+extension :: FilePath -> Maybe T.Text
 extension p = case extensions p of
 	[] -> Nothing
 	es -> Just (last es)
 
 -- | Get a 'FilePath'&#x2019;s full extension list.
-extensions :: FilePath -> [B.ByteString]
-extensions = pathExtensions
+extensions :: FilePath -> [T.Text]
+extensions = map chunkText . pathExtensions
 
 -- | Get whether a 'FilePath'&#x2019;s last extension is the predicate.
-hasExtension :: FilePath -> B.ByteString -> Bool
+hasExtension :: FilePath -> T.Text -> Bool
 hasExtension p e = extension p == Just e
 
 -- | Append an extension to the end of a 'FilePath'.
-addExtension :: FilePath -> B.ByteString -> FilePath
+addExtension :: FilePath -> T.Text -> FilePath
 addExtension p ext = addExtensions p [ext]
 
 -- | Append many extensions to the end of a 'FilePath'.
-addExtensions :: FilePath -> [B.ByteString] -> FilePath
-addExtensions p exts = p { pathExtensions = pathExtensions p ++ exts }
+addExtensions :: FilePath -> [T.Text] -> FilePath
+addExtensions p exts = p { pathExtensions = newExtensions } where
+	newExtensions = pathExtensions p ++ chunks
+	chunks = map (\e -> Chunk e True) exts
 
 -- | An alias for 'addExtension'.
-(<.>) :: FilePath -> B.ByteString -> FilePath
+(<.>) :: FilePath -> T.Text -> FilePath
 (<.>) = addExtension
 
 -- | Remove a 'FilePath'&#x2019;s last extension.
@@ -245,20 +247,20 @@ dropExtensions :: FilePath -> FilePath
 dropExtensions p = p { pathExtensions = [] }
 
 -- | Replace a 'FilePath'&#x2019;s last extension.
-replaceExtension :: FilePath -> B.ByteString -> FilePath
+replaceExtension :: FilePath -> T.Text -> FilePath
 replaceExtension = addExtension . dropExtension
 
 -- | Remove all extensions from a 'FilePath', and replace them with a new
 -- list.
-replaceExtensions :: FilePath -> [B.ByteString] -> FilePath
+replaceExtensions :: FilePath -> [T.Text] -> FilePath
 replaceExtensions = addExtensions . dropExtensions
 
 -- | @splitExtension p = ('dropExtension' p, 'extension' p)@
-splitExtension :: FilePath -> (FilePath, Maybe B.ByteString)
+splitExtension :: FilePath -> (FilePath, Maybe T.Text)
 splitExtension p = (dropExtension p, extension p)
 
 -- | @splitExtensions p = ('dropExtensions' p, 'extensions' p)@
-splitExtensions :: FilePath -> (FilePath, [B.ByteString])
+splitExtensions :: FilePath -> (FilePath, [T.Text])
 splitExtensions p = (dropExtensions p, extensions p)
 
 -------------------------------------------------------------------------------

@@ -15,6 +15,8 @@ import System.FilePath as P
 import System.FilePath.CurrentOS ()
 import System.FilePath.Rules
 
+import Debug.Trace
+
 main :: IO ()
 main = F.defaultMain tests
 
@@ -65,7 +67,7 @@ testNull :: F.Test
 testNull = testCases "null"
 	[ assert (P.null empty)
 	, toChar8 posix empty @?= ""
-	, toChar8 windows empty @?= ""
+	, toString windows empty @?= ""
 	]
 
 testRoot :: F.Test
@@ -128,7 +130,7 @@ testFilename =
 testBasename :: F.Test
 testBasename =
 	let tp x y = toChar8 posix (basename (fromChar8 posix x)) @?= y in
-	let tw x y = toChar8 windows (basename (fromChar8 windows x)) @?= y in
+	let tw x y = toString windows (basename (fromString windows x)) @?= y in
 	
 	testCases "basename"
 	[ tp "/foo/bar" "bar"
@@ -158,8 +160,8 @@ testRelative = testCases "relative"
 	, assert $ relative (fromChar8 posix "foo/bar")
 	]
 
-testIdentity :: F.TestName -> Rules -> Gen FilePath -> F.Test
-testIdentity name r gen = testProperty name $ forAll gen $ \p -> p == fromBytes r (toBytes r p)
+testIdentity :: F.TestName -> Rules a -> Gen FilePath -> F.Test
+testIdentity name r gen = testProperty name $ forAll gen $ \p -> p == decode r (encode r p)
 
 testToText :: F.Test
 testToText =
@@ -170,6 +172,7 @@ testToText =
 	, t "ascii" (Right "ascii")
 	, t "\xF0\x9D\x84\x9E" (Right "\x1D11E")
 	, t "\xED\xA0\x80" (Left "\xED\xA0\x80")
+	, t "\xF0\x9D\x84\x9E/\xED\xA0\x80" (Left "\x1D11E/\xED\xA0\x80")
 	]
 
 testFromText :: F.Test
@@ -230,7 +233,7 @@ testCommonPrefix =
 testSplitExtension :: F.Test
 testSplitExtension =
 	let t x (y1, y2) = case splitExtension (fromChar8 posix x) of
-		(base, ext) -> (toChar8 posix base, ext) @?= (y1, fmap B8.pack y2) in
+		(base, ext) -> (toChar8 posix base, ext) @?= (y1, fmap T.pack y2) in
 	
 	testCases "splitExtension"
 	[ t ""              ("", Nothing)
@@ -260,7 +263,7 @@ testCollapse =
 testParsing :: F.Test
 testParsing =
 	let tp x y = toChar8 posix (fromChar8 posix x) @?= y in
-	let tw x y = toChar8 windows (fromChar8 windows x) @?= y in
+	let tw x y = toString windows (fromString windows x) @?= y in
 	
 	testCases "parsing"
 	[ tp "" ""
@@ -296,7 +299,7 @@ testParsing =
 testSplitSearchPath :: F.Test
 testSplitSearchPath =
 	let tp x y = map (toChar8 posix) (splitSearchPath posix (B8.pack x)) @?= y in
-	let tw x y = map (toChar8 windows) (splitSearchPath windows (B8.pack x)) @?= y in
+	let tw x y = map (toString windows) (splitSearchPath windows (T.pack x)) @?= y in
 	
 	testCases "splitSearchPath"
 	[ tp "a:b:c" ["a", "b", "c"]
@@ -321,7 +324,7 @@ windowsPaths = sized $ \n -> genComponents n >>= merge where
 	merge cs = do
 		root <- genRoot
 		let path = intercalate "\\" cs
-		return $ fromChar8 windows $ root ++ path
+		return $ fromString windows $ root ++ path
 		
 	reserved = ['\x00'..'\x1F'] ++ ['/', '\\', '?', '*', ':', '|', '"', '<', '>']
 	validChar c = not $ elem c reserved
@@ -339,11 +342,17 @@ windowsPaths = sized $ \n -> genComponents n >>= merge where
 			Just c -> [c, ':', '\\']
 			Nothing -> "\\"
 
-toChar8 :: Rules -> FilePath -> String
-toChar8 r = B8.unpack . toBytes r
+toChar8 :: Rules B.ByteString -> FilePath -> String
+toChar8 r = B8.unpack . encode r
 
-fromChar8 :: Rules -> String -> FilePath
-fromChar8 r = fromBytes r . B8.pack
+fromChar8 :: Rules B.ByteString -> String -> FilePath
+fromChar8 r = decode r . B8.pack
+
+toString :: Rules T.Text -> FilePath -> String
+toString r = T.unpack . encode r
+
+fromString :: Rules T.Text -> String -> FilePath
+fromString r = decode r . T.pack
 
 emap :: (a -> c) -> (b -> d) -> Either a b -> Either c d
 emap f1 f2 = either (Left . f1) (Right . f2)

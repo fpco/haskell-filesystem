@@ -12,10 +12,10 @@ module System.FilePath.Rules
 	, windows
 	
 	-- * Type conversions
-	, toBytes
-	, fromBytes
 	, toText
 	, fromText
+	, encode
+	, decode
 	
 	-- * Rule&#x2010;specific path properties
 	, valid
@@ -39,64 +39,17 @@ import           System.FilePath hiding (root, filename, basename)
 import           System.FilePath.Internal
 
 -------------------------------------------------------------------------------
--- Public helpers
--------------------------------------------------------------------------------
-
--- | Convert a 'FilePath' into a strict 'B.ByteString', suitable for passing
--- to OS libraries.
-toBytes :: Rules -> FilePath -> B.ByteString
-toBytes r = B.concat . toByteChunks r
-
--- | Attempt to convert a 'FilePath' to human&#x2010;readable text.
---
--- If the path is decoded successfully, the result is a 'Right' containing
--- the decoded text. Successfully decoded text can be converted back to the
--- original path using 'fromText'.
---
--- If the path cannot be decoded, the result is a 'Left' containing an
--- approximation of the original path. If displayed to the user, this value
--- should be accompanied by some warning that the path has an invalid
--- encoding. Approximated text cannot be converted back to the original path.
---
--- This function ignores the user&#x2019;s locale, and assumes all file paths
--- are encoded in UTF8. If you need to display file paths with an unusual or
--- obscure encoding, use 'toBytes' and then decode them manually.
---
--- Since: 0.2
-toText :: Rules -> FilePath -> Either T.Text T.Text
-toText r path = encoded where
-	bytes = toBytes r path
-	encoded = case maybeDecodeUtf8 bytes of
-		Just text -> Right text
-		Nothing -> Left (T.pack (B8.unpack bytes))
-
--- | Convert human&#x2010;readable text into a 'FilePath'.
---
--- This function ignores the user&#x2019;s locale, and assumes all file paths
--- are encoded in UTF8. If you need to create file paths with an unusual or
--- obscure encoding, encode them manually and then use 'fromBytes'.
---
--- Since: 0.2
-fromText :: Rules -> T.Text -> FilePath
-fromText r text = fromBytes r (TE.encodeUtf8 text)
-
--------------------------------------------------------------------------------
 -- Generic
 -------------------------------------------------------------------------------
 
-rootBytes :: Maybe Root -> B.ByteString
-rootBytes r = B8.pack $ flip (maybe "") r $ \r' -> case r' of
+rootText :: Maybe Root -> T.Text
+rootText r = T.pack $ flip (maybe "") r $ \r' -> case r' of
 	RootPosix -> "/"
 	RootWindowsVolume c -> c : ":\\"
 	RootWindowsCurrentVolume -> "\\"
 
-byteDirectories :: FilePath -> [B.ByteString]
-byteDirectories path = pathDirectories path ++ [filenameBytes path]
-
-upperBytes :: B.ByteString -> B.ByteString
-upperBytes bytes = (`B.map` bytes) $ \b -> if b >= 0x41 && b <= 0x5A
-	then b + 0x20
-	else b
+directoryChunks :: FilePath -> [Chunk]
+directoryChunks path = pathDirectories path ++ [filenameChunk path]
 
 maybeDecodeUtf8 :: B.ByteString -> Maybe T.Text
 maybeDecodeUtf8 = excToMaybe . TE.decodeUtf8 where
@@ -113,49 +66,71 @@ maybeDecodeUtf8 = excToMaybe . TE.decodeUtf8 where
 -------------------------------------------------------------------------------
 
 -- | Linux, BSD, OS X, and other UNIX or UNIX-like operating systems.
-posix :: Rules
+posix :: Rules B.ByteString
 posix = Rules
-	{ rulesName = "POSIX"
-	, toByteChunks = posixToByteChunks
-	, fromBytes = posixFromBytes
+	{ rulesName = T.pack "POSIX"
 	, valid = posixValid
 	, splitSearchPath = posixSplitSearch
+	, toText = posixToText
+	, fromText = posixFromText
+	, encode = posixToBytes
+	, decode = posixFromBytes
 	}
 
-posixToByteChunks :: FilePath -> [B.ByteString]
-posixToByteChunks p = root : chunks where
-	root = rootBytes $ pathRoot p
-	chunks = intersperse (B8.pack "/") $ byteDirectories p
+posixToText :: FilePath -> Either T.Text T.Text
+posixToText p = if good then Right text else Left text where
+	good = and (map chunkGood chunks)
+	text = T.concat (root : map chunkText chunks)
+	
+	root = rootText (pathRoot p)
+	chunks = intersperse (Chunk (T.pack "/") True) (directoryChunks p)
 
-posixFromBytes :: B.ByteString -> FilePath
-posixFromBytes bytes = if B.null bytes then empty else path where
-	path = FilePath root directories basename exts
-	
-	split = B.split 0x2F bytes
-	
-	(root, pastRoot) = if B.null (head split)
-		then (Just RootPosix, tail split)
-		else (Nothing, split)
+posixFromChunks :: [Chunk] -> FilePath
+posixFromChunks chunks = FilePath root directories basename exts where
+	(root, pastRoot) = if T.null (chunkText (head chunks))
+		then (Just RootPosix, tail chunks)
+		else (Nothing, chunks)
 	
 	(directories, filename)
-		| P.null pastRoot = ([], B.empty)
+		| P.null pastRoot = ([], Chunk T.empty True)
 		| otherwise = case last pastRoot of
-			fn | fn == dot -> (goodDirs pastRoot, B.empty)
-			fn | fn == dots -> (goodDirs pastRoot, B.empty)
+			fn | fn == dot -> (goodDirs pastRoot, Chunk T.empty True)
+			fn | fn == dots -> (goodDirs pastRoot, Chunk T.empty True)
 			fn -> (goodDirs (init pastRoot), fn)
 	
-	goodDirs = filter (not . B.null)
+	goodDirs = filter (not . T.null . chunkText)
 	
-	(basename, exts) = if B.null filename
+	-- TODO: handle 'good' flag for basename and extensions individually
+	(basename, exts) = if T.null (chunkText filename)
 		then (Nothing, [])
-		else case B.split 0x2E filename of
+		else case T.split (== '.') (chunkText filename) of
 			[] -> (Nothing, [])
-			(name':exts') -> (Just name', exts')
+			(name':exts') -> (Just (Chunk name' (chunkGood filename)) , map (\e -> Chunk e (chunkGood filename)) exts')
+
+posixFromText :: T.Text -> FilePath
+posixFromText text = if T.null text
+	then empty
+	else posixFromChunks (map (\t -> Chunk t True) (T.split (== '/') text))
+
+posixToBytes :: FilePath -> B.ByteString
+posixToBytes p = B.concat (root : chunks) where
+	root = TE.encodeUtf8 (rootText (pathRoot p))
+	chunks = intersperse (B8.pack "/") (map chunkBytes (directoryChunks p))
+	chunkBytes c = if chunkGood c
+		then TE.encodeUtf8 (chunkText c)
+		else B8.pack (T.unpack (chunkText c))
+
+posixFromBytes :: B.ByteString -> FilePath
+posixFromBytes bytes = if B.null bytes
+	then empty
+	else posixFromChunks $ flip map (B.split 0x2F bytes) $ \b -> case maybeDecodeUtf8 b of
+		Just text -> Chunk text True
+		Nothing -> Chunk (T.pack (B8.unpack b)) False
 
 posixValid :: FilePath -> Bool
 posixValid p = validRoot && validDirectories where
-	validDirectories = flip all (byteDirectories p)
-		$ not . B.any (\b -> b == 0 || b == 0x2F)
+	validDirectories = all validChunk (directoryChunks p)
+	validChunk ch = not (T.any (\c -> c == '\0' || c == '/') (chunkText ch))
 	validRoot = case pathRoot p of
 		Nothing -> True
 		Just RootPosix -> True
@@ -163,64 +138,65 @@ posixValid p = validRoot && validDirectories where
 
 posixSplitSearch :: B.ByteString -> [FilePath]
 posixSplitSearch = map (posixFromBytes . normSearch) . B.split 0x3A where
-	normSearch bytes = if B.null bytes then dot else bytes
+	normSearch bytes = if B.null bytes then B8.pack "." else bytes
 
 -------------------------------------------------------------------------------
 -- Windows
 -------------------------------------------------------------------------------
 
 -- | Windows and DOS
-windows :: Rules
+windows :: Rules T.Text
 windows = Rules
-	{ rulesName = "Windows"
-	, toByteChunks = winToByteChunks
-	, fromBytes = winFromBytes
+	{ rulesName = T.pack "Windows"
 	, valid = winValid
-	, splitSearchPath = map winFromBytes . filter (not . B.null) . B.split 0x3B
+	, splitSearchPath = winSplit
+	, toText = Right . winToText
+	, fromText = winFromText
+	, encode = winToText
+	, decode = winFromText
 	}
 
-winToByteChunks :: FilePath -> [B.ByteString]
-winToByteChunks p = root : chunks where
-	root = rootBytes $ pathRoot p
-	chunks = intersperse (B8.pack "\\") $ byteDirectories p
+winToText :: FilePath -> T.Text
+winToText p = T.concat (root : chunks) where
+	root = rootText (pathRoot p)
+	chunks = intersperse (T.pack "\\") (map chunkText (directoryChunks p))
 
-winFromBytes :: B.ByteString -> FilePath
-winFromBytes bytes = if B.null bytes then empty else path where
+winFromText :: T.Text -> FilePath
+winFromText text = if T.null text then empty else path where
 	path = FilePath root directories basename exts
 	
-	split = B.splitWith (\b -> b == 0x2F || b == 0x5C) bytes
+	split = T.split (\c -> c == '/' || c == '\\') text
 	
 	(root, pastRoot) = let
 		head' = head split
 		tail' = tail split
-		in if B.null head'
+		in if T.null head'
 			then (Just RootWindowsCurrentVolume, tail')
-			else if B.elem 0x3A head'
+			else if T.any (== ':') head'
 				then (Just (parseDrive head'), tail')
 				else (Nothing, split)
 	
-	parseDrive bytes' = RootWindowsVolume c where
-		c = (toUpper . chr . fromIntegral . B.head) bytes'
+	parseDrive = RootWindowsVolume . toUpper . T.head
 	
 	(directories, filename)
-		| P.null pastRoot = ([], B.empty)
+		| P.null pastRoot = ([], T.empty)
 		| otherwise = case last pastRoot of
-			fn | fn == dot -> (goodDirs pastRoot, B.empty)
-			fn | fn == dots -> (goodDirs pastRoot, B.empty)
+			fn | fn == chunkText dot -> (goodDirs pastRoot, T.empty)
+			fn | fn == chunkText dots -> (goodDirs pastRoot, T.empty)
 			fn -> (goodDirs (init pastRoot), fn)
 	
-	goodDirs = filter (not . B.null)
+	goodDirs = map (\t -> Chunk t True) . filter (not . T.null)
 	
-	(basename, exts) = if B.null filename
+	(basename, exts) = if T.null filename
 		then (Nothing, [])
-		else case B.split 0x2E filename of
+		else case T.split (== '.') filename of
 			[] -> (Nothing, [])
-			(name':exts') -> (Just name', exts')
+			(name':exts') -> (Just (Chunk name' True), map (\e -> Chunk e True) exts')
 
 winValid :: FilePath -> Bool
 winValid p = validRoot && noReserved && validCharacters where
-	reservedChars = [0..0x1F] ++ [0x2F, 0x5C, 0x3F, 0x2A, 0x3A, 0x7C, 0x22, 0x3C, 0x3E]
-	reservedNames = map B8.pack
+	reservedChars = map chr [0..0x1F] ++ "/\\?*:|\"<>"
+	reservedNames = map T.pack
 		[ "AUX", "CLOCK$", "COM1", "COM2", "COM3", "COM4"
 		, "COM5", "COM6", "COM7", "COM8", "COM9", "CON"
 		, "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6"
@@ -230,12 +206,15 @@ winValid p = validRoot && noReserved && validCharacters where
 	validRoot = case pathRoot p of
 		Nothing -> True
 		Just RootWindowsCurrentVolume -> True
-		Just (RootWindowsVolume v) -> elem (toUpper v) ['A'..'Z']
+		Just (RootWindowsVolume v) -> elem v ['A'..'Z']
 		_ -> False
 	
 	noExt = p { pathExtensions = [] }
-	noReserved = flip all (byteDirectories noExt)
-		$ \c -> notElem (upperBytes c) reservedNames
+	noReserved = flip all (directoryChunks noExt)
+		$ \fn -> notElem (T.toUpper (chunkText fn)) reservedNames
 	
-	validCharacters = flip all (byteDirectories p)
-		$ not . B.any (`elem` reservedChars)
+	validCharacters = flip all (directoryChunks p)
+		$ not . T.any (`elem` reservedChars) . chunkText
+
+winSplit :: T.Text -> [FilePath]
+winSplit = map winFromText . filter (not . T.null) . T.split (== ';')

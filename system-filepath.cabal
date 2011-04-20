@@ -1,5 +1,5 @@
 name: system-filepath
-version: 0.2.1
+version: 0.3
 synopsis: High-level, byte-based file and directory path manipulations
 license: MIT
 license-file: license.txt

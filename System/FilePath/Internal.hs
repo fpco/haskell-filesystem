@@ -10,20 +10,26 @@
 --
 module System.FilePath.Internal where
 
-import Prelude hiding (FilePath)
+import           Prelude hiding (FilePath)
 
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Char8 as B8
 import           Data.Data (Data)
+import           Data.List (intersperse)
+import qualified Data.Text as T
 import           Data.Typeable (Typeable)
 
 -------------------------------------------------------------------------------
 -- File Paths
 -------------------------------------------------------------------------------
 
-type Directory = B.ByteString
-type Basename = B.ByteString
-type Extension = B.ByteString
+data Chunk = Chunk
+	{ chunkText :: T.Text
+	, chunkGood :: Bool
+	}
+	deriving (Eq, Ord, Data, Typeable)
+
+type Directory = Chunk
+type Basename = Chunk
+type Extension = Chunk
 
 data Root
 	= RootPosix
@@ -43,41 +49,80 @@ data FilePath = FilePath
 empty :: FilePath
 empty = FilePath Nothing [] Nothing []
 
-dot :: B.ByteString
-dot = B8.pack "."
+dot :: Chunk
+dot = Chunk (T.pack ".") True
 
-dots :: B.ByteString
-dots = B8.pack ".."
+dots :: Chunk
+dots = Chunk (T.pack "..") True
 
-filenameBytes :: FilePath -> B.ByteString
-filenameBytes p = B.append name ext where
-	name = maybe B.empty id (pathBasename p)
-	ext = case pathExtensions p of
-		[] -> B.empty
-		exts -> B.intercalate dot (B.empty:exts)
+filenameChunk :: FilePath -> Chunk
+filenameChunk p = Chunk (T.concat texts) (and good) where
+	name = maybe (Chunk T.empty True) id (pathBasename p)
+	exts = case pathExtensions p of
+		[] -> []
+		exts' -> intersperse dot ((Chunk T.empty True):exts')
+	chunks = name:exts
+	
+	texts = map chunkText chunks
+	good = map chunkGood chunks
 
 -------------------------------------------------------------------------------
 -- Rules
 -------------------------------------------------------------------------------
 
-data Rules = Rules
-	{ rulesName :: String
-	, toByteChunks :: FilePath -> [B.ByteString]
+data Rules platformFormat = Rules
+	{ rulesName :: T.Text
 	
-	-- | Parse a strict 'B.ByteString', such as  those received from
-	-- OS libraries, into a 'FilePath'.
-	, fromBytes :: B.ByteString -> FilePath
-	
-	-- | Check if a 'FilePath' is valid; it must not contain
-	-- any illegal characters, and must have a root appropriate to the
-	-- current 'Rules'.
+	-- | Check if a 'FilePath' is valid; it must not contain any illegal
+	-- characters, and must have a root appropriate to the current
+	-- 'Rules'.
 	, valid :: FilePath -> Bool
 	
 	-- | Split a search path, such as @$PATH@ or @$PYTHONPATH@, into
 	-- a list of 'FilePath's.
-	, splitSearchPath :: B.ByteString -> [FilePath]
+	, splitSearchPath :: platformFormat -> [FilePath]
+	
+	-- | Attempt to convert a 'FilePath' to human&#x2010;readable text.
+	--
+	-- If the path is decoded successfully, the result is a 'Right'
+	-- containing the decoded text. Successfully decoded text can be
+	-- converted back to the original path using 'fromText'.
+	--
+	-- If the path cannot be decoded, the result is a 'Left' containing an
+	-- approximation of the original path. If displayed to the user, this
+	-- value should be accompanied by some warning that the path has an
+	-- invalid encoding. Approximated text cannot be converted back to the
+	-- original path.
+	--
+	-- This function ignores the user&#x2019;s locale, and assumes all
+	-- file paths are encoded in UTF8. If you need to display file paths
+	-- with an unusual or obscure encoding, use 'toBytes' and then decode
+	-- them manually.
+	--
+	-- Since: 0.2
+	, toText :: FilePath -> Either T.Text T.Text
+	
+	-- | Convert human&#x2010;readable text into a 'FilePath'.
+	--
+	-- This function ignores the user&#x2019;s locale, and assumes all
+	-- file paths are encoded in UTF8. If you need to create file paths
+	-- with an unusual or obscure encoding, encode them manually and then
+	-- use 'fromBytes'.
+	--
+	-- Since: 0.2
+	, fromText :: T.Text -> FilePath
+	
+	-- | Convert a 'FilePath' to the platform&#x2019;s underlying format.
+	--
+	-- Since: 0.3
+	, encode :: FilePath -> platformFormat
+	
+	-- | Convert the platform&#x2019;s underlying format to a 'FilePath'.
+	--
+	-- Since: 0.3
+	, decode :: platformFormat -> FilePath
 	}
 
-instance Show Rules where
-	showsPrec d r = showParen (d > 10) $
-		showString "Rules " . shows (rulesName r)
+instance Show (Rules a) where
+	showsPrec d r = showParen (d > 10)
+		(showString "Rules " . shows (rulesName r))

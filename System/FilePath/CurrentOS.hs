@@ -18,10 +18,10 @@ module System.FilePath.CurrentOS
 	, currentOS
 	
 	-- * Type conversions
-	, toBytes
-	, fromBytes
 	, toText
 	, fromText
+	, encode
+	, decode
 	
 	-- * Rule&#x2010;specific path properties
 	, valid
@@ -36,7 +36,13 @@ import           System.FilePath
 import qualified System.FilePath as F
 import qualified System.FilePath.Rules as R
 
-currentOS :: R.Rules
+#if defined(CABAL_OS_WINDOWS)
+#define PLATFORM_PATH_FORMAT T.Text
+#else
+#define PLATFORM_PATH_FORMAT B.ByteString
+#endif
+
+currentOS :: R.Rules PLATFORM_PATH_FORMAT
 #if defined(CABAL_OS_WINDOWS)
 currentOS = R.windows
 #else
@@ -48,17 +54,7 @@ instance S.IsString F.FilePath where
 
 instance Show F.FilePath where
 	showsPrec d path = showParen (d > 10) $
-		showString "FilePath " . shows (toBytes path)
-
--- | Convert a 'FilePath' into a strict 'B.ByteString', suitable for passing
--- to OS libraries.
-toBytes :: F.FilePath -> B.ByteString
-toBytes = R.toBytes currentOS
-
--- | Parse a strict 'B.ByteString', such as  those received from OS libraries,
--- into a 'FilePath'.
-fromBytes :: B.ByteString -> F.FilePath
-fromBytes = R.fromBytes currentOS
+		showString "FilePath " . shows (toText path)
 
 -- | Attempt to convert a 'FilePath' to human&#x2010;readable text.
 --
@@ -96,5 +92,11 @@ valid = R.valid currentOS
 
 -- | Split a search path, such as @$PATH@ or @$PYTHONPATH@, into a list
 -- of 'FilePath's.
-splitSearchPath :: B.ByteString -> [F.FilePath]
+splitSearchPath :: PLATFORM_PATH_FORMAT -> [F.FilePath]
 splitSearchPath = R.splitSearchPath currentOS
+
+encode :: F.FilePath -> PLATFORM_PATH_FORMAT
+encode = R.encode currentOS
+
+decode :: PLATFORM_PATH_FORMAT -> F.FilePath
+decode = R.decode currentOS
