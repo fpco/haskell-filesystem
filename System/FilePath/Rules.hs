@@ -140,8 +140,8 @@ posixFromBytes bytes = if B.null bytes then empty else path where
 	(directories, filename)
 		| P.null pastRoot = ([], B.empty)
 		| otherwise = case last pastRoot of
-			fn | fn == B8.pack "." -> (goodDirs pastRoot, B.empty)
-			fn | fn == B8.pack ".." -> (goodDirs pastRoot, B.empty)
+			fn | fn == dot -> (goodDirs pastRoot, B.empty)
+			fn | fn == dots -> (goodDirs pastRoot, B.empty)
 			fn -> (goodDirs (init pastRoot), fn)
 	
 	goodDirs = filter (not . B.null)
@@ -163,7 +163,7 @@ posixValid p = validRoot && validDirectories where
 
 posixSplitSearch :: B.ByteString -> [FilePath]
 posixSplitSearch = map (posixFromBytes . normSearch) . B.split 0x3A where
-	normSearch bytes = if B.null bytes then B8.pack "." else bytes
+	normSearch bytes = if B.null bytes then dot else bytes
 
 -------------------------------------------------------------------------------
 -- Windows
@@ -205,8 +205,8 @@ winFromBytes bytes = if B.null bytes then empty else path where
 	(directories, filename)
 		| P.null pastRoot = ([], B.empty)
 		| otherwise = case last pastRoot of
-			fn | fn == B8.pack "." -> (goodDirs pastRoot, B.empty)
-			fn | fn == B8.pack ".." -> (goodDirs pastRoot, B.empty)
+			fn | fn == dot -> (goodDirs pastRoot, B.empty)
+			fn | fn == dots -> (goodDirs pastRoot, B.empty)
 			fn -> (goodDirs (init pastRoot), fn)
 	
 	goodDirs = filter (not . B.null)

@@ -53,7 +53,6 @@ module System.FilePath
 import           Prelude hiding (FilePath, concat, null)
 
 import qualified Data.ByteString as B
-import qualified Data.ByteString.Char8 as B8
 import           Data.List (foldl')
 import           Data.Maybe (isNothing)
 import qualified Data.Monoid as M
@@ -83,11 +82,11 @@ directory :: FilePath -> FilePath
 directory p = empty
 	{ pathRoot = pathRoot p
 	, pathDirectories = let
-		starts = map (Just . B8.pack) [".", ".."]
-		dot | safeHead (pathDirectories p) `elem` starts = []
-		    | isNothing (pathRoot p) = [B8.pack "."]
-		    | otherwise = []
-		in dot ++ pathDirectories p
+		starts = map Just [dot, dots]
+		dot' | safeHead (pathDirectories p) `elem` starts = []
+		     | isNothing (pathRoot p) = [dot]
+		     | otherwise = []
+		in dot' ++ pathDirectories p
 	}
 
 -- | Retrieves the 'FilePath'&#x2019;s parent directory.
@@ -95,15 +94,15 @@ parent :: FilePath -> FilePath
 parent p = empty
 	{ pathRoot = pathRoot p
 	, pathDirectories = let
-		starts = map (Just . B8.pack) [".", ".."]
+		starts = map Just [dot, dots]
 		directories = if null (filename p)
 			then safeInit (pathDirectories p)
 			else pathDirectories p
 		
-		dot | safeHead directories `elem` starts = []
-		    | isNothing (pathRoot p) = [B8.pack "."]
-		    | otherwise = []
-		in dot ++ directories
+		dot' | safeHead directories `elem` starts = []
+		     | isNothing (pathRoot p) = [dot]
+		     | otherwise = []
+		in dot' ++ directories
 	}
 
 -- | Retrieve a 'FilePath'&#x2019;s filename component.
@@ -196,9 +195,6 @@ commonPrefix ps = foldr1 step ps where
 collapse :: FilePath -> FilePath
 collapse p = p { pathDirectories = reverse newDirs } where
 	(_, newDirs) = foldl' step (True, []) (pathDirectories p)
-	
-	dot = B8.pack "."
-	dots = B8.pack ".."
 	
 	step (True, acc) c = (False, c:acc)
 	step (_, acc) c | c == dot = (False, acc)

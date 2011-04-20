@@ -43,12 +43,18 @@ data FilePath = FilePath
 empty :: FilePath
 empty = FilePath Nothing [] Nothing []
 
+dot :: B.ByteString
+dot = B8.pack "."
+
+dots :: B.ByteString
+dots = B8.pack ".."
+
 filenameBytes :: FilePath -> B.ByteString
 filenameBytes p = B.append name ext where
 	name = maybe B.empty id (pathBasename p)
 	ext = case pathExtensions p of
 		[] -> B.empty
-		exts -> B.intercalate (B8.pack ".") (B.empty:exts)
+		exts -> B.intercalate dot (B.empty:exts)
 
 -------------------------------------------------------------------------------
 -- Rules
