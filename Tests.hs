@@ -305,9 +305,6 @@ testSplitSearchPath =
 	, tw "a;;b;c" ["a", "b", "c"]
 	]
 
-instance Arbitrary Rules where
-	arbitrary = elements [posix, windows]
-
 posixPaths :: Gen FilePath
 posixPaths = sized $ fmap merge . genComponents where
 	merge = fromChar8 posix . intercalate "/"
