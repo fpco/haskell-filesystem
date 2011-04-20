@@ -26,6 +26,9 @@ library
     , bytestring >= 0.9 && < 0.10
     , text >= 0.3 && < 0.12
 
+  if os(windows)
+    cpp-options: -DCABAL_OS_WINDOWS
+
   exposed-modules:
     System.FilePath
     System.FilePath.CurrentOS
