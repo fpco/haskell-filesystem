@@ -100,12 +100,17 @@ posixFromChunks chunks = FilePath root directories basename exts where
 	
 	goodDirs = filter (not . T.null . chunkText)
 	
-	-- TODO: handle 'good' flag for basename and extensions individually
 	(basename, exts) = if T.null (chunkText filename)
 		then (Nothing, [])
 		else case T.split (== '.') (chunkText filename) of
 			[] -> (Nothing, [])
-			(name':exts') -> (Just (Chunk name' (chunkGood filename)) , map (\e -> Chunk e (chunkGood filename)) exts')
+			(name':exts') -> if chunkGood filename
+				then (Just (Chunk name' True), map (\e -> Chunk e True) exts')
+				else (Just (checkChunk name'), map checkChunk exts')
+	
+	checkChunk raw = case maybeDecodeUtf8 (B8.pack (T.unpack raw)) of
+		Just text -> Chunk text True
+		Nothing -> Chunk raw False
 
 posixFromText :: T.Text -> FilePath
 posixFromText text = if T.null text
