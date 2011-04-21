@@ -53,8 +53,10 @@ instance S.IsString F.FilePath where
 	fromString = R.fromText currentOS . T.pack
 
 instance Show F.FilePath where
-	showsPrec d path = showParen (d > 10) $
-		showString "FilePath " . shows (toText path)
+	showsPrec d path = showParen (d > 10) (ss "FilePath " . s txt) where
+		s = shows
+		ss = showString
+		txt = either id id (toText path)
 
 -- | Attempt to convert a 'FilePath' to human&#x2010;readable text.
 --
