@@ -1,3 +1,5 @@
+{-# LANGUAGE PackageImports #-}
+
 -- |
 -- Module: System.File
 -- Copyright: 2011 John Millikin
@@ -12,6 +14,9 @@
 module System.File
 	( IO.Handle
 	, IO.IOMode(..)
+	
+	-- * File operations
+	, copyFile
 	
 	-- * Binary files
 	, openFile
@@ -36,6 +41,19 @@ import qualified Data.Text.IO as T
 import qualified System.IO as IO
 import           System.FilePath (FilePath)
 import           System.FileIO.Internal (encode)
+
+import qualified "directory" System.Directory as SD
+
+-- | Copy a file to a new entry in the filesystem. If a file already exists
+-- at the new location, it will be replaced.
+--
+-- See: 'SD.copyFile'
+--
+-- Since: 0.1.1
+copyFile :: FilePath -- ^ Old location
+         -> FilePath -- ^ New location
+         -> IO ()
+copyFile old new = SD.copyFile (encode old) (encode new)
 
 -- | Open a file in binary mode, and return an open 'Handle'. The 'Handle'
 -- should be 'IO.hClose'd when it is no longer needed.
