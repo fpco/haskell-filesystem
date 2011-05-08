@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE PackageImports #-}
 
 -- |
@@ -21,6 +22,7 @@ module System.Directory
 	, fileSize
 	, rename
 	, modified
+	, canonicalizePath
 	, listDirectory
 	
 	-- * Creating things
@@ -49,6 +51,8 @@ import           Prelude hiding (FilePath)
 
 import qualified Control.Exception as Exc
 import qualified Data.Text as T
+import           Foreign.Ptr (nullPtr)
+import           Foreign.C (CString, withCString, peekCString)
 import qualified System.Environment as SE
 import           System.FilePath (FilePath, append)
 import           System.FilePath.CurrentOS (currentOS)
@@ -69,6 +73,7 @@ import qualified System.Win32 as Win32
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified System.Posix as Posix
+import qualified System.Posix.Error as Posix
 
 #endif
 
@@ -142,6 +147,33 @@ rename old new =
 	Win32.moveFileEx old' new' Win32.mOVEFILE_REPLACE_EXISTING
 #else
 	Posix.rename old' new'
+#endif
+
+-- Resolve symlinks and \"..\" path elements to return a canonical path.
+-- It is intended that two paths referring to the same object will always
+-- resolve to the same canonical path.
+--
+-- Note that on many operating systems, it is impossible to guarantee that
+-- two paths to the same file will resolve to the same canonical path.
+--
+-- See: 'SD.canonicalizePath'
+--
+-- Since: 0.1.1
+canonicalizePath :: FilePath -> IO FilePath
+canonicalizePath path =
+	let path' = encode path in
+#ifdef CABAL_OS_WINDOWS
+	fmap decode (Win32.getFullPathName path')
+#else
+	withCString path' $ \cPath -> do
+		cOut <- Posix.throwErrnoPathIfNull "canonicalizePath" path' (c_realpath cPath nullPtr)
+		out <- peekCString cOut
+		return (decode out)
+#endif
+
+#ifndef CABAL_OS_WINDOWS
+foreign import ccall unsafe "realpath"
+	c_realpath :: CString -> CString -> IO CString
 #endif
 
 -- | Create a directory at a given path. The user may choose whether it is

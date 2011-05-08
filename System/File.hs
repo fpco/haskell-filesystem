@@ -1,3 +1,5 @@
+{-# LANGUAGE PackageImports #-}
+
 -- |
 -- Module: System.File
 -- Copyright: 2011 John Millikin
@@ -10,8 +12,11 @@
 -- computations. See the linked documentation for each computation for
 -- details on exceptions and operating system interaction.
 module System.File
-	( Handle
-	, Mode
+	( IO.Handle
+	, IO.IOMode(..)
+	
+	-- * File operations
+	, copyFile
 	
 	-- * Binary files
 	, openFile
@@ -37,11 +42,18 @@ import qualified System.IO as IO
 import           System.FilePath (FilePath)
 import           System.FileIO.Internal (encode)
 
--- | Re&#x2010;exported for convenience.
-type Handle = IO.Handle
+import qualified "directory" System.Directory as SD
 
--- | Re&#x2010;exported for convenience.
-type Mode = IO.IOMode
+-- | Copy a file to a new entry in the filesystem. If a file already exists
+-- at the new location, it will be replaced.
+--
+-- See: 'SD.copyFile'
+--
+-- Since: 0.1.1
+copyFile :: FilePath -- ^ Old location
+         -> FilePath -- ^ New location
+         -> IO ()
+copyFile old new = SD.copyFile (encode old) (encode new)
 
 -- | Open a file in binary mode, and return an open 'Handle'. The 'Handle'
 -- should be 'IO.hClose'd when it is no longer needed.
@@ -50,7 +62,7 @@ type Mode = IO.IOMode
 -- lifetime automatically.
 --
 -- See: 'IO.openBinaryFile'
-openFile :: FilePath -> Mode -> IO IO.Handle
+openFile :: FilePath -> IO.IOMode -> IO IO.Handle
 openFile path = IO.openBinaryFile (encode path)
 
 -- | Open a file in binary mode, and pass its 'Handle' to a provided
@@ -58,7 +70,7 @@ openFile path = IO.openBinaryFile (encode path)
 -- computation returns.
 --
 -- See: 'IO.withBinaryFile'
-withFile :: FilePath -> Mode -> (IO.Handle -> IO a) -> IO a
+withFile :: FilePath -> IO.IOMode -> (IO.Handle -> IO a) -> IO a
 withFile path = IO.withBinaryFile (encode path)
 
 -- | Read in the entire contents of a binary file.
@@ -88,7 +100,7 @@ appendFile path = B.appendFile (encode path)
 -- 'Handle'&#x2019;s lifetime automatically.
 --
 -- See: 'IO.openFile'
-openTextFile :: FilePath -> Mode -> IO IO.Handle
+openTextFile :: FilePath -> IO.IOMode -> IO IO.Handle
 openTextFile path = IO.openFile (encode path)
 
 -- | Open a file in text mode, and pass its 'Handle' to a provided
@@ -96,7 +108,7 @@ openTextFile path = IO.openFile (encode path)
 -- computation returns.
 --
 -- See: 'IO.withFile'
-withTextFile :: FilePath -> Mode -> (IO.Handle -> IO a) -> IO a
+withTextFile :: FilePath -> IO.IOMode -> (IO.Handle -> IO a) -> IO a
 withTextFile path = IO.withFile (encode path)
 
 -- | Read in the entire contents of a text file.
