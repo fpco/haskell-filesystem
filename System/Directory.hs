@@ -16,12 +16,10 @@
 module System.Directory
 	(
 	
-	-- * File and directory attributes
+	-- * Generic operations
 	  isFile
 	, isDirectory
-	, fileSize
 	, rename
-	, modified
 	, canonicalizePath
 	, listDirectory
 	
@@ -61,17 +59,10 @@ import           System.IO.Error (isDoesNotExistError)
 
 #ifdef CABAL_OS_WINDOWS
 
-import           Data.Bits ((.|.))
-import           Data.Time ( UTCTime(..)
-                           , fromGregorian
-                           , secondsToDiffTime
-                           , picosecondsToDiffTime)
 import qualified System.Win32 as Win32
 
 #else
 
-import           Data.Time (UTCTime)
-import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified System.Posix as Posix
 import qualified System.Posix.Error as Posix
 
@@ -93,47 +84,6 @@ isFile path = SD.doesFileExist (encode path)
 -- See: 'SD.doesDirectoryExist'
 isDirectory :: FilePath -> IO Bool
 isDirectory path = SD.doesDirectoryExist (encode path)
-
--- | Get when the object at a given path was last modified.
-modified :: FilePath -> IO UTCTime
-modified path = do
-#ifdef CABAL_OS_WINDOWS
-	info <- withHANDLE path Win32.getFileInformationByHandle
-	let ftime = Win32.bhfiLastWriteTime info
-	stime <- Win32.fileTimeToSystemTime ftime
-	
-	let date = fromGregorian
-		(fromIntegral (Win32.wYear stime))
-		(fromIntegral (Win32.wMonth stime))
-		(fromIntegral (Win32.wDay stime))
-	
-	let seconds = secondsToDiffTime $
-		(toInteger (Win32.wHour stime) * 3600) +
-		(toInteger (Win32.wMinute stime) * 60) +
-		(toInteger (Win32.wSecond stime))
-	
-	let msecs = picosecondsToDiffTime $
-		(toInteger (Win32.wMilliseconds stime) * 1000000000)
-	
-	return (UTCTime date (seconds + msecs))
-#else
-	stat <- Posix.getFileStatus (encode path)
-	let mtime = Posix.modificationTime stat
-	return (posixSecondsToUTCTime (realToFrac mtime))
-#endif
-
--- | Get the size of an object at a given path. For special objects like
--- links or directories, the size is filesystem&#x2010; and
--- platform&#x2010;dependent.
-fileSize :: FilePath -> IO Integer
-fileSize path = do
-#ifdef CABAL_OS_WINDOWS
-	info <- withHANDLE path Win32.getFileInformationByHandle
-	return (toInteger (Win32.bhfiSize info))
-#else
-	stat <- Posix.getFileStatus (encode path)
-	return (toInteger (Posix.fileSize stat))
-#endif
 
 -- | Rename a filesystem object. Some operating systems have restrictions
 -- on what objects can be renamed; see linked documentation for details.
@@ -352,17 +302,3 @@ xdg envkey label fallback = do
 	return $ case label of
 		Just text -> append dir (R.fromText currentOS text)
 		Nothing -> dir
-
-#ifdef CABAL_OS_WINDOWS
-withHANDLE :: FilePath -> (Win32.HANDLE -> IO a) -> IO a
-withHANDLE path = Exc.bracket open close where
-	open = Win32.createFile
-		(encode path)
-		Win32.gENERIC_READ
-		(Win32.fILE_SHARE_READ .|. Win32.fILE_SHARE_WRITE)
-		Nothing
-		Win32.oPEN_EXISTING
-		0
-		Nothing
-	close = Win32.closeHandle
-#endif
