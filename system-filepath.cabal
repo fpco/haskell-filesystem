@@ -1,5 +1,5 @@
 name: system-filepath
-version: 0.3.1
+version: 0.4
 synopsis: High-level, byte-based file and directory path manipulations
 license: MIT
 license-file: license.txt
@@ -10,13 +10,13 @@ build-type: Simple
 cabal-version: >= 1.6
 category: System
 stability: experimental
-homepage: https://john-millikin.com/software/system-filepath/
+homepage: https://john-millikin.com/software/hs-filepath/
 bug-reports: mailto:jmillikin@gmail.com
 tested-with: GHC == 6.12.1
 
 source-repository head
   type: bzr
-  location: https://john-millikin.com/software/system-filepath/
+  location: https://john-millikin.com/software/hs-filepath/
 
 library
   ghc-options: -Wall -O2
@@ -33,9 +33,6 @@ library
     Filesystem.Path
     Filesystem.Path.CurrentOS
     Filesystem.Path.Rules
-    System.FilePath
-    System.FilePath.CurrentOS
-    System.FilePath.Rules
 
   other-modules:
     Filesystem.Path.Internal
