@@ -154,7 +154,7 @@ append x y = if absolute y then y else xy where
 	directories = xDirectories ++ pathDirectories y
 	xDirectories = (pathDirectories x ++) $ if null (filename x)
 		then []
-		else [filenameChunk x]
+		else [filenameChunk True x]
 
 -- | An alias for 'append'.
 (</>) :: FilePath -> FilePath -> FilePath

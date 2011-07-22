@@ -51,8 +51,8 @@ rootText r = T.pack $ flip (maybe "") r $ \r' -> case r' of
 	RootWindowsVolume c -> c : ":\\"
 	RootWindowsCurrentVolume -> "\\"
 
-directoryChunks :: FilePath -> [Chunk]
-directoryChunks path = pathDirectories path ++ [filenameChunk path]
+directoryChunks :: Bool -> FilePath -> [Chunk]
+directoryChunks strict path = pathDirectories path ++ [filenameChunk strict path]
 
 maybeDecodeUtf8 :: B.ByteString -> Maybe T.Text
 maybeDecodeUtf8 = excToMaybe . TE.decodeUtf8 where
@@ -88,7 +88,7 @@ posixToText p = if good then Right text else Left text where
 	text = T.concat (root : map chunkText chunks)
 	
 	root = rootText (pathRoot p)
-	chunks = intersperse (Chunk (T.pack "/") True) (directoryChunks p)
+	chunks = intersperse (Chunk (T.pack "/") True) (directoryChunks False p)
 
 posixFromChunks :: [Chunk] -> FilePath
 posixFromChunks chunks = FilePath root directories basename exts where
@@ -125,7 +125,7 @@ posixFromText text = if T.null text
 posixToBytes :: FilePath -> B.ByteString
 posixToBytes p = B.concat (root : chunks) where
 	root = TE.encodeUtf8 (rootText (pathRoot p))
-	chunks = intersperse (B8.pack "/") (map chunkBytes (directoryChunks p))
+	chunks = intersperse (B8.pack "/") (map chunkBytes (directoryChunks True p))
 	chunkBytes c = if chunkGood c
 		then TE.encodeUtf8 (chunkText c)
 		else B8.pack (T.unpack (chunkText c))
@@ -139,7 +139,7 @@ posixFromBytes bytes = if B.null bytes
 
 posixValid :: FilePath -> Bool
 posixValid p = validRoot && validDirectories where
-	validDirectories = all validChunk (directoryChunks p)
+	validDirectories = all validChunk (directoryChunks True p)
 	validChunk ch = not (T.any (\c -> c == '\0' || c == '/') (chunkText ch))
 	validRoot = case pathRoot p of
 		Nothing -> True
@@ -171,7 +171,7 @@ windows = Rules
 winToText :: FilePath -> T.Text
 winToText p = T.concat (root : chunks) where
 	root = rootText (pathRoot p)
-	chunks = intersperse (T.pack "\\") (map chunkText (directoryChunks p))
+	chunks = intersperse (T.pack "\\") (map chunkText (directoryChunks False p))
 
 winFromText :: T.Text -> FilePath
 winFromText text = if T.null text then empty else path where
@@ -222,10 +222,10 @@ winValid p = validRoot && noReserved && validCharacters where
 		_ -> False
 	
 	noExt = p { pathExtensions = [] }
-	noReserved = flip all (directoryChunks noExt)
+	noReserved = flip all (directoryChunks False noExt)
 		$ \fn -> notElem (T.toUpper (chunkText fn)) reservedNames
 	
-	validCharacters = flip all (directoryChunks p)
+	validCharacters = flip all (directoryChunks False p)
 		$ not . T.any (`elem` reservedChars) . chunkText
 
 winSplit :: T.Text -> [FilePath]

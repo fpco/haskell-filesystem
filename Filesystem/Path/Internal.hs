@@ -12,9 +12,11 @@ module Filesystem.Path.Internal where
 
 import           Prelude hiding (FilePath)
 
+import qualified Data.ByteString.Char8 as B8
 import           Data.Data (Data)
 import           Data.List (intersperse)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import           Data.Typeable (Typeable)
 
 -------------------------------------------------------------------------------
@@ -55,16 +57,22 @@ dot = Chunk (T.pack ".") True
 dots :: Chunk
 dots = Chunk (T.pack "..") True
 
-filenameChunk :: FilePath -> Chunk
-filenameChunk p = Chunk (T.concat texts) (and good) where
+filenameChunk :: Bool -> FilePath -> Chunk
+filenameChunk strict p = Chunk (T.concat texts) allGood where
 	name = maybe (Chunk T.empty True) id (pathBasename p)
 	exts = case pathExtensions p of
 		[] -> []
 		exts' -> intersperse dot ((Chunk T.empty True):exts')
 	chunks = name:exts
 	
-	texts = map chunkText chunks
-	good = map chunkGood chunks
+	texts = map chunkText' chunks
+	allGood = and (map chunkGood chunks)
+	
+	chunkText' c = if chunkGood c
+		then if allGood || not strict
+			then chunkText c
+			else T.pack (B8.unpack (TE.encodeUtf8 (chunkText c)))
+		else chunkText c
 
 -------------------------------------------------------------------------------
 -- Rules
