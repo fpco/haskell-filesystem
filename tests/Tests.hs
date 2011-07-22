@@ -1,21 +1,20 @@
 module Main (tests, main) where
 
-import Prelude hiding (FilePath)
-import Data.Word (Word8)
-import Data.List (intercalate)
+import           Prelude hiding (FilePath)
+
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
+import           Data.List (intercalate)
 import qualified Data.Text as T
-import Test.QuickCheck
-import Test.HUnit (Assertion, assert, (@?=))
 import qualified Test.Framework as F
-import Test.Framework.Providers.QuickCheck2 (testProperty)
-import Test.Framework.Providers.HUnit (testCase)
-import System.FilePath as P
-import System.FilePath.CurrentOS ()
-import System.FilePath.Rules
+import           Test.Framework.Providers.HUnit (testCase)
+import           Test.Framework.Providers.QuickCheck2 (testProperty)
+import           Test.HUnit (Assertion, assert, (@?=))
+import           Test.QuickCheck
 
-import Debug.Trace
+import           Filesystem.Path as P
+import           Filesystem.Path.CurrentOS ()
+import           Filesystem.Path.Rules
 
 main :: IO ()
 main = F.defaultMain tests
@@ -43,6 +42,7 @@ tests =
 	, F.testGroup "To/From bytes"
 	  [ testIdentity "POSIX" posix posixPaths
 	  , testIdentity "Windows" windows windowsPaths
+	  , testMixedValidityToBytes
 	  ]
 	
 	, F.testGroup "To/From text"
@@ -163,17 +163,30 @@ testRelative = testCases "relative"
 testIdentity :: F.TestName -> Rules a -> Gen FilePath -> F.Test
 testIdentity name r gen = testProperty name $ forAll gen $ \p -> p == decode r (encode r p)
 
+testMixedValidityToBytes :: F.Test
+testMixedValidityToBytes =
+	let p = fromChar8 posix in
+	let t x y = encode posix x @?= B8.pack y in
+	
+	testCases "mixed validity to bytes"
+	[ t (p "\xB1.\xDD\xAA") "\xB1.\xDD\xAA"
+	, t (p "\xB1.\xDD\xAA" </> p "foo") "\xB1.\xDD\xAA/foo"
+	]
+
 testToText :: F.Test
 testToText =
-	let t x y = toText posix (fromChar8 posix x) @?= emap T.pack T.pack y in
+	let p = fromChar8 posix in
+	let t x y = toText posix x @?= emap T.pack T.pack y in
 	
 	testCases "toText"
-	[ t "" (Right "")
-	, t "ascii" (Right "ascii")
-	, t "\xF0\x9D\x84\x9E" (Right "\x1D11E")
-	, t "\xED\xA0\x80" (Left "\xED\xA0\x80")
-	, t "\xF0\x9D\x84\x9E/\xED\xA0\x80" (Left "\x1D11E/\xED\xA0\x80")
-	, t "\xED.\xF0\x9D\x84\x9E.\xA0\x80" (Left "\xED.\x1D11E.\xA0\x80")
+	[ t (p "") (Right "")
+	, t (p "ascii") (Right "ascii")
+	, t (p "\xF0\x9D\x84\x9E") (Right "\x1D11E")
+	, t (p "\xED\xA0\x80") (Left "\xED\xA0\x80")
+	, t (p "\xF0\x9D\x84\x9E/\xED\xA0\x80") (Left "\x1D11E/\xED\xA0\x80")
+	, t (p "\xED.\xF0\x9D\x84\x9E.\xA0\x80") (Left "\xED.\x1D11E.\xA0\x80")
+	, t (p "\xB1.\xDD\xAA") (Left "\xB1.\x76A")
+	, t (p "\xB1.\xDD\xAA" </> p "foo") (Left "\xB1.\xDD\xAA/foo")
 	]
 
 testFromText :: F.Test

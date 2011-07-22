@@ -1,20 +1,22 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 
 -- |
--- Module: System.FilePath.Internal
+-- Module: Filesystem.Path.Internal
 -- Copyright: 2010 John Millikin
 -- License: MIT
 --
 -- Maintainer:  jmillikin@gmail.com
 -- Portability:  portable
 --
-module System.FilePath.Internal where
+module Filesystem.Path.Internal where
 
 import           Prelude hiding (FilePath)
 
+import qualified Data.ByteString.Char8 as B8
 import           Data.Data (Data)
 import           Data.List (intersperse)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import           Data.Typeable (Typeable)
 
 -------------------------------------------------------------------------------
@@ -55,16 +57,22 @@ dot = Chunk (T.pack ".") True
 dots :: Chunk
 dots = Chunk (T.pack "..") True
 
-filenameChunk :: FilePath -> Chunk
-filenameChunk p = Chunk (T.concat texts) (and good) where
+filenameChunk :: Bool -> FilePath -> Chunk
+filenameChunk strict p = Chunk (T.concat texts) allGood where
 	name = maybe (Chunk T.empty True) id (pathBasename p)
 	exts = case pathExtensions p of
 		[] -> []
 		exts' -> intersperse dot ((Chunk T.empty True):exts')
 	chunks = name:exts
 	
-	texts = map chunkText chunks
-	good = map chunkGood chunks
+	texts = map chunkText' chunks
+	allGood = and (map chunkGood chunks)
+	
+	chunkText' c = if chunkGood c
+		then if allGood || not strict
+			then chunkText c
+			else T.pack (B8.unpack (TE.encodeUtf8 (chunkText c)))
+		else chunkText c
 
 -------------------------------------------------------------------------------
 -- Rules
@@ -96,7 +104,7 @@ data Rules platformFormat = Rules
 	--
 	-- This function ignores the user&#x2019;s locale, and assumes all
 	-- file paths are encoded in UTF8. If you need to display file paths
-	-- with an unusual or obscure encoding, use 'toBytes' and then decode
+	-- with an unusual or obscure encoding, use 'encode' and then decode
 	-- them manually.
 	--
 	-- Since: 0.2
@@ -107,20 +115,40 @@ data Rules platformFormat = Rules
 	-- This function ignores the user&#x2019;s locale, and assumes all
 	-- file paths are encoded in UTF8. If you need to create file paths
 	-- with an unusual or obscure encoding, encode them manually and then
-	-- use 'fromBytes'.
+	-- use 'decode'.
 	--
 	-- Since: 0.2
 	, fromText :: T.Text -> FilePath
 	
-	-- | Convert a 'FilePath' to the platform&#x2019;s underlying format.
+	-- | Convert a 'FilePath' to a platform&#x2010;specific format,
+	-- suitable for use with external OS functions.
 	--
 	-- Since: 0.3
 	, encode :: FilePath -> platformFormat
 	
-	-- | Convert the platform&#x2019;s underlying format to a 'FilePath'.
+	-- | Convert a 'FilePath' from a platform&#x2010;specific format,
+	-- suitable for use with external OS functions.
 	--
 	-- Since: 0.3
 	, decode :: platformFormat -> FilePath
+	
+	-- | Attempt to convert a 'FilePath' to a string suitable for use with
+	-- functions in @System.IO@. The contents of this string are
+	-- platform&#x2010;dependent, and are not guaranteed to be
+	-- human&#x2010;readable. For converting 'FilePath's to a
+	-- human&#x2010;readable format, use 'toText'.
+	--
+	-- Since: 0.3.1
+	, encodeString :: FilePath -> String
+	
+	-- | Attempt to parse a 'FilePath' from a string suitable for use
+	-- with functions in @System.IO@. Do not use this function for parsing
+	-- human&#x2010;readable paths, as the character set decoding is
+	-- platform&#x2010;dependent. For converting human&#x2010;readable
+	-- text to a 'FilePath', use 'fromText'.
+	--
+	-- Since: 0.3.1
+	, decodeString :: String -> FilePath
 	}
 
 instance Show (Rules a) where
