@@ -1,21 +1,20 @@
 module Main (tests, main) where
 
-import Prelude hiding (FilePath)
-import Data.Word (Word8)
-import Data.List (intercalate)
+import           Prelude hiding (FilePath)
+
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
+import           Data.List (intercalate)
 import qualified Data.Text as T
-import Test.QuickCheck
-import Test.HUnit (Assertion, assert, (@?=))
 import qualified Test.Framework as F
-import Test.Framework.Providers.QuickCheck2 (testProperty)
-import Test.Framework.Providers.HUnit (testCase)
-import Filesystem.Path as P
-import Filesystem.Path.CurrentOS ()
-import Filesystem.Path.Rules
+import           Test.Framework.Providers.HUnit (testCase)
+import           Test.Framework.Providers.QuickCheck2 (testProperty)
+import           Test.HUnit (Assertion, assert, (@?=))
+import           Test.QuickCheck
 
-import Debug.Trace
+import           Filesystem.Path as P
+import           Filesystem.Path.CurrentOS ()
+import           Filesystem.Path.Rules
 
 main :: IO ()
 main = F.defaultMain tests
