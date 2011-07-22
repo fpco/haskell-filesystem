@@ -1,0 +1,104 @@
+{-# LANGUAGE CPP #-}
+
+-- |
+-- Module: Filesystem.Path.CurrentOS
+-- Copyright: 2010 John Millikin
+-- License: MIT
+--
+-- Maintainer:  jmillikin@gmail.com
+-- Portability:  portable
+--
+-- Re&#x2010;exports contents of "Filesystem.Path.Rules", defaulting to the
+-- current OS&#x2019;s rules when needed.
+--
+-- Also enables 'Show' and 'S.IsString' instances for 'F.FilePath'.
+--
+module Filesystem.Path.CurrentOS
+	( module Filesystem.Path
+	, currentOS
+	
+	-- * Type conversions
+	, toText
+	, fromText
+	, encode
+	, decode
+	
+	-- * Rule&#x2010;specific path properties
+	, valid
+	, splitSearchPath
+	) where
+
+import qualified Data.ByteString as B
+import qualified Data.String as S
+import qualified Data.Text as T
+
+import           Filesystem.Path
+import qualified Filesystem.Path as F
+import qualified Filesystem.Path.Rules as R
+
+#if defined(CABAL_OS_WINDOWS)
+#define PLATFORM_PATH_FORMAT T.Text
+#else
+#define PLATFORM_PATH_FORMAT B.ByteString
+#endif
+
+currentOS :: R.Rules PLATFORM_PATH_FORMAT
+#if defined(CABAL_OS_WINDOWS)
+currentOS = R.windows
+#else
+currentOS = R.posix
+#endif
+
+instance S.IsString F.FilePath where
+	fromString = R.fromText currentOS . T.pack
+
+instance Show F.FilePath where
+	showsPrec d path = showParen (d > 10) (ss "FilePath " . s txt) where
+		s = shows
+		ss = showString
+		txt = either id id (toText path)
+
+-- | Attempt to convert a 'FilePath' to human&#x2010;readable text.
+--
+-- If the path is decoded successfully, the result is a 'Right' containing
+-- the decoded text. Successfully decoded text can be converted back to the
+-- original path using 'fromText'.
+--
+-- If the path cannot be decoded, the result is a 'Left' containing an
+-- approximation of the original path. If displayed to the user, this value
+-- should be accompanied by some warning that the path has an invalid
+-- encoding. Approximated text cannot be converted back to the original path.
+--
+-- This function ignores the user&#x2019;s locale, and assumes all file paths
+-- are encoded in UTF8. If you need to display file paths with an unusual or
+-- obscure encoding, use 'toBytes' and then decode them manually.
+--
+-- Since: 0.2
+toText :: F.FilePath -> Either T.Text T.Text
+toText = R.toText currentOS
+
+-- | Convert human&#x2010;readable text into a 'FilePath'.
+--
+-- This function ignores the user&#x2019;s locale, and assumes all file paths
+-- are encoded in UTF8. If you need to create file paths with an unusual or
+-- obscure encoding, encode them manually and then use 'fromBytes'.
+--
+-- Since: 0.2
+fromText :: T.Text -> F.FilePath
+fromText = R.fromText currentOS
+
+-- | Check if a 'FilePath' is valid; it must not contain any illegal
+-- characters, and must have a root appropriate to the current 'R.Rules'.
+valid :: F.FilePath -> Bool
+valid = R.valid currentOS
+
+-- | Split a search path, such as @$PATH@ or @$PYTHONPATH@, into a list
+-- of 'FilePath's.
+splitSearchPath :: PLATFORM_PATH_FORMAT -> [F.FilePath]
+splitSearchPath = R.splitSearchPath currentOS
+
+encode :: F.FilePath -> PLATFORM_PATH_FORMAT
+encode = R.encode currentOS
+
+decode :: PLATFORM_PATH_FORMAT -> F.FilePath
+decode = R.decode currentOS

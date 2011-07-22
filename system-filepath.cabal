@@ -30,9 +30,12 @@ library
     cpp-options: -DCABAL_OS_WINDOWS
 
   exposed-modules:
+    Filesystem.Path
+    Filesystem.Path.CurrentOS
+    Filesystem.Path.Rules
     System.FilePath
     System.FilePath.CurrentOS
     System.FilePath.Rules
 
   other-modules:
-    System.FilePath.Internal
+    Filesystem.Path.Internal

@@ -1,14 +1,14 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 
 -- |
--- Module: System.FilePath.Internal
+-- Module: Filesystem.Path.Internal
 -- Copyright: 2010 John Millikin
 -- License: MIT
 --
 -- Maintainer:  jmillikin@gmail.com
 -- Portability:  portable
 --
-module System.FilePath.Internal where
+module Filesystem.Path.Internal where
 
 import           Prelude hiding (FilePath)
 

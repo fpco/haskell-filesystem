@@ -11,9 +11,9 @@ import Test.HUnit (Assertion, assert, (@?=))
 import qualified Test.Framework as F
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.Framework.Providers.HUnit (testCase)
-import System.FilePath as P
-import System.FilePath.CurrentOS ()
-import System.FilePath.Rules
+import Filesystem.Path as P
+import Filesystem.Path.CurrentOS ()
+import Filesystem.Path.Rules
 
 import Debug.Trace
 
