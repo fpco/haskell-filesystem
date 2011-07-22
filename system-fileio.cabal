@@ -1,5 +1,5 @@
 name: system-fileio
-version: 0.2
+version: 0.2.1
 synopsis: High-level filesystem interaction
 license: MIT
 license-file: license.txt
@@ -40,8 +40,6 @@ library
     build-depends: unix
 
   exposed-modules:
+    Filesystem
     System.Directory
     System.File
-
-  other-modules:
-    System.FileIO.Internal
