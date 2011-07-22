@@ -16,6 +16,8 @@ module Filesystem.Path.Rules
 	, fromText
 	, encode
 	, decode
+	, encodeString
+	, decodeString
 	
 	-- * Rule&#x2010;specific path properties
 	, valid
@@ -33,6 +35,7 @@ import           Data.List (intersperse)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import           Data.Text.Encoding.Error (UnicodeException)
+import           System.IO ()
 import           System.IO.Unsafe (unsafePerformIO)
 
 import           Filesystem.Path hiding (root, filename, basename)
@@ -75,6 +78,8 @@ posix = Rules
 	, fromText = posixFromText
 	, encode = posixToBytes
 	, decode = posixFromBytes
+	, encodeString = B8.unpack . posixToBytes
+	, decodeString = posixFromBytes . B8.pack
 	}
 
 posixToText :: FilePath -> Either T.Text T.Text
@@ -159,6 +164,8 @@ windows = Rules
 	, fromText = winFromText
 	, encode = winToText
 	, decode = winFromText
+	, encodeString = T.unpack . winToText
+	, decodeString = winFromText . T.pack
 	}
 
 winToText :: FilePath -> T.Text

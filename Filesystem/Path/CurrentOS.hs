@@ -22,6 +22,8 @@ module Filesystem.Path.CurrentOS
 	, fromText
 	, encode
 	, decode
+	, encodeString
+	, decodeString
 	
 	-- * Rule&#x2010;specific path properties
 	, valid
@@ -58,7 +60,7 @@ instance Show F.FilePath where
 		ss = showString
 		txt = either id id (toText path)
 
--- | Attempt to convert a 'FilePath' to human&#x2010;readable text.
+-- | Attempt to convert a 'F.FilePath' to human&#x2010;readable text.
 --
 -- If the path is decoded successfully, the result is a 'Right' containing
 -- the decoded text. Successfully decoded text can be converted back to the
@@ -71,7 +73,7 @@ instance Show F.FilePath where
 --
 -- This function ignores the user&#x2019;s locale, and assumes all file paths
 -- are encoded in UTF8. If you need to display file paths with an unusual or
--- obscure encoding, use 'toBytes' and then decode them manually.
+-- obscure encoding, use 'encode' and then decode them manually.
 --
 -- Since: 0.2
 toText :: F.FilePath -> Either T.Text T.Text
@@ -81,7 +83,7 @@ toText = R.toText currentOS
 --
 -- This function ignores the user&#x2019;s locale, and assumes all file paths
 -- are encoded in UTF8. If you need to create file paths with an unusual or
--- obscure encoding, encode them manually and then use 'fromBytes'.
+-- obscure encoding, encode them manually and then use 'decode'.
 --
 -- Since: 0.2
 fromText :: T.Text -> F.FilePath
@@ -97,8 +99,36 @@ valid = R.valid currentOS
 splitSearchPath :: PLATFORM_PATH_FORMAT -> [F.FilePath]
 splitSearchPath = R.splitSearchPath currentOS
 
+-- | Convert a 'F.FilePath' to a platform&#x2010;specific format, suitable
+-- for use with external OS functions.
+--
+-- Since: 0.3
 encode :: F.FilePath -> PLATFORM_PATH_FORMAT
 encode = R.encode currentOS
 
+-- | Convert a 'F.FilePath' from a platform&#x2010;specific format, suitable
+-- for use with external OS functions.
+--
+-- Since: 0.3
 decode :: PLATFORM_PATH_FORMAT -> F.FilePath
 decode = R.decode currentOS
+
+-- | Attempt to convert a 'F.FilePath' to a string suitable for use with
+-- functions in @System.IO@. The contents of this string are
+-- platform&#x2010;dependent, and are not guaranteed to be
+-- human&#x2010;readable. For converting 'F.FilePath's to a
+-- human&#x2010;readable format, use 'toText'.
+--
+-- Since: 0.3.1
+encodeString :: F.FilePath -> String
+encodeString = R.encodeString currentOS
+
+-- | Attempt to parse a 'F.FilePath' from a string suitable for use with
+-- functions in @System.IO@. Do not use this function for parsing
+-- human&#x2010;readable paths, as the character set decoding is
+-- platform&#x2010;dependent. For converting human&#x2010;readable text to a
+-- 'F.FilePath', use 'fromText'.
+--
+-- Since: 0.3.1
+decodeString :: String -> F.FilePath
+decodeString = R.decodeString currentOS
