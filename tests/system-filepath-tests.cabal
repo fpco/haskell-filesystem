@@ -1,0 +1,26 @@
+name: system-filepath-tests
+version: 0
+build-type: Simple
+cabal-version: >= 1.6
+
+flag coverage
+  default: False
+  manual: True
+
+executable system-filepath_tests
+  main-is: Tests.hs
+  ghc-options: -Wall
+
+  if flag(coverage)
+    ghc-options: -fhpc
+
+  build-depends:
+      base > 3 && < 5
+    , bytestring
+    , text
+    , QuickCheck
+    , HUnit
+    , test-framework
+    , test-framework-quickcheck2
+    , test-framework-hunit
+    , system-filepath
