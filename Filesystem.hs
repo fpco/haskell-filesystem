@@ -177,13 +177,14 @@ createDirectory True path = SD.createDirectoryIfMissing False (encodeString path
 createTree :: FilePath -> IO ()
 createTree path = SD.createDirectoryIfMissing True (encodeString path)
 
--- | List contents of a directory, excluding @\".\"@ and @\"..\"@.
+-- | List contents of a directory, excluding @\".\"@ and @\"..\"@. Each
+-- returned 'FilePath' includes the path of the directory.
 --
 -- See: 'SD.getDirectoryContents'
 listDirectory :: FilePath -> IO [FilePath]
 listDirectory path = fmap cleanup contents where
 	contents = SD.getDirectoryContents (encodeString path)
-	cleanup = map decodeString . filter (`notElem` [".", ".."])
+	cleanup = map (append path) . map decodeString . filter (`notElem` [".", ".."])
 
 -- | Remove a file.
 --
