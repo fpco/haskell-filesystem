@@ -1,5 +1,5 @@
 name: system-fileio
-version: 0.2.1
+version: 0.3
 synopsis: High-level filesystem interaction
 license: MIT
 license-file: license.txt
@@ -10,7 +10,7 @@ build-type: Simple
 cabal-version: >=1.6
 category: System
 stability: experimental
-homepage: https://john-millikin.com/software/system-fileio/
+homepage: https://john-millikin.com/software/hs-fileio/
 bug-reports: mailto:jmillikin@gmail.com
 tested-with: GHC==6.12.1
 
@@ -20,7 +20,7 @@ description:
 
 source-repository head
   type: bzr
-  location: https://john-millikin.com/software/system-fileio/
+  location: https://john-millikin.com/software/hs-fileio/
 
 library
   ghc-options: -Wall -O2
@@ -41,5 +41,3 @@ library
 
   exposed-modules:
     Filesystem
-    System.Directory
-    System.File
