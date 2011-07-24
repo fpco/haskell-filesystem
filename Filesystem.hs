@@ -74,9 +74,9 @@ import qualified Data.Text.IO as T
 import           Foreign.Ptr (nullPtr)
 import           Foreign.C (CString, withCString, peekCString)
 import qualified System.Environment as SE
-import           System.FilePath (FilePath, append)
-import           System.FilePath.CurrentOS (currentOS)
-import qualified System.FilePath.Rules as R
+import           Filesystem.Path (FilePath, append)
+import           Filesystem.Path.CurrentOS (currentOS)
+import qualified Filesystem.Path.Rules as R
 import qualified System.IO as IO
 import           System.IO.Error (isDoesNotExistError)
 
