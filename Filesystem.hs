@@ -1,6 +1,5 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
-{-# LANGUAGE PackageImports #-}
 
 -- |
 -- Module: Filesystem
@@ -99,8 +98,7 @@ import qualified System.Posix.Error as Posix
 
 #endif
 
--- hopefully temporary
-import qualified "directory" System.Directory as SD
+import qualified System.Directory as SD
 
 -- | Check if a file exists at the given path.
 --
