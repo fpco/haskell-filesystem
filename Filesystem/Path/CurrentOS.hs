@@ -30,6 +30,8 @@ module Filesystem.Path.CurrentOS
 	, splitSearchPath
 	) where
 
+import           Prelude hiding (FilePath)
+
 import qualified Data.ByteString as B
 import qualified Data.String as S
 import qualified Data.Text as T
