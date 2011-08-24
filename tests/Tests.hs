@@ -1,3 +1,6 @@
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main (tests, main) where
 
 import           Prelude hiding (FilePath)
@@ -6,321 +9,283 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
 import           Data.List (intercalate)
 import qualified Data.Text as T
-import qualified Test.Framework as F
-import           Test.Framework.Providers.HUnit (testCase)
-import           Test.Framework.Providers.QuickCheck2 (testProperty)
-import           Test.HUnit (Assertion, assert, (@?=))
-import           Test.QuickCheck
+import           Data.Text (Text)
+import           Test.Chell
+import           Test.Chell.QuickCheck
+import           Test.QuickCheck hiding (property)
 
 import           Filesystem.Path as P
 import           Filesystem.Path.CurrentOS ()
 import           Filesystem.Path.Rules
 
 main :: IO ()
-main = F.defaultMain tests
+main = Test.Chell.defaultMain tests
 
-tests :: [F.Test]
+tests :: [Suite]
 tests =
-	[ F.testGroup "Basic properties"
-	  [ testNull
-	  , testRoot
-	  , testDirectory
-	  , testParent
-	  , testFilename
-	  , testBasename
-	  , testAbsolute
-	  , testRelative
-	  ]
+	[
+	-- Basic properties
+	  test test_Empty
+	, test test_Root
+	, test test_Directory
+	, test test_Parent
+	, test test_Filename
+	, test test_Basename
+	, test test_Absolute
+	, test test_Relative
 	
-	, F.testGroup "Basic operations"
-	  [ testAppend
-	  , testCommonPrefix
-	  , testSplitExtension
-	  , testCollapse
-	  ]
+	-- Basic operations
+	, test test_Append
+	, test test_CommonPrefix
+	, test test_SplitExtension
+	, test test_Collapse
 	
-	, F.testGroup "To/From bytes"
-	  [ testIdentity "POSIX" posix posixPaths
-	  , testIdentity "Windows" windows windowsPaths
-	  , testMixedValidityToBytes
-	  ]
+	, suite "to-from-bytes"
+		[ test_Identity "posix" posix posixPaths
+		, test_Identity "windows" windows windowsPaths
+		, test test_MixedValidityToBytes
+		]
 	
-	, F.testGroup "To/From text"
-	  [ testToText
-	  , testFromText
-	  ]
+	, suite "to-from-text"
+		[ test test_ToText
+		, test test_FromText
+		]
 	
-	, F.testGroup "Validity"
-	  [ testProperty "POSIX" $ forAll posixPaths $ valid posix
-	  , testProperty "Windows" $ forAll windowsPaths $ valid windows
-	  ]
+	, suite "validity"
+		[ property "posix" (forAll posixPaths (valid posix))
+		, property "windows" (forAll windowsPaths (valid windows))
+		]
 	
-	, testSplitSearchPath
-	, testParsing
+	, test test_SplitSearchPath
+	, test test_Parsing
 	]
 
-testCases :: F.TestName -> [Assertion] -> F.Test
-testCases name = F.testGroup name . zipWith (\n -> testCase n . assert) labels where
-	labels = map show $ iterate (+ 1) 1
+test_Empty :: Test
+test_Empty = assertions "empty" $ do
+	$expect $ P.null empty
+	$expect $ equal (toChar8 posix empty) ""
+	$expect $ equal (toString windows empty) ""
 
-testNull :: F.Test
-testNull = testCases "null"
-	[ assert (P.null empty)
-	, toChar8 posix empty @?= ""
-	, toString windows empty @?= ""
-	]
-
-testRoot :: F.Test
-testRoot =
-	let t x y = toChar8 posix (root (fromChar8 posix x)) @?= y in
+test_Root :: Test
+test_Root = assertions "root" $ do
+	let root x = toChar8 posix (P.root (fromChar8 posix x))
 	
-	testCases "root"
-	[ t "" ""
-	, t "/" "/"
-	, t "foo" ""
-	, t "/foo" "/"
-	]
+	$expect $ equal (root "") ""
+	$expect $ equal (root "/") "/"
+	$expect $ equal (root "foo") ""
+	$expect $ equal (root "/foo") "/"
 
-testDirectory :: F.Test
-testDirectory =
-	let t x y = toChar8 posix (directory (fromChar8 posix x)) @?= y in
+test_Directory :: Test
+test_Directory = assertions "directory" $ do
+	let directory x = toChar8 posix (P.directory (fromChar8 posix x))
 	
-	testCases "directory"
-	[ t "" "./"
-	, t "/" "/"
-	, t "/foo/bar" "/foo/"
-	, t "/foo/bar/" "/foo/bar/"
-	, t "." "./"
-	, t ".." "../"
-	, t "../foo" "../"
-	, t "../foo/" "../foo/"
-	, t "foo" "./"
-	, t "foo/bar" "./foo/"
-	]
+	$expect $ equal (directory "") "./"
+	$expect $ equal (directory "/") "/"
+	$expect $ equal (directory "/foo/bar") "/foo/"
+	$expect $ equal (directory "/foo/bar/") "/foo/bar/"
+	$expect $ equal (directory ".") "./"
+	$expect $ equal (directory "..") "../"
+	$expect $ equal (directory "../foo") "../"
+	$expect $ equal (directory "../foo/") "../foo/"
+	$expect $ equal (directory "foo") "./"
+	$expect $ equal (directory "foo/bar") "./foo/"
 
-testParent :: F.Test
-testParent =
-	let t x y = toChar8 posix (parent (fromChar8 posix x)) @?= y in
+test_Parent :: Test
+test_Parent = assertions "parent" $ do
+	let parent x = toChar8 posix (P.parent (fromChar8 posix x))
 	
-	testCases "parent"
-	[ t "" "./"
-	, t "/" "/"
-	, t "/foo/bar" "/foo/"
-	, t "/foo/bar/" "/foo/"
-	, t "." "./"
-	, t ".." "./"
-	, t "../foo/bar" "../foo/"
-	, t "../foo/bar" "../foo/"
-	, t "foo" "./"
-	, t "foo/bar" "./foo/"
-	]
+	$expect $ equal (parent "") "./"
+	$expect $ equal (parent "/") "/"
+	$expect $ equal (parent "/foo/bar") "/foo/"
+	$expect $ equal (parent "/foo/bar/") "/foo/"
+	$expect $ equal (parent ".") "./"
+	$expect $ equal (parent "..") "./"
+	$expect $ equal (parent "../foo/bar") "../foo/"
+	$expect $ equal (parent "../foo/bar") "../foo/"
+	$expect $ equal (parent "foo") "./"
+	$expect $ equal (parent "foo/bar") "./foo/"
 
-testFilename :: F.Test
-testFilename =
-	let t x y = toChar8 posix (filename (fromChar8 posix x)) @?= y in
+test_Filename :: Test
+test_Filename = assertions "filename" $ do
+	let filename x = toChar8 posix (P.filename (fromChar8 posix x))
 	
-	testCases "filename"
-	[ t "" ""
-	, t "/" ""
-	, t "/foo/" ""
-	, t "/foo/bar" "bar"
-	, t "/foo/bar.txt" "bar.txt"
-	]
+	$expect $ equal (filename "") ""
+	$expect $ equal (filename "/") ""
+	$expect $ equal (filename "/foo/") ""
+	$expect $ equal (filename "/foo/bar") "bar"
+	$expect $ equal (filename "/foo/bar.txt") "bar.txt"
 
-testBasename :: F.Test
-testBasename =
-	let tp x y = toChar8 posix (basename (fromChar8 posix x)) @?= y in
-	let tw x y = toString windows (basename (fromString windows x)) @?= y in
+test_Basename :: Test
+test_Basename = assertions "basename" $ do
+	let basename_posix x = toChar8 posix (basename (fromChar8 posix x))
+	let basename_windows x = toString windows (basename (fromString windows x))
 	
-	testCases "basename"
-	[ tp "/foo/bar" "bar"
-	, tp "/foo/bar.txt" "bar"
-	, tp "." ""
-	, tp ".." ""
+	$expect $ equal (basename_posix "/foo/bar") "bar"
+	$expect $ equal (basename_posix "/foo/bar.txt") "bar"
+	$expect $ equal (basename_posix ".") ""
+	$expect $ equal (basename_posix "..") ""
 	
-	, tw "c:\\foo\\bar" "bar"
-	, tw "c:\\foo\\bar.txt" "bar"
-	, tw "." ""
-	, tw ".." ""
-	]
+	$expect $ equal (basename_windows "c:\\foo\\bar") "bar"
+	$expect $ equal (basename_windows "c:\\foo\\bar.txt") "bar"
+	$expect $ equal (basename_windows ".") ""
+	$expect $ equal (basename_windows "..") ""
 
-testAbsolute :: F.Test
-testAbsolute = testCases "absolute"
-	[ assert $ absolute (fromChar8 posix "/")
-	, assert $ absolute (fromChar8 posix "/foo/bar")
-	, assert . not $ absolute (fromChar8 posix "")
-	, assert . not $ absolute (fromChar8 posix "foo/bar")
-	]
+test_Absolute :: Test
+test_Absolute = assertions "absolute" $ do
+	$expect $ absolute (fromChar8 posix "/")
+	$expect $ absolute (fromChar8 posix "/foo/bar")
+	$expect . not $ absolute (fromChar8 posix "")
+	$expect . not $ absolute (fromChar8 posix "foo/bar")
 
-testRelative :: F.Test
-testRelative = testCases "relative"
-	[ assert . not $ relative (fromChar8 posix "/")
-	, assert . not $ relative (fromChar8 posix "/foo/bar")
-	, assert $ relative (fromChar8 posix "")
-	, assert $ relative (fromChar8 posix "foo/bar")
-	]
+test_Relative :: Test
+test_Relative = assertions "relative" $ do
+	$expect . not $ relative (fromChar8 posix "/")
+	$expect . not $ relative (fromChar8 posix "/foo/bar")
+	$expect $ relative (fromChar8 posix "")
+	$expect $ relative (fromChar8 posix "foo/bar")
 
-testIdentity :: F.TestName -> Rules a -> Gen FilePath -> F.Test
-testIdentity name r gen = testProperty name $ forAll gen $ \p -> p == decode r (encode r p)
+test_Identity :: Text -> Rules a -> Gen FilePath -> Suite
+test_Identity name r gen = property name $ forAll gen $ \p -> p == decode r (encode r p)
 
-testMixedValidityToBytes :: F.Test
-testMixedValidityToBytes =
-	let p = fromChar8 posix in
-	let t x y = encode posix x @?= B8.pack y in
+test_MixedValidityToBytes :: Test
+test_MixedValidityToBytes = assertions "mixed-validity-to-bytes" $ do
+	let p = fromChar8 posix
 	
-	testCases "mixed validity to bytes"
-	[ t (p "\xB1.\xDD\xAA") "\xB1.\xDD\xAA"
-	, t (p "\xB1.\xDD\xAA" </> p "foo") "\xB1.\xDD\xAA/foo"
-	]
+	$expect $ equal (encode posix (p "\xB1.\xDD\xAA")) (B8.pack "\xB1.\xDD\xAA")
+	$expect $ equal (encode posix (p "\xB1.\xDD\xAA" </> p "foo")) (B8.pack "\xB1.\xDD\xAA/foo")
 
-testToText :: F.Test
-testToText =
-	let p = fromChar8 posix in
-	let t x y = toText posix x @?= emap T.pack T.pack y in
+test_ToText :: Test
+test_ToText = assertions "toText" $ do
+	let p = fromChar8 posix
 	
-	testCases "toText"
-	[ t (p "") (Right "")
-	, t (p "ascii") (Right "ascii")
-	, t (p "\xF0\x9D\x84\x9E") (Right "\x1D11E")
-	, t (p "\xED\xA0\x80") (Left "\xED\xA0\x80")
-	, t (p "\xF0\x9D\x84\x9E/\xED\xA0\x80") (Left "\x1D11E/\xED\xA0\x80")
-	, t (p "\xED.\xF0\x9D\x84\x9E.\xA0\x80") (Left "\xED.\x1D11E.\xA0\x80")
-	, t (p "\xB1.\xDD\xAA") (Left "\xB1.\x76A")
-	, t (p "\xB1.\xDD\xAA" </> p "foo") (Left "\xB1.\xDD\xAA/foo")
-	]
+	$expect $ equal (toText posix (p "")) (Right (T.pack ""))
+	$expect $ equal (toText posix (p "ascii")) (Right (T.pack "ascii"))
+	$expect $ equal (toText posix (p "\xF0\x9D\x84\x9E")) (Right (T.pack "\x1D11E"))
+	$expect $ equal (toText posix (p "\xED\xA0\x80")) (Left (T.pack "\xED\xA0\x80"))
+	$expect $ equal (toText posix (p "\xF0\x9D\x84\x9E/\xED\xA0\x80")) (Left (T.pack "\x1D11E/\xED\xA0\x80"))
+	$expect $ equal (toText posix (p "\xED.\xF0\x9D\x84\x9E.\xA0\x80")) (Left (T.pack "\xED.\x1D11E.\xA0\x80"))
+	$expect $ equal (toText posix (p "\xB1.\xDD\xAA")) (Left (T.pack "\xB1.\x76A"))
+	$expect $ equal (toText posix (p "\xB1.\xDD\xAA" </> p "foo")) (Left (T.pack "\xB1.\xDD\xAA/foo"))
 
-testFromText :: F.Test
-testFromText =
-	let t x y = fromText posix (T.pack x) @?= fromChar8 posix y in
+test_FromText :: Test
+test_FromText = assertions "fromText" $ do
+	let pt x = fromText posix (T.pack x)
+	let p = fromChar8 posix
 	
-	testCases "fromText"
-	[ t "" ""
-	, t "\x1D11E" "\xF0\x9D\x84\x9E"
-	, t "\xED\xA0\x80" "\xC3\xAD\xC2\xA0\xC2\x80"
-	]
+	$expect $ equal (pt "") (p "")
+	$expect $ equal (pt "\x1D11E") (p "\xF0\x9D\x84\x9E")
+	$expect $ equal (pt "\xED\xA0\x80") (p "\xC3\xAD\xC2\xA0\xC2\x80")
 
-testAppend :: F.Test
-testAppend =
-	let t x y z = toChar8 posix (append (fromChar8 posix x) (fromChar8 posix y)) @?= z in
+test_Append :: Test
+test_Append = assertions "append" $ do
+	let append x y = toChar8 posix (P.append (fromChar8 posix x) (fromChar8 posix y))
 	
-	testCases "append"
-	[ t "" "" ""
-	, t "" "b/" "b/"
+	$expect $ equal (append "" "") ""
+	$expect $ equal (append "" "b/") "b/"
 	
 	-- Relative to a directory
-	, t "a/" "" "a/"
-	, t "a/" "b/" "a/b/"
-	, t "a/" "b.txt" "a/b.txt"
-	, t "a.txt" "b.txt" "a.txt/b.txt"
-	, t "." "a" "./a"
+	$expect $ equal (append "a/" "") "a/"
+	$expect $ equal (append "a/" "b/") "a/b/"
+	$expect $ equal (append "a/" "b.txt") "a/b.txt"
+	$expect $ equal (append "a.txt" "b.txt") "a.txt/b.txt"
+	$expect $ equal (append "." "a") "./a"
 	
 	-- Relative to a file
-	, t "a" "" "a/"
-	, t "a" "b/" "a/b/"
-	, t "a/b" "c" "a/b/c"
+	$expect $ equal (append "a" "") "a/"
+	$expect $ equal (append "a" "b/") "a/b/"
+	$expect $ equal (append "a/b" "c") "a/b/c"
 	
 	-- Absolute
-	, t "/a/" "" "/a/"
-	, t "/a/" "b" "/a/b"
-	, t "/a/" "b/" "/a/b/"
+	$expect $ equal (append "/a/" "") "/a/"
+	$expect $ equal (append "/a/" "b") "/a/b"
+	$expect $ equal (append "/a/" "b/") "/a/b/"
 	
 	-- Second parameter is absolute
-	, t "/a/" "/" "/"
-	, t "/a/" "/b" "/b"
-	, t "/a/" "/b/" "/b/"
-	]
+	$expect $ equal (append "/a/" "/") "/"
+	$expect $ equal (append "/a/" "/b") "/b"
+	$expect $ equal (append "/a/" "/b/") "/b/"
 
-testCommonPrefix :: F.Test
-testCommonPrefix =
-	let t xs y = toChar8 posix (commonPrefix (map (fromChar8 posix) xs)) @?= y in
+test_CommonPrefix :: Test
+test_CommonPrefix = assertions "commonPrefix" $ do
+	let commonPrefix xs = toChar8 posix (P.commonPrefix (map (fromChar8 posix) xs))
 	
-	testCases "commonPrefix"
-	[ t ["", ""] ""
-	, t ["/", ""] ""
-	, t ["/", "/"] "/"
-	, t ["foo/", "/foo/"] ""
-	, t ["/foo", "/foo/"] "/"
-	, t ["/foo/", "/foo/"] "/foo/"
-	, t ["/foo/bar/baz.txt.gz", "/foo/bar/baz.txt.gz.bar"] "/foo/bar/baz.txt.gz"
-	]
+	$expect $ equal (commonPrefix ["", ""]) ""
+	$expect $ equal (commonPrefix ["/", ""]) ""
+	$expect $ equal (commonPrefix ["/", "/"]) "/"
+	$expect $ equal (commonPrefix ["foo/", "/foo/"]) ""
+	$expect $ equal (commonPrefix ["/foo", "/foo/"]) "/"
+	$expect $ equal (commonPrefix ["/foo/", "/foo/"]) "/foo/"
+	$expect $ equal (commonPrefix ["/foo/bar/baz.txt.gz", "/foo/bar/baz.txt.gz.bar"]) "/foo/bar/baz.txt.gz"
 
-testSplitExtension :: F.Test
-testSplitExtension =
-	let t x (y1, y2) = case splitExtension (fromChar8 posix x) of
-		(base, ext) -> (toChar8 posix base, ext) @?= (y1, fmap T.pack y2) in
+test_SplitExtension :: Test
+test_SplitExtension = assertions "splitExtension" $ do
+	let splitExtension x = (toChar8 posix base, ext) where
+		(base, ext) = P.splitExtension (fromChar8 posix x)
 	
-	testCases "splitExtension"
-	[ t ""              ("", Nothing)
-	, t "foo"           ("foo", Nothing)
-	, t "foo."          ("foo", Just "")
-	, t "foo.a"         ("foo", Just "a")
-	, t "foo.a/"        ("foo.a/", Nothing)
-	, t "foo.a/bar"     ("foo.a/bar", Nothing)
-	, t "foo.a/bar.b"   ("foo.a/bar", Just "b")
-	, t "foo.a/bar.b.c" ("foo.a/bar.b", Just "c")
-	]
+	$expect $ equal (splitExtension "") ("", Nothing)
+	$expect $ equal (splitExtension "foo") ("foo", Nothing)
+	$expect $ equal (splitExtension "foo.") ("foo", Just (T.pack ""))
+	$expect $ equal (splitExtension "foo.a") ("foo", Just (T.pack "a"))
+	$expect $ equal (splitExtension "foo.a/") ("foo.a/", Nothing)
+	$expect $ equal (splitExtension "foo.a/bar") ("foo.a/bar", Nothing)
+	$expect $ equal (splitExtension "foo.a/bar.b") ("foo.a/bar", Just (T.pack "b"))
+	$expect $ equal (splitExtension "foo.a/bar.b.c") ("foo.a/bar.b", Just (T.pack "c"))
 
-testCollapse :: F.Test
-testCollapse =
-	let t x y = toChar8 posix (collapse (fromChar8 posix x)) @?= y in
+test_Collapse :: Test
+test_Collapse = assertions "collapse" $ do
+	let collapse x = toChar8 posix (P.collapse (fromChar8 posix x))
 	
-	testCases "collapse"
-	[ t "./" "./"
-	, t "././" "./"
-	, t "../" "../"
-	, t ".././" "../"
-	, t "./../" "../"
-	, t "parent/foo/../bar" "parent/bar"
-	, t "parent/foo/.." "parent/"
-	]
+	$expect $ equal (collapse "./") "./"
+	$expect $ equal (collapse "././") "./"
+	$expect $ equal (collapse "../") "../"
+	$expect $ equal (collapse ".././") "../"
+	$expect $ equal (collapse "./../") "../"
+	$expect $ equal (collapse "parent/foo/../bar") "parent/bar"
+	$expect $ equal (collapse "parent/foo/..") "parent/"
 
-testParsing :: F.Test
-testParsing =
-	let tp x y = toChar8 posix (fromChar8 posix x) @?= y in
-	let tw x y = toString windows (fromString windows x) @?= y in
+test_Parsing :: Test
+test_Parsing = assertions "parsing" $ do
+	let p x = toChar8 posix (fromChar8 posix x)
+	let w x = toString windows (fromString windows x)
 	
-	testCases "parsing"
-	[ tp "" ""
-	, tp "/" "/"
-	, tp "/a" "/a"
-	, tp "/a/" "/a/"
-	, tp "a" "a"
-	, tp "a/" "a/"
-	, tp "a/b" "a/b"
-	, tp "a//b" "a/b"
-	, tp "a/./b" "a/./b"
-	, tp "." "./"
-	, tp "./" "./"
-	, tp ".." "../"
-	, tp "../" "../"
+	$expect $ equal (p "") ""
+	$expect $ equal (p "/") "/"
+	$expect $ equal (p "/a") "/a"
+	$expect $ equal (p "/a/") "/a/"
+	$expect $ equal (p "a") "a"
+	$expect $ equal (p "a/") "a/"
+	$expect $ equal (p "a/b") "a/b"
+	$expect $ equal (p "a//b") "a/b"
+	$expect $ equal (p "a/./b") "a/./b"
+	$expect $ equal (p ".") "./"
+	$expect $ equal (p "./") "./"
+	$expect $ equal (p "..") "../"
+	$expect $ equal (p "../") "../"
 	
-	, tw "" ""
-	, tw "c:\\" "C:\\"
-	, tw "c:\\a" "C:\\a"
-	, tw "c:\\a\\" "C:\\a\\"
-	, tw "a" "a"
-	, tw "a/" "a\\"
-	, tw "a\\" "a\\"
-	, tw "a\\b" "a\\b"
-	, tw "a\\\\b" "a\\b"
-	, tw "a\\.\\b" "a\\.\\b"
-	, tw "." ".\\"
-	, tw ".\\" ".\\"
-	, tw ".." "..\\"
-	, tw "..\\" "..\\"
-	]
+	$expect $ equal (w "") ""
+	$expect $ equal (w "c:\\") "C:\\"
+	$expect $ equal (w "c:\\a") "C:\\a"
+	$expect $ equal (w "c:\\a\\") "C:\\a\\"
+	$expect $ equal (w "a") "a"
+	$expect $ equal (w "a/") "a\\"
+	$expect $ equal (w "a\\") "a\\"
+	$expect $ equal (w "a\\b") "a\\b"
+	$expect $ equal (w "a\\\\b") "a\\b"
+	$expect $ equal (w "a\\.\\b") "a\\.\\b"
+	$expect $ equal (w ".") ".\\"
+	$expect $ equal (w ".\\") ".\\"
+	$expect $ equal (w "..") "..\\"
+	$expect $ equal (w "..\\") "..\\"
 
-testSplitSearchPath :: F.Test
-testSplitSearchPath =
-	let tp x y = map (toChar8 posix) (splitSearchPath posix (B8.pack x)) @?= y in
-	let tw x y = map (toString windows) (splitSearchPath windows (T.pack x)) @?= y in
+test_SplitSearchPath :: Test
+test_SplitSearchPath = assertions "splitSearchPath" $ do
+	let p x = map (toChar8 posix) (splitSearchPath posix (B8.pack x))
+	let w x = map (toString windows) (splitSearchPath windows (T.pack x))
 	
-	testCases "splitSearchPath"
-	[ tp "a:b:c" ["a", "b", "c"]
-	, tp "a::b:c" ["a", "./", "b", "c"]
-	, tw "a;b;c" ["a", "b", "c"]
-	, tw "a;;b;c" ["a", "b", "c"]
-	]
+	$expect $ equal (p "a:b:c") ["a", "b", "c"]
+	$expect $ equal (p "a::b:c") ["a", "./", "b", "c"]
+	$expect $ equal (w "a;b;c") ["a", "b", "c"]
+	$expect $ equal (w "a;;b;c") ["a", "b", "c"]
 
 posixPaths :: Gen FilePath
 posixPaths = sized $ fmap merge . genComponents where
@@ -367,6 +332,3 @@ toString r = T.unpack . encode r
 
 fromString :: Rules T.Text -> String -> FilePath
 fromString r = decode r . T.pack
-
-emap :: (a -> c) -> (b -> d) -> Either a b -> Either c d
-emap f1 f2 = either (Left . f1) (Right . f2)
