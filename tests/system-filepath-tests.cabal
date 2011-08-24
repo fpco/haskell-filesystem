@@ -17,10 +17,8 @@ executable system-filepath_tests
   build-depends:
       base > 3 && < 5
     , bytestring
-    , text
+    , chell >= 0.1 && < 0.2
+    , chell-quickcheck >= 0.1 && < 0.2
     , QuickCheck
-    , HUnit
-    , test-framework
-    , test-framework-quickcheck2
-    , test-framework-hunit
     , system-filepath
+    , text
