@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 -- |
 -- Module: Filesystem.Path
 -- Copyright: 2010 John Millikin
