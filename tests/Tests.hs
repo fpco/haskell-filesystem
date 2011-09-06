@@ -136,6 +136,12 @@ test_Absolute = assertions "absolute" $ do
 	$expect $ absolute (fromChar8 posix "/foo/bar")
 	$expect . not $ absolute (fromChar8 posix "")
 	$expect . not $ absolute (fromChar8 posix "foo/bar")
+	
+	$expect $ absolute (fromString windows "c:\\")
+	$expect $ absolute (fromString windows "c:\\foo\\bar")
+	$expect . not $ absolute (fromString windows "")
+	$expect . not $ absolute (fromString windows "foo\\bar")
+	$expect . not $ absolute (fromString windows "\\foo\\bar")
 
 test_Relative :: Test
 test_Relative = assertions "relative" $ do
@@ -143,6 +149,12 @@ test_Relative = assertions "relative" $ do
 	$expect . not $ relative (fromChar8 posix "/foo/bar")
 	$expect $ relative (fromChar8 posix "")
 	$expect $ relative (fromChar8 posix "foo/bar")
+	
+	$expect . not $ relative (fromString windows "c:\\")
+	$expect . not $ relative (fromString windows "c:\\foo\\bar")
+	$expect $ relative (fromString windows "")
+	$expect $ relative (fromString windows "foo\\bar")
+	$expect . not $ relative (fromString windows "\\foo\\bar")
 
 test_Identity :: Text -> Rules a -> Gen FilePath -> Suite
 test_Identity name r gen = property name $ forAll gen $ \p -> p == decode r (encode r p)
@@ -178,32 +190,40 @@ test_FromText = assertions "fromText" $ do
 
 test_Append :: Test
 test_Append = assertions "append" $ do
-	let append x y = toChar8 posix (P.append (fromChar8 posix x) (fromChar8 posix y))
+	let appendP x y = toChar8 posix (P.append (fromChar8 posix x) (fromChar8 posix y))
+	let appendW x y = toString windows (P.append (fromString windows x) (fromString windows y))
 	
-	$expect $ equal (append "" "") ""
-	$expect $ equal (append "" "b/") "b/"
+	$expect $ equal (appendP "" "") ""
+	$expect $ equal (appendP "" "b/") "b/"
 	
 	-- Relative to a directory
-	$expect $ equal (append "a/" "") "a/"
-	$expect $ equal (append "a/" "b/") "a/b/"
-	$expect $ equal (append "a/" "b.txt") "a/b.txt"
-	$expect $ equal (append "a.txt" "b.txt") "a.txt/b.txt"
-	$expect $ equal (append "." "a") "./a"
+	$expect $ equal (appendP "a/" "") "a/"
+	$expect $ equal (appendP "a/" "b/") "a/b/"
+	$expect $ equal (appendP "a/" "b.txt") "a/b.txt"
+	$expect $ equal (appendP "a.txt" "b.txt") "a.txt/b.txt"
+	$expect $ equal (appendP "." "a") "./a"
 	
 	-- Relative to a file
-	$expect $ equal (append "a" "") "a/"
-	$expect $ equal (append "a" "b/") "a/b/"
-	$expect $ equal (append "a/b" "c") "a/b/c"
+	$expect $ equal (appendP "a" "") "a/"
+	$expect $ equal (appendP "a" "b/") "a/b/"
+	$expect $ equal (appendP "a/b" "c") "a/b/c"
 	
 	-- Absolute
-	$expect $ equal (append "/a/" "") "/a/"
-	$expect $ equal (append "/a/" "b") "/a/b"
-	$expect $ equal (append "/a/" "b/") "/a/b/"
+	$expect $ equal (appendP "/a/" "") "/a/"
+	$expect $ equal (appendP "/a/" "b") "/a/b"
+	$expect $ equal (appendP "/a/" "b/") "/a/b/"
 	
 	-- Second parameter is absolute
-	$expect $ equal (append "/a/" "/") "/"
-	$expect $ equal (append "/a/" "/b") "/b"
-	$expect $ equal (append "/a/" "/b/") "/b/"
+	$expect $ equal (appendP "/a/" "/") "/"
+	$expect $ equal (appendP "/a/" "/b") "/b"
+	$expect $ equal (appendP "/a/" "/b/") "/b/"
+	
+	-- Windows: volume handling
+	$expect $ equal (appendW "c:\\" "") "C:\\"
+	$expect $ equal (appendW "c:\\foo" "bar\\baz") "C:\\foo\\bar\\baz"
+	$expect $ equal (appendW "c:\\foo" "d:\\bar") "D:\\bar"
+	$expect $ equal (appendW "c:\\foo" "\\bar") "C:\\bar"
+	$expect $ equal (appendW "foo\\bar" "\\baz") "\\baz"
 
 test_CommonPrefix :: Test
 test_CommonPrefix = assertions "commonPrefix" $ do

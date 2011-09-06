@@ -146,7 +146,14 @@ relative p = case pathRoot p of
 -- | Appends two 'FilePath's. If the second path is absolute, it is returned
 -- unchanged.
 append :: FilePath -> FilePath -> FilePath
-append x y = if absolute y then y else xy where
+append x y = cased where
+	cased = case pathRoot y of
+		Just RootPosix -> y
+		Just (RootWindowsVolume _) -> y
+		Just RootWindowsCurrentVolume -> case pathRoot x of
+			Just (RootWindowsVolume _) -> y { pathRoot = pathRoot x }
+			_ -> y
+		Nothing -> xy
 	xy = y
 		{ pathRoot = pathRoot x
 		, pathDirectories = directories
