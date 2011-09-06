@@ -30,6 +30,7 @@ tests =
 	, test test_Directory
 	, test test_Parent
 	, test test_Filename
+	, test test_Dirname
 	, test test_Basename
 	, test test_Absolute
 	, test test_Relative
@@ -114,6 +115,24 @@ test_Filename = assertions "filename" $ do
 	$expect $ equal (filename "/foo/") ""
 	$expect $ equal (filename "/foo/bar") "bar"
 	$expect $ equal (filename "/foo/bar.txt") "bar.txt"
+
+test_Dirname :: Test
+test_Dirname = assertions "dirname" $ do
+	let dirname x = toChar8 posix (P.dirname (fromChar8 posix x))
+	
+	$expect $ equal (dirname "") ""
+	$expect $ equal (dirname "/") ""
+	$expect $ equal (dirname "foo") ""
+	$expect $ equal (dirname "foo/bar") "foo"
+	$expect $ equal (dirname "foo/bar/") "bar"
+	$expect $ equal (dirname "foo/bar/baz.txt") "bar"
+	
+	-- the directory name will be re-parsed to a file name.
+	let dirnameExts x = P.extensions (P.dirname (fromChar8 posix x))
+	$expect $ equal (dirnameExts "foo.d/bar") ["d"]
+	
+	-- reparsing preserves good/bad encoding state
+	$expect $ equal (dirnameExts "foo.\xB1.\xDD\xAA/bar") ["\xB1", "\xDD\xAA"]
 
 test_Basename :: Test
 test_Basename = assertions "basename" $ do

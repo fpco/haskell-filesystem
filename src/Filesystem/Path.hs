@@ -23,6 +23,7 @@ module Filesystem.Path
 	, directory
 	, parent
 	, filename
+	, dirname
 	, basename
 	, absolute
 	, relative
@@ -117,6 +118,24 @@ filename p = empty
 	{ pathBasename = pathBasename p
 	, pathExtensions = pathExtensions p
 	}
+
+-- | Retrieve a 'FilePath'&#x2019;s directory name. This is only the
+-- /file name/ of the directory, not its full path.
+--
+-- @
+-- dirname \"foo/bar/baz.txt\" == \"bar\"
+-- dirname \"/\" == \"\"
+-- @
+--
+-- Since: 0.3.2
+dirname :: FilePath -> FilePath
+dirname p = case reverse (pathDirectories p) of
+	[] -> FilePath Nothing [] Nothing []
+	(d:_) -> let
+		d':exts = T.split (== '.') (chunkText d)
+		chunk txt = d { chunkText = txt }
+		in FilePath Nothing [] (Just (chunk d')) (map chunk exts)
+
 
 -- | Retrieve a 'FilePath'&#x2019;s basename component.
 --
