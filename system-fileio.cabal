@@ -35,9 +35,9 @@ library
 
   if os(windows)
     cpp-options: -DCABAL_OS_WINDOWS
-    build-depends: Win32
+    build-depends: Win32 >= 2.2 && < 2.3
   else
-    build-depends: unix
+    build-depends: unix >= 2.3 && < 2.6
 
   exposed-modules:
     Filesystem
