@@ -10,6 +10,7 @@ flag coverage
 executable system-filepath_tests
   main-is: Tests.hs
   ghc-options: -Wall
+  hs-source-dirs: ../src,.
 
   if flag(coverage)
     ghc-options: -fhpc
@@ -20,5 +21,4 @@ executable system-filepath_tests
     , chell >= 0.1 && < 0.2
     , chell-quickcheck >= 0.1 && < 0.2
     , QuickCheck
-    , system-filepath
     , text

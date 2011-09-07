@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 -- |
 -- Module: Filesystem.Path
 -- Copyright: 2010 John Millikin
@@ -21,6 +23,7 @@ module Filesystem.Path
 	, directory
 	, parent
 	, filename
+	, dirname
 	, basename
 	, absolute
 	, relative
@@ -30,6 +33,7 @@ module Filesystem.Path
 	, (</>)
 	, concat
 	, commonPrefix
+	, stripPrefix
 	, collapse
 	
 	-- * Extensions
@@ -116,6 +120,24 @@ filename p = empty
 	, pathExtensions = pathExtensions p
 	}
 
+-- | Retrieve a 'FilePath'&#x2019;s directory name. This is only the
+-- /file name/ of the directory, not its full path.
+--
+-- @
+-- dirname \"foo/bar/baz.txt\" == \"bar\"
+-- dirname \"/\" == \"\"
+-- @
+--
+-- Since: 0.4.1
+dirname :: FilePath -> FilePath
+dirname p = case reverse (pathDirectories p) of
+	[] -> FilePath Nothing [] Nothing []
+	(d:_) -> let
+		d':exts = T.split (== '.') (chunkText d)
+		chunk txt = d { chunkText = txt }
+		in FilePath Nothing [] (Just (chunk d')) (map chunk exts)
+
+
 -- | Retrieve a 'FilePath'&#x2019;s basename component.
 --
 -- @
@@ -146,7 +168,14 @@ relative p = case pathRoot p of
 -- | Appends two 'FilePath's. If the second path is absolute, it is returned
 -- unchanged.
 append :: FilePath -> FilePath -> FilePath
-append x y = if absolute y then y else xy where
+append x y = cased where
+	cased = case pathRoot y of
+		Just RootPosix -> y
+		Just (RootWindowsVolume _) -> y
+		Just RootWindowsCurrentVolume -> case pathRoot x of
+			Just (RootWindowsVolume _) -> y { pathRoot = pathRoot x }
+			_ -> y
+		Nothing -> xy
 	xy = y
 		{ pathRoot = pathRoot x
 		, pathDirectories = directories
@@ -185,6 +214,44 @@ commonPrefix ps = foldr1 step ps where
 	common (x:xs) (y:ys) = if x == y
 		then x : common xs ys
 		else []
+
+-- Remove a prefix from a path.
+--
+-- @
+-- stripPrefix "/foo/" "/foo/bar/baz.txt" == Just "bar/baz.txt"
+-- stripPrefix "/foo/" "/bar/baz.txt" == Nothing
+-- @
+--
+-- Since: 0.4.1
+stripPrefix :: FilePath -> FilePath -> Maybe FilePath
+stripPrefix x y = if pathRoot x /= pathRoot y
+	then case pathRoot x of
+		Nothing -> Just y
+		Just _ -> Nothing
+	else do
+		dirs <- strip (pathDirectories x) (pathDirectories y)
+		case dirs of
+			[] -> case (pathBasename x, pathBasename y) of
+				(Nothing, Nothing) -> do
+					exts <- strip (pathExtensions x) (pathExtensions y)
+					return (y { pathRoot = Nothing, pathDirectories = dirs, pathExtensions = exts })
+				(Nothing, Just _) -> case pathExtensions x of
+					[] -> Just (y { pathRoot = Nothing, pathDirectories = dirs })
+					_ -> Nothing
+				(Just x_b, Just y_b) | x_b == y_b -> do
+					exts <- strip (pathExtensions x) (pathExtensions y)
+					return (empty { pathExtensions = exts })
+				_ -> Nothing
+			_ -> case (pathBasename x, pathExtensions x) of
+				(Nothing, []) -> Just (y { pathRoot = Nothing, pathDirectories = dirs })
+				_ -> Nothing
+
+strip :: Eq a => [a] -> [a] -> Maybe [a]
+strip [] ys = Just ys
+strip _ [] = Nothing
+strip (x:xs) (y:ys) = if x == y
+	then strip xs ys
+	else Nothing
 
 -- | Remove @\".\"@ and @\"..\"@ directories from a path.
 --
