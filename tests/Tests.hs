@@ -38,6 +38,8 @@ tests =
 	-- Basic operations
 	, test test_Append
 	, test test_CommonPrefix
+	, test test_StripPrefix
+	, property "stripPrefix" prop_StripPrefix
 	, test test_SplitExtension
 	, test test_Collapse
 	
@@ -255,6 +257,37 @@ test_CommonPrefix = assertions "commonPrefix" $ do
 	$expect $ equal (commonPrefix ["/foo", "/foo/"]) "/"
 	$expect $ equal (commonPrefix ["/foo/", "/foo/"]) "/foo/"
 	$expect $ equal (commonPrefix ["/foo/bar/baz.txt.gz", "/foo/bar/baz.txt.gz.bar"]) "/foo/bar/baz.txt.gz"
+
+test_StripPrefix :: Test
+test_StripPrefix = assertions "stripPrefix" $ do
+	let stripPrefix x y = fmap (toChar8 posix) (P.stripPrefix (fromChar8 posix x) (fromChar8 posix y))
+	
+	$expect $ equal (stripPrefix "" "") (Just "")
+	$expect $ equal (stripPrefix "" "/") (Just "/")
+	$expect $ equal (stripPrefix "/" "/") (Just "")
+	$expect $ equal (stripPrefix "/" "/foo") (Just "foo")
+	$expect $ equal (stripPrefix "/" "/foo/bar") (Just "foo/bar")
+	$expect $ equal (stripPrefix "/foo/" "/foo/bar") (Just "bar")
+	$expect $ equal (stripPrefix "/foo/" "/foo/bar/baz") (Just "bar/baz")
+	$expect $ equal (stripPrefix "/foo/bar" "/foo/bar.txt") (Just ".txt")
+	$expect $ equal (stripPrefix "/foo/bar.txt" "/foo/bar.txt.gz") (Just ".gz")
+	
+	-- Test ignoring non-matching prefixes
+	$expect $ equal (stripPrefix "/foo" "/foo/bar") Nothing
+	$expect $ equal (stripPrefix "/foo/bar/baz" "/foo") Nothing
+	$expect $ equal (stripPrefix "/foo/baz/" "/foo/bar/qux") Nothing
+	$expect $ equal (stripPrefix "/foo/bar/baz" "/foo/bar/qux") Nothing
+	$expect $ equal (stripPrefix "/foo/bar/baz" "/foo/bar/qux") Nothing
+
+prop_StripPrefix :: Property
+prop_StripPrefix =
+	forAll posixPaths $ \x ->
+	forAll posixPaths $ \suffix ->
+	let prefix = x </> "" in
+	let full = fromChar8 posix (toChar8 posix prefix ++ toChar8 posix suffix) in
+	case stripPrefix prefix full of
+		Nothing -> False
+		Just stripped -> prefix </> stripped == full
 
 test_SplitExtension :: Test
 test_SplitExtension = assertions "splitExtension" $ do
