@@ -24,6 +24,7 @@ source-repository head
 
 library
   ghc-options: -Wall -O2
+  hs-source-dirs: src
 
   build-depends:
       base >= 3 && < 5
