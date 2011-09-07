@@ -68,7 +68,6 @@ import           Prelude hiding (FilePath, readFile, writeFile, appendFile)
 
 import qualified Control.Exception as Exc
 import qualified Data.ByteString as B
-import qualified Data.ByteString.Char8 as B8
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import           Foreign.Ptr (Ptr, nullPtr)
@@ -76,7 +75,7 @@ import           Foreign.C (CString, withCString, peekCString)
 import qualified System.Environment as SE
 
 import           Filesystem.Path (FilePath, append)
-import           Filesystem.Path.CurrentOS (currentOS)
+import           Filesystem.Path.CurrentOS (currentOS, decodeString, encodeString)
 import qualified Filesystem.Path.Rules as R
 
 import qualified System.IO as IO
@@ -501,18 +500,4 @@ withHANDLE path = Exc.bracket open close where
 		0
 		Nothing
 	close = Win32.closeHandle
-#endif
-
-encodeString :: FilePath -> String
-#ifdef CABAL_OS_WINDOWS
-encodeString = T.unpack . R.encode R.windows
-#else
-encodeString = B8.unpack . R.encode R.posix
-#endif
-
-decodeString :: String -> FilePath
-#ifdef CABAL_OS_WINDOWS
-decodeString = R.decode R.windows . T.pack
-#else
-decodeString = R.decode R.posix . B8.pack
 #endif
