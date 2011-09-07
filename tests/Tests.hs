@@ -378,12 +378,19 @@ windowsPaths = sized $ \n -> genComponents n >>= merge where
 		return $ fromString windows $ root ++ path
 		
 	reserved = ['\x00'..'\x1F'] ++ ['/', '\\', '?', '*', ':', '|', '"', '<', '>']
-	validChar c = not $ elem c reserved
+	reservedNames =
+		[ "AUX", "CLOCK$", "COM1", "COM2", "COM3", "COM4"
+		, "COM5", "COM6", "COM7", "COM8", "COM9", "CON"
+		, "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6"
+		, "LPT7", "LPT8", "LPT9", "NUL", "PRN"
+		]
+	validChar c = not (elem c reserved)
+	validComponent c = not (elem c reservedNames)
 	component = do
 		size <- choose (0, 10)
 		vectorOf size $ arbitrary `suchThat` validChar
 	genComponents n = do
-		cs <- vectorOf n component
+		cs <- vectorOf n (component `suchThat` validComponent)
 		frequency [(1, return cs), (9, return ([""] ++ cs))]
 	
 	genRoot = do
