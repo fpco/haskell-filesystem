@@ -71,12 +71,14 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import           Foreign.Ptr (nullPtr)
+import           Foreign.Ptr (Ptr, nullPtr)
 import           Foreign.C (CString, withCString, peekCString)
 import qualified System.Environment as SE
+
 import           Filesystem.Path (FilePath, append)
 import           Filesystem.Path.CurrentOS (currentOS)
 import qualified Filesystem.Path.Rules as R
+
 import qualified System.IO as IO
 import           System.IO.Error (isDoesNotExistError)
 
@@ -137,15 +139,28 @@ rename old new =
 --
 -- Since: 0.1.1
 canonicalizePath :: FilePath -> IO FilePath
-canonicalizePath path =
-	let path' = encodeString path in
+canonicalizePath path = fmap decodeString $ do
+	let path' = encodeString path
 #ifdef CABAL_OS_WINDOWS
-	fmap decodeString (Win32.getFullPathName path')
+#if MIN_VERSION_Win32(2,2,1)
+	Win32.getFullPathName path'
+#else
+	Win32.withTString path' $ \c_name -> do
+		Win32.try "getFullPathName" (\buf len ->
+			c_GetFullPathNameW c_name len buf nullPtr) 512
+#endif
 #else
 	withCString path' $ \cPath -> do
 		cOut <- Posix.throwErrnoPathIfNull "canonicalizePath" path' (c_realpath cPath nullPtr)
-		out <- peekCString cOut
-		return (decodeString out)
+		peekCString cOut
+#endif
+
+#ifdef CABAL_OS_WINDOWS
+#if MIN_VERSION_Win32(2,2,1)
+#else
+foreign import stdcall unsafe "GetFullPathNameW"
+	c_GetFullPathNameW :: Win32.LPCTSTR -> Win32.DWORD -> Win32.LPTSTR -> Ptr Win32.LPTSTR -> IO Win32.DWORD
+#endif
 #endif
 
 #ifndef CABAL_OS_WINDOWS
@@ -218,13 +233,24 @@ removeTree path = SD.removeDirectoryRecursive (encodeString path)
 --
 -- See: 'SD.getCurrentDirectory'
 getWorkingDirectory :: IO FilePath
-getWorkingDirectory = do
+getWorkingDirectory = fmap decodeString $ do
 #ifdef CABAL_OS_WINDOWS
-	raw <- Win32.getCurrentDirectory
+#if MIN_VERSION_Win32(2,2,1)
+	Win32.getCurrentDirectory
 #else
-	raw <- Posix.getWorkingDirectory
+	Win32.try "getCurrentDirectory" (flip c_GetCurrentDirectoryW) 512
 #endif
-	return (decodeString raw)
+#else
+	Posix.getWorkingDirectory
+#endif
+
+#ifdef CABAL_OS_WINDOWS
+#if MIN_VERSION_Win32(2,2,1)
+#else
+foreign import stdcall unsafe "GetCurrentDirectoryW"
+	c_GetCurrentDirectoryW :: Win32.DWORD -> Win32.LPTSTR -> IO Win32.UINT
+#endif
+#endif
 
 -- | Set the current working directory.
 --
