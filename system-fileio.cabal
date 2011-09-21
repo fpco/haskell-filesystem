@@ -1,5 +1,5 @@
 name: system-fileio
-version: 0.2.2
+version: 0.2.2.1
 synopsis: High-level filesystem interaction
 license: MIT
 license-file: license.txt
@@ -24,7 +24,7 @@ source-repository head
 source-repository this
   type: bzr
   location: https://john-millikin.com/branches/hs-fileio/0.2/
-  tag: system-fileio_0.2.2
+  tag: system-fileio_0.2.2.1
 
 library
   ghc-options: -Wall -O2
@@ -36,7 +36,7 @@ library
     , directory >= 1.0 && < 1.2
     , system-filepath >= 0.3 && < 0.5
     , text >= 0.1 && < 0.12
-    , time >= 1.0 && < 1.4
+    , time >= 1.0 && < 1.5
 
   if os(windows)
     cpp-options: -DCABAL_OS_WINDOWS
