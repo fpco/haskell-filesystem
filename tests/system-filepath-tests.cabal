@@ -18,7 +18,7 @@ executable system-filepath_tests
   build-depends:
       base > 3 && < 5
     , bytestring
-    , chell >= 0.1 && < 0.2
+    , chell >= 0.2 && < 0.3
     , chell-quickcheck >= 0.1 && < 0.2
     , QuickCheck
     , text

@@ -25,33 +25,33 @@ tests :: [Suite]
 tests =
 	[
 	-- Basic properties
-	  test test_Empty
-	, test test_Root
-	, test test_Directory
-	, test test_Parent
-	, test test_Filename
-	, test test_Dirname
-	, test test_Basename
-	, test test_Absolute
-	, test test_Relative
+	  test_Empty
+	, test_Root
+	, test_Directory
+	, test_Parent
+	, test_Filename
+	, test_Dirname
+	, test_Basename
+	, test_Absolute
+	, test_Relative
 	
 	-- Basic operations
-	, test test_Append
-	, test test_CommonPrefix
-	, test test_StripPrefix
+	, test_Append
+	, test_CommonPrefix
+	, test_StripPrefix
 	, property "stripPrefix" prop_StripPrefix
-	, test test_SplitExtension
-	, test test_Collapse
+	, test_SplitExtension
+	, test_Collapse
 	
 	, suite "to-from-bytes"
 		[ test_Identity "posix" posix posixPaths
 		, test_Identity "windows" windows windowsPaths
-		, test test_MixedValidityToBytes
+		, test_MixedValidityToBytes
 		]
 	
 	, suite "to-from-text"
-		[ test test_ToText
-		, test test_FromText
+		[ test_ToText
+		, test_FromText
 		]
 	
 	, suite "validity"
@@ -59,17 +59,17 @@ tests =
 		, property "windows" (forAll windowsPaths (valid windows))
 		]
 	
-	, test test_SplitSearchPath
-	, test test_Parsing
+	, test_SplitSearchPath
+	, test_Parsing
 	]
 
-test_Empty :: Test
+test_Empty :: Suite
 test_Empty = assertions "empty" $ do
 	$expect $ P.null empty
 	$expect $ equal (toChar8 posix empty) ""
 	$expect $ equal (toString windows empty) ""
 
-test_Root :: Test
+test_Root :: Suite
 test_Root = assertions "root" $ do
 	let root x = toChar8 posix (P.root (fromChar8 posix x))
 	
@@ -78,7 +78,7 @@ test_Root = assertions "root" $ do
 	$expect $ equal (root "foo") ""
 	$expect $ equal (root "/foo") "/"
 
-test_Directory :: Test
+test_Directory :: Suite
 test_Directory = assertions "directory" $ do
 	let directory x = toChar8 posix (P.directory (fromChar8 posix x))
 	
@@ -93,7 +93,7 @@ test_Directory = assertions "directory" $ do
 	$expect $ equal (directory "foo") "./"
 	$expect $ equal (directory "foo/bar") "./foo/"
 
-test_Parent :: Test
+test_Parent :: Suite
 test_Parent = assertions "parent" $ do
 	let parent x = toChar8 posix (P.parent (fromChar8 posix x))
 	
@@ -108,7 +108,7 @@ test_Parent = assertions "parent" $ do
 	$expect $ equal (parent "foo") "./"
 	$expect $ equal (parent "foo/bar") "./foo/"
 
-test_Filename :: Test
+test_Filename :: Suite
 test_Filename = assertions "filename" $ do
 	let filename x = toChar8 posix (P.filename (fromChar8 posix x))
 	
@@ -118,7 +118,7 @@ test_Filename = assertions "filename" $ do
 	$expect $ equal (filename "/foo/bar") "bar"
 	$expect $ equal (filename "/foo/bar.txt") "bar.txt"
 
-test_Dirname :: Test
+test_Dirname :: Suite
 test_Dirname = assertions "dirname" $ do
 	let dirname x = toChar8 posix (P.dirname (fromChar8 posix x))
 	
@@ -136,7 +136,7 @@ test_Dirname = assertions "dirname" $ do
 	-- reparsing preserves good/bad encoding state
 	$expect $ equal (dirnameExts "foo.\xB1.\xDD\xAA/bar") ["\xB1", "\xDD\xAA"]
 
-test_Basename :: Test
+test_Basename :: Suite
 test_Basename = assertions "basename" $ do
 	let basename_posix x = toChar8 posix (basename (fromChar8 posix x))
 	let basename_windows x = toString windows (basename (fromString windows x))
@@ -151,7 +151,7 @@ test_Basename = assertions "basename" $ do
 	$expect $ equal (basename_windows ".") ""
 	$expect $ equal (basename_windows "..") ""
 
-test_Absolute :: Test
+test_Absolute :: Suite
 test_Absolute = assertions "absolute" $ do
 	$expect $ absolute (fromChar8 posix "/")
 	$expect $ absolute (fromChar8 posix "/foo/bar")
@@ -164,7 +164,7 @@ test_Absolute = assertions "absolute" $ do
 	$expect . not $ absolute (fromString windows "foo\\bar")
 	$expect . not $ absolute (fromString windows "\\foo\\bar")
 
-test_Relative :: Test
+test_Relative :: Suite
 test_Relative = assertions "relative" $ do
 	$expect . not $ relative (fromChar8 posix "/")
 	$expect . not $ relative (fromChar8 posix "/foo/bar")
@@ -180,14 +180,14 @@ test_Relative = assertions "relative" $ do
 test_Identity :: Text -> Rules a -> Gen FilePath -> Suite
 test_Identity name r gen = property name $ forAll gen $ \p -> p == decode r (encode r p)
 
-test_MixedValidityToBytes :: Test
+test_MixedValidityToBytes :: Suite
 test_MixedValidityToBytes = assertions "mixed-validity-to-bytes" $ do
 	let p = fromChar8 posix
 	
 	$expect $ equal (encode posix (p "\xB1.\xDD\xAA")) (B8.pack "\xB1.\xDD\xAA")
 	$expect $ equal (encode posix (p "\xB1.\xDD\xAA" </> p "foo")) (B8.pack "\xB1.\xDD\xAA/foo")
 
-test_ToText :: Test
+test_ToText :: Suite
 test_ToText = assertions "toText" $ do
 	let p = fromChar8 posix
 	
@@ -200,7 +200,7 @@ test_ToText = assertions "toText" $ do
 	$expect $ equal (toText posix (p "\xB1.\xDD\xAA")) (Left (T.pack "\xB1.\x76A"))
 	$expect $ equal (toText posix (p "\xB1.\xDD\xAA" </> p "foo")) (Left (T.pack "\xB1.\xDD\xAA/foo"))
 
-test_FromText :: Test
+test_FromText :: Suite
 test_FromText = assertions "fromText" $ do
 	let pt x = fromText posix (T.pack x)
 	let p = fromChar8 posix
@@ -209,7 +209,7 @@ test_FromText = assertions "fromText" $ do
 	$expect $ equal (pt "\x1D11E") (p "\xF0\x9D\x84\x9E")
 	$expect $ equal (pt "\xED\xA0\x80") (p "\xC3\xAD\xC2\xA0\xC2\x80")
 
-test_Append :: Test
+test_Append :: Suite
 test_Append = assertions "append" $ do
 	let appendP x y = toChar8 posix (P.append (fromChar8 posix x) (fromChar8 posix y))
 	let appendW x y = toString windows (P.append (fromString windows x) (fromString windows y))
@@ -246,7 +246,7 @@ test_Append = assertions "append" $ do
 	$expect $ equal (appendW "c:\\foo" "\\bar") "C:\\bar"
 	$expect $ equal (appendW "foo\\bar" "\\baz") "\\baz"
 
-test_CommonPrefix :: Test
+test_CommonPrefix :: Suite
 test_CommonPrefix = assertions "commonPrefix" $ do
 	let commonPrefix xs = toChar8 posix (P.commonPrefix (map (fromChar8 posix) xs))
 	
@@ -258,7 +258,7 @@ test_CommonPrefix = assertions "commonPrefix" $ do
 	$expect $ equal (commonPrefix ["/foo/", "/foo/"]) "/foo/"
 	$expect $ equal (commonPrefix ["/foo/bar/baz.txt.gz", "/foo/bar/baz.txt.gz.bar"]) "/foo/bar/baz.txt.gz"
 
-test_StripPrefix :: Test
+test_StripPrefix :: Suite
 test_StripPrefix = assertions "stripPrefix" $ do
 	let stripPrefix x y = fmap (toChar8 posix) (P.stripPrefix (fromChar8 posix x) (fromChar8 posix y))
 	
@@ -289,7 +289,7 @@ prop_StripPrefix =
 		Nothing -> False
 		Just stripped -> prefix </> stripped == full
 
-test_SplitExtension :: Test
+test_SplitExtension :: Suite
 test_SplitExtension = assertions "splitExtension" $ do
 	let splitExtension x = (toChar8 posix base, ext) where
 		(base, ext) = P.splitExtension (fromChar8 posix x)
@@ -303,7 +303,7 @@ test_SplitExtension = assertions "splitExtension" $ do
 	$expect $ equal (splitExtension "foo.a/bar.b") ("foo.a/bar", Just (T.pack "b"))
 	$expect $ equal (splitExtension "foo.a/bar.b.c") ("foo.a/bar.b", Just (T.pack "c"))
 
-test_Collapse :: Test
+test_Collapse :: Suite
 test_Collapse = assertions "collapse" $ do
 	let collapse x = toChar8 posix (P.collapse (fromChar8 posix x))
 	
@@ -315,7 +315,7 @@ test_Collapse = assertions "collapse" $ do
 	$expect $ equal (collapse "parent/foo/../bar") "parent/bar"
 	$expect $ equal (collapse "parent/foo/..") "parent/"
 
-test_Parsing :: Test
+test_Parsing :: Suite
 test_Parsing = assertions "parsing" $ do
 	let p x = toChar8 posix (fromChar8 posix x)
 	let w x = toString windows (fromString windows x)
@@ -349,7 +349,7 @@ test_Parsing = assertions "parsing" $ do
 	$expect $ equal (w "..") "..\\"
 	$expect $ equal (w "..\\") "..\\"
 
-test_SplitSearchPath :: Test
+test_SplitSearchPath :: Suite
 test_SplitSearchPath = assertions "splitSearchPath" $ do
 	let p x = map (toChar8 posix) (splitSearchPath posix (B8.pack x))
 	let w x = map (toString windows) (splitSearchPath windows (T.pack x))
