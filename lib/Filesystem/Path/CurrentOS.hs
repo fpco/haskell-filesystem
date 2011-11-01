@@ -51,7 +51,11 @@ currentOS :: R.Rules PLATFORM_PATH_FORMAT
 #if defined(CABAL_OS_WINDOWS)
 currentOS = R.windows
 #else
+#if __GLASGOW_HASKELL__ >= 702
+currentOS = R.posix_ghc702
+#else
 currentOS = R.posix
+#endif
 #endif
 
 instance S.IsString F.FilePath where

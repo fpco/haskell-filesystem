@@ -9,6 +9,7 @@
 module Filesystem.Path.Rules
 	( Rules
 	, posix
+	, posix_ghc702
 	, windows
 	
 	-- * Type conversions
@@ -80,6 +81,16 @@ posix = Rules
 	, decode = posixFromBytes
 	, encodeString = B8.unpack . posixToBytes
 	, decodeString = posixFromBytes . B8.pack
+	}
+
+-- | Linux, BSD, OS X, and other UNIX or UNIX-like operating systems.
+--
+-- This variant is for use with GHC 7.2 or later, which tries to decode
+-- file paths in its IO computations.
+posix_ghc702 :: Rules B.ByteString
+posix_ghc702 = posix
+	{ encodeString = T.unpack . either id id . posixToText
+	, decodeString = posixFromText . T.pack
 	}
 
 posixToText :: FilePath -> Either T.Text T.Text
