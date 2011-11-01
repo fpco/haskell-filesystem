@@ -10,7 +10,7 @@ flag coverage
 executable system-filepath_tests
   main-is: Tests.hs
   ghc-options: -Wall
-  hs-source-dirs: ../src,.
+  hs-source-dirs: ../lib,.
 
   if flag(coverage)
     ghc-options: -fhpc
