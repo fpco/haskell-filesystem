@@ -8,7 +8,7 @@ flag coverage
   manual: True
 
 executable system-fileio_tests
-  main-is: SystemFileioTests.hs
+  main-is: FilesystemTests.hs
   ghc-options: -Wall
   hs-source-dirs: ../lib,.
 

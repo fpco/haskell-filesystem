@@ -23,7 +23,7 @@ extra-source-files:
   scripts/run-tests
   --
   tests/system-fileio-tests.cabal
-  tests/SystemFileioTests.hs
+  tests/FilesystemTests.hs
 
 source-repository head
   type: bzr
