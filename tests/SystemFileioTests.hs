@@ -11,6 +11,7 @@ module Main
 	, main
 	) where
 
+import           Control.Monad
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString.Char8
 import qualified Data.ByteString
@@ -73,14 +74,22 @@ test_UnicodeWindows = assertions "windows" $ do
 test_UnicodePosixValid :: Suite
 test_UnicodePosixValid = assertions "valid" $ do
 	let text = "\12354\946\1076\119070.txt"
-	(tempDir, paths, contents) <- liftIO $ withSystemTempDirectory "tests." $ \dir -> do
+	(tempDir, paths, contents, fp) <- liftIO $ withSystemTempDirectory "tests." $ \dir -> do
 		let dirPath = decodeString dir
 		let filePath = dirPath </> fromText text
 		writeTextFile filePath "contents"
 		
+		-- check that it was saved in the correct encoding
+		fp <- Data.ByteString.useAsCString (encode filePath) $ \path_cstr ->
+			Foreign.C.withCString "rb" $ \mode_cstr ->
+			c_fopen path_cstr mode_cstr
+		when (fp /= nullPtr) $ do
+			_ <- c_fclose fp
+			return ()
+		
 		paths <- listDirectory dirPath
 		contents <- readTextFile filePath
-		return (dir, paths, contents)
+		return (dir, paths, contents, fp)
 	
 	$assert (not (Prelude.null paths))
 	$expect $ equal (length paths) 1
@@ -91,6 +100,7 @@ test_UnicodePosixValid = assertions "valid" $ do
 	$expect $ equal (toText path) (Right textPath)
 	
 	$expect $ equal contents "contents"
+	$expect $ notEqual fp nullPtr
 
 test_UnicodePosixInvalid :: Suite
 test_UnicodePosixInvalid = assertions "invalid" $ do
