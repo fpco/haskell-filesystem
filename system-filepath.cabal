@@ -13,6 +13,10 @@ stability: experimental
 homepage: https://john-millikin.com/software/hs-filepath/
 bug-reports: mailto:jmillikin@gmail.com
 
+extra-source-files:
+  tests/system-filepath-tests.cabal
+  tests/Tests.hs
+
 source-repository head
   type: bzr
   location: https://john-millikin.com/software/hs-filepath/
@@ -24,7 +28,7 @@ source-repository this
 
 library
   ghc-options: -Wall -O2
-  hs-source-dirs: src
+  hs-source-dirs: lib
 
   build-depends:
       base >= 3 && < 5

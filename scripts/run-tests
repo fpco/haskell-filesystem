@@ -10,12 +10,7 @@ fi
 
 require_cabal_dev
 
-rm -rf dist
-cabal-dev install || exit 1
-ghc-pkg -f cabal-dev/packages-*.conf hide system-filepath
-
 pushd tests
-rm -rf dist
 $CABAL_DEV -s ../cabal-dev install || exit 1
 popd
 

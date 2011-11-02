@@ -27,7 +27,10 @@ data Chunk = Chunk
 	{ chunkText :: T.Text
 	, chunkGood :: Bool
 	}
-	deriving (Eq, Ord, Data, Typeable)
+	deriving (Ord, Data, Typeable)
+
+instance Eq Chunk where
+	(Chunk x _) == (Chunk y _) = x == y
 
 type Directory = Chunk
 type Basename = Chunk
