@@ -17,6 +17,14 @@ description:
   This is a small wrapper around the \"directory\", \"unix\", and \"Win32\"
   packages for use with \"system-filepath\".
 
+extra-source-files:
+  scripts/common.bash
+  scripts/run-coverage
+  scripts/run-tests
+  --
+  tests/system-fileio-tests.cabal
+  tests/SystemFileioTests.hs
+
 source-repository head
   type: bzr
   location: https://john-millikin.com/software/hs-fileio/

@@ -1,0 +1,17 @@
+#!/bin/bash
+if [ ! -f 'system-fileio.cabal' ]; then
+	echo -n "Can't find system-fileio.cabal; please run this script as"
+	echo -n " ./scripts/run-tests from within the system-fileio source"
+	echo " directory"
+	exit 1
+fi
+
+. scripts/common.bash
+
+require_cabal_dev
+
+pushd tests
+$CABAL_DEV -s ../cabal-dev install || exit 1
+popd
+
+cabal-dev/bin/system-fileio_tests
