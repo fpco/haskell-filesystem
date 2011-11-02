@@ -1,5 +1,5 @@
 name: system-filepath
-version: 0.3.2
+version: 0.3.3
 synopsis: High-level, byte-based file and directory path manipulations
 license: MIT
 license-file: license.txt
@@ -24,7 +24,7 @@ source-repository head
 source-repository this
   type: bzr
   location: https://john-millikin.com/branches/hs-filepath/0.3/
-  tag: system-filepath_0.3.2
+  tag: system-filepath_0.3.3
 
 library
   ghc-options: -Wall -O2
