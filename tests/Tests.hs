@@ -315,7 +315,9 @@ test_Collapse = assertions "collapse" $ do
 	$expect $ equal (collapse "../") "../"
 	$expect $ equal (collapse ".././") "../"
 	$expect $ equal (collapse "./../") "../"
-	$expect $ equal (collapse "parent/foo/../bar") "parent/bar"
+	$expect $ equal (collapse "../../") "../../"
+	$expect $ equal (collapse "parent/foo/baz/../bar") "parent/foo/bar"
+	$expect $ equal (collapse "parent/foo/baz/../../bar") "parent/bar"
 	$expect $ equal (collapse "parent/foo/..") "parent/"
 
 test_Parsing :: Suite
