@@ -24,6 +24,9 @@ extra-source-files:
   --
   tests/system-fileio-tests.cabal
   tests/FilesystemTests.hs
+  tests/FilesystemTests/Posix.hs
+  tests/FilesystemTests/Util.hs
+  tests/FilesystemTests/Windows.hs
 
 source-repository head
   type: bzr

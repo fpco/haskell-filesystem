@@ -17,5 +17,12 @@ popd
 rm -f system-fileio_tests.tix
 cabal-dev/bin/system-fileio_tests $@
 
-hpc markup --srcdir=src --srcdir=tests/ system-fileio_tests.tix --destdir=hpc-markup --exclude=Main
-hpc report --srcdir=src --srcdir=tests/ system-fileio_tests.tix --exclude=Main
+EXCLUDES="\
+--exclude=Main \
+--exclude=FilesystemTests.Posix \
+--exclude=FilesystemTests.Util \
+--exclude=FilesystemTests.Windows
+"
+
+hpc markup --srcdir=src --srcdir=tests/ system-fileio_tests.tix --destdir=hpc-markup $EXCLUDES > /dev/null
+hpc report --srcdir=src --srcdir=tests/ system-fileio_tests.tix $EXCLUDES
