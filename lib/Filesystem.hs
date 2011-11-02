@@ -436,27 +436,30 @@ openFile path = IO.openBinaryFile (encodeString path)
 --
 -- See: 'IO.withBinaryFile'
 withFile :: FilePath -> IO.IOMode -> (IO.Handle -> IO a) -> IO a
-withFile path = IO.withBinaryFile (encodeString path)
+withFile path mode = Exc.bracket (openFile path mode) IO.hClose
 
 -- | Read in the entire contents of a binary file.
 --
 -- See: 'B.readFile'
 readFile :: FilePath -> IO B.ByteString
-readFile path = B.readFile (encodeString path)
+readFile path = withFile path IO.ReadMode
+	(\h -> IO.hFileSize h >>= B.hGet h . fromIntegral)
 
 -- | Replace the entire contents of a binary file with the provided
 -- 'B.ByteString'.
 --
 -- See: 'B.writeFile'
 writeFile :: FilePath -> B.ByteString -> IO ()
-writeFile path = B.writeFile (encodeString path)
+writeFile path bytes = withFile path IO.WriteMode
+	(\h -> B.hPut h bytes)
 
 -- | Append a 'B.ByteString' to a file. If the file does not exist, it will
 -- be created.
 --
 -- See: 'B.appendFile'
 appendFile :: FilePath -> B.ByteString -> IO ()
-appendFile path = B.appendFile (encodeString path)
+appendFile path bytes = withFile path IO.AppendMode
+	(\h -> B.hPut h bytes)
 
 -- | Open a file in text mode, and return an open 'Handle'. The 'Handle'
 -- should be 'IO.hClose'd when it is no longer needed.
@@ -474,27 +477,29 @@ openTextFile path = IO.openFile (encodeString path)
 --
 -- See: 'IO.withFile'
 withTextFile :: FilePath -> IO.IOMode -> (IO.Handle -> IO a) -> IO a
-withTextFile path = IO.withFile (encodeString path)
+withTextFile path mode = Exc.bracket (openTextFile path mode) IO.hClose
 
 -- | Read in the entire contents of a text file.
 --
 -- See: 'T.readFile'
 readTextFile :: FilePath -> IO T.Text
-readTextFile path = T.readFile (encodeString path)
+readTextFile path = openTextFile path IO.ReadMode >>= T.hGetContents
 
 -- | Replace the entire contents of a text file with the provided
 -- 'T.Text'.
 --
 -- See: 'T.writeFile'
 writeTextFile :: FilePath -> T.Text -> IO ()
-writeTextFile path = T.writeFile (encodeString path)
+writeTextFile path text = withTextFile path IO.WriteMode
+	(\h -> T.hPutStr h text)
 
 -- | Append 'T.Text' to a file. If the file does not exist, it will
 -- be created.
 --
 -- See: 'T.appendFile'
 appendTextFile :: FilePath -> T.Text -> IO ()
-appendTextFile path = T.appendFile (encodeString path)
+appendTextFile path text = withTextFile path IO.AppendMode
+	(\h -> T.hPutStr h text)
 
 #ifdef CABAL_OS_WINDOWS
 withHANDLE :: FilePath -> (Win32.HANDLE -> IO a) -> IO a
