@@ -14,4 +14,4 @@ pushd tests
 $CABAL_DEV -s ../cabal-dev install || exit 1
 popd
 
-cabal-dev/bin/system-fileio_tests
+cabal-dev/bin/system-fileio_tests $@

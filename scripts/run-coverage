@@ -15,7 +15,7 @@ $CABAL_DEV -s ../cabal-dev install --flags="coverage" || exit 1
 popd
 
 rm -f system-fileio_tests.tix
-cabal-dev/bin/system-fileio_tests
+cabal-dev/bin/system-fileio_tests $@
 
 hpc markup --srcdir=src --srcdir=tests/ system-fileio_tests.tix --destdir=hpc-markup --exclude=Main
 hpc report --srcdir=src --srcdir=tests/ system-fileio_tests.tix --exclude=Main
