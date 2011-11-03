@@ -36,7 +36,9 @@ test_Posix = suite "posix"
 		, test_IsDirectoryIso8859
 		]
 	, suite "rename"
-		[
+		[ test_RenameAscii
+		, test_RenameUtf8
+		, test_RenameIso8859
 		]
 	, suite "canonicalizePath"
 		[
@@ -125,50 +127,131 @@ test_Posix = suite "posix"
 test_IsFileAscii :: Suite
 test_IsFileAscii = assertionsWithTemp "ascii" $ \dir -> do
 	let path = dir </> decode "test.txt"
+	
+	before <- liftIO $ Filesystem.isFile path
+	$expect (not before)
+	
 	touch_ffi path "contents\n"
 	
-	x <- liftIO $ Filesystem.isFile path
-	$expect x
+	after <- liftIO $ Filesystem.isFile path
+	$expect after
 
 test_IsFileUtf8 :: Suite
 test_IsFileUtf8 = assertionsWithTemp "utf8" $ \dir -> do
 	let path = dir </> decode "\xC2\xA1\xC2\xA2.txt"
+	
+	before <- liftIO $ Filesystem.isFile path
+	$expect (not before)
+	
 	touch_ffi path "contents\n"
 	
-	x <- liftIO $ Filesystem.isFile path
-	$expect x
+	after <- liftIO $ Filesystem.isFile path
+	$expect after
 
 test_IsFileIso8859 :: Suite
 test_IsFileIso8859 = assertionsWithTemp "iso8859" $ \dir -> do
 	let path = dir </> decode "\xA1\xA2\xA3.txt"
+	
+	before <- liftIO $ Filesystem.isFile path
+	$expect (not before)
+	
 	touch_ffi path "contents\n"
 	
-	x <- liftIO $ Filesystem.isFile path
-	$expect x
+	after <- liftIO $ Filesystem.isFile path
+	$expect after
 
 test_IsDirectoryAscii :: Suite
 test_IsDirectoryAscii = assertionsWithTemp "ascii" $ \dir -> do
 	let path = dir </> decode "test.d"
+	
+	before <- liftIO $ Filesystem.isDirectory path
+	$expect (not before)
+	
 	mkdir_ffi path
 	
-	x <- liftIO $ Filesystem.isDirectory path
-	$expect x
+	after <- liftIO $ Filesystem.isDirectory path
+	$expect after
 
 test_IsDirectoryUtf8 :: Suite
 test_IsDirectoryUtf8 = assertionsWithTemp "utf8" $ \dir -> do
 	let path = dir </> decode "\xC2\xA1\xC2\xA2.d"
+	
+	before <- liftIO $ Filesystem.isDirectory path
+	$expect (not before)
+	
 	mkdir_ffi path
 	
-	x <- liftIO $ Filesystem.isDirectory path
-	$expect x
+	after <- liftIO $ Filesystem.isDirectory path
+	$expect after
 
 test_IsDirectoryIso8859 :: Suite
 test_IsDirectoryIso8859 = assertionsWithTemp "iso8859" $ \dir -> do
 	let path = dir </> decode "\xA1\xA2\xA3.d"
+	
+	before <- liftIO $ Filesystem.isDirectory path
+	$expect (not before)
+	
 	mkdir_ffi path
 	
-	x <- liftIO $ Filesystem.isDirectory path
-	$expect x
+	after <- liftIO $ Filesystem.isDirectory path
+	$expect after
+
+test_RenameAscii :: Suite
+test_RenameAscii = assertionsWithTemp "ascii" $ \dir -> do
+	let old_path = dir </> decode "old_test.txt"
+	let new_path = dir </> decode "new_test.txt"
+	
+	touch_ffi old_path ""
+	
+	old_before <- liftIO $ Filesystem.isFile old_path
+	new_before <- liftIO $ Filesystem.isFile new_path
+	$expect old_before
+	$expect (not new_before)
+	
+	liftIO $ Filesystem.rename old_path new_path
+	
+	old_after <- liftIO $ Filesystem.isFile old_path
+	new_after <- liftIO $ Filesystem.isFile new_path
+	$expect (not old_after)
+	$expect new_after
+
+test_RenameUtf8 :: Suite
+test_RenameUtf8 = assertionsWithTemp "utf8" $ \dir -> do
+	let old_path = dir </> decode "old_\xC2\xA1\xC2\xA2.txt"
+	let new_path = dir </> decode "new_\xC2\xA1\xC2\xA2.txt"
+	
+	touch_ffi old_path ""
+	
+	old_before <- liftIO $ Filesystem.isFile old_path
+	new_before <- liftIO $ Filesystem.isFile new_path
+	$expect old_before
+	$expect (not new_before)
+	
+	liftIO $ Filesystem.rename old_path new_path
+	
+	old_after <- liftIO $ Filesystem.isFile old_path
+	new_after <- liftIO $ Filesystem.isFile new_path
+	$expect (not old_after)
+	$expect new_after
+
+test_RenameIso8859 :: Suite
+test_RenameIso8859 = assertionsWithTemp "iso8859" $ \dir -> do
+	let old_path = dir </> decode "old_\xA1\xA2\xA3.txt"
+	let new_path = dir </> decode "new_\xA1\xA2\xA3.txt"
+	
+	touch_ffi old_path ""
+	
+	old_before <- liftIO $ Filesystem.isFile old_path
+	new_before <- liftIO $ Filesystem.isFile new_path
+	$expect old_before
+	$expect (not new_before)
+	
+	liftIO $ Filesystem.rename old_path new_path
+	
+	old_after <- liftIO $ Filesystem.isFile old_path
+	new_after <- liftIO $ Filesystem.isFile new_path
+	$expect (not old_after)
+	$expect new_after
 
 test_ListDirectory :: Suite
 test_ListDirectory = assertionsWithTemp "listDirectory" $ \dir -> do
