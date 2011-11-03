@@ -14,6 +14,10 @@ homepage: https://john-millikin.com/software/hs-filepath/
 bug-reports: mailto:jmillikin@gmail.com
 
 extra-source-files:
+  scripts/common.bash
+  scripts/run-coverage
+  scripts/run-tests
+  --
   tests/system-filepath-tests.cabal
   tests/Tests.hs
 
