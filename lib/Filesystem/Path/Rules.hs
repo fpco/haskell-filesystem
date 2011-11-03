@@ -31,7 +31,7 @@ import qualified Prelude as P
 import qualified Control.Exception as Exc
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
-import           Data.Char (toUpper, chr)
+import           Data.Char (toUpper, chr, ord)
 import           Data.List (intersperse)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -89,8 +89,8 @@ posix = Rules
 -- file paths in its IO computations.
 posix_ghc702 :: Rules B.ByteString
 posix_ghc702 = posix
-	{ encodeString = T.unpack . either id id . posixToText
-	, decodeString = posixFromText . T.pack
+	{ encodeString = posixToGhcString
+	, decodeString = posixFromGhcString
 	}
 
 posixToText :: FilePath -> Either T.Text T.Text
@@ -147,6 +147,27 @@ posixFromBytes bytes = if B.null bytes
 	else posixFromChunks $ flip map (B.split 0x2F bytes) $ \b -> case maybeDecodeUtf8 b of
 		Just text -> Chunk text True
 		Nothing -> Chunk (T.pack (B8.unpack b)) False
+
+posixToGhcString :: FilePath -> String
+posixToGhcString p = P.concat (root : chunks) where
+	root = T.unpack (rootText (pathRoot p))
+	chunks = intersperse "/" (map chunkStr (directoryChunks True p))
+	chunkStr ch = if chunkGood ch
+		then T.unpack (chunkText ch)
+		else map (\c -> if ord c >= 0x80 && ord c < 0xFF
+			then chr (ord c + 0xEF00)
+			else c) (T.unpack (chunkText ch))
+
+posixFromGhcString :: String -> FilePath
+posixFromGhcString str = path where
+	path = if P.null str
+		then empty
+		else posixFromChunks (map checkChunk (textSplitBy (== '/') (T.pack str)))
+	checkChunk t = if T.any (\c -> ord c >= 0xEF00 && ord c <= 0xEFFF) t
+		then Chunk (T.map (\c -> if ord c >= 0xEF00 && ord c <= 0xEFFF
+			then chr (ord c - 0xEF00)
+			else c) t) False
+		else Chunk t True
 
 posixValid :: FilePath -> Bool
 posixValid p = validRoot && validDirectories where

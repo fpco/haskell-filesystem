@@ -5,7 +5,6 @@ module Main (tests, main) where
 
 import           Prelude hiding (FilePath)
 
-import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
 import           Data.List (intercalate)
 import qualified Data.Text as T
@@ -384,8 +383,8 @@ test_EncodeString_Posix_Ghc702 :: Suite
 test_EncodeString_Posix_Ghc702 = assertions "posix_ghc702" $ do
 	let enc = encodeString posix_ghc702
 	$expect $ equal (enc (fromChar8 "test")) "test"
-	$expect $ equal (enc (fromChar8 "test\xA1\xA2")) "test\xA1\xA2"
-	$expect $ equal (enc (fromChar8 "\xC2\xA1\xC2\xA2/test\xA1\xA2")) "\xA1\xA2/test\xA1\xA2"
+	$expect $ equal (enc (fromChar8 "test\xA1\xA2")) "test\xEFA1\xEFA2"
+	$expect $ equal (enc (fromChar8 "\xC2\xA1\xC2\xA2/test\xA1\xA2")) "\xA1\xA2/test\xEFA1\xEFA2"
 	$expect $ equal (enc (fromText posix_ghc702 "test\xA1\xA2")) "test\xA1\xA2"
 
 test_EncodeString_Win32 :: Suite
@@ -417,6 +416,10 @@ test_DecodeString_Posix_Ghc702 = assertions "posix_ghc702" $ do
 	$expect $ equal (dec r "test") (fromText r "test")
 	$expect $ equal (dec r "test\xC2\xA1\xC2\xA2") (fromText r "test\xC2\xA1\xC2\xA2")
 	$expect $ equal (dec r "test\xA1\xA2") (fromText r "test\xA1\xA2")
+	$expect $ equal (dec r "test\xEFA1\xEFA2") (fromChar8 "test\xA1\xA2")
+	$expect $ equal
+		(toText r (dec r "test\xEFA1\xEFA2"))
+		(Left "test\xA1\xA2")
 
 test_DecodeString_Win32 :: Suite
 test_DecodeString_Win32 = assertions "windows" $ do
