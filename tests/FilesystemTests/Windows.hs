@@ -8,6 +8,8 @@ module FilesystemTests.Windows
 	( test_Windows
 	) where
 
+import           Control.Monad
+import           Control.Monad.IO.Class (liftIO)
 import           Test.Chell
 
 import           Filesystem
