@@ -14,8 +14,10 @@ module Filesystem.Path.Internal where
 import           Prelude hiding (FilePath)
 
 import qualified Data.ByteString.Char8 as B8
+import           Data.Char (chr, ord)
 import           Data.Data (Data)
 import           Data.List (intersperse)
+import           Data.Ord (comparing)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import           Data.Typeable (Typeable)
@@ -24,18 +26,9 @@ import           Data.Typeable (Typeable)
 -- File Paths
 -------------------------------------------------------------------------------
 
-data Chunk = Chunk
-	{ chunkText :: T.Text
-	, chunkGood :: Bool
-	}
-	deriving (Ord, Data, Typeable)
-
-instance Eq Chunk where
-	(Chunk x _) == (Chunk y _) = x == y
-
-type Directory = Chunk
-type Basename = Chunk
-type Extension = Chunk
+type Directory = T.Text
+type Basename = T.Text
+type Extension = T.Text
 
 data Root
 	= RootPosix
@@ -49,34 +42,35 @@ data FilePath = FilePath
 	, pathBasename :: Maybe Basename
 	, pathExtensions :: [Extension]
 	}
-	deriving (Eq, Ord, Data, Typeable)
+	deriving (Data, Typeable)
+
+instance Eq FilePath where
+	x == y = compare x y == EQ
+
+instance Ord FilePath where
+	compare = comparing (\p ->
+		(pathRoot p
+		, fmap unescape' (pathDirectories p)
+		, fmap unescape' (pathBasename p)
+		, fmap unescape' (pathExtensions p)
+		))
 
 -- | A file path with no root, directory, or filename
 empty :: FilePath
 empty = FilePath Nothing [] Nothing []
 
-dot :: Chunk
-dot = Chunk (T.pack ".") True
+dot :: T.Text
+dot = T.pack "."
 
-dots :: Chunk
-dots = Chunk (T.pack "..") True
+dots :: T.Text
+dots = T.pack ".."
 
-filenameChunk :: Bool -> FilePath -> Chunk
-filenameChunk strict p = Chunk (T.concat texts) allGood where
-	name = maybe (Chunk T.empty True) id (pathBasename p)
+filenameText :: FilePath -> T.Text
+filenameText p = T.concat (name:exts) where
+	name = maybe T.empty id (pathBasename p)
 	exts = case pathExtensions p of
 		[] -> []
-		exts' -> intersperse dot ((Chunk T.empty True):exts')
-	chunks = name:exts
-	
-	texts = map chunkText' chunks
-	allGood = and (map chunkGood chunks)
-	
-	chunkText' c = if chunkGood c
-		then if allGood || not strict
-			then chunkText c
-			else T.pack (B8.unpack (TE.encodeUtf8 (chunkText c)))
-		else chunkText c
+		exts' -> intersperse dot (T.empty:exts')
 
 -------------------------------------------------------------------------------
 -- Rules
@@ -166,3 +160,17 @@ textSplitBy = T.split
 textSplitBy = T.splitBy
 #endif
 
+unescape :: T.Text -> (T.Text, Bool)
+unescape t = if T.any (\c -> ord c >= 0xEF00 && ord c <= 0xEFFF) t
+	then (T.map (\c -> if ord c >= 0xEF00 && ord c <= 0xEFFF
+		then chr (ord c - 0xEF00)
+		else c) t, False)
+	else (t, True)
+
+unescape' :: T.Text -> T.Text
+unescape' = fst . unescape
+
+unescapeBytes' :: T.Text -> B8.ByteString
+unescapeBytes' t = B8.concat (map (\c -> if ord c >= 0xEF00 && ord c <= 0xEFFF
+	then B8.singleton (chr (ord c - 0xEF00))
+	else TE.encodeUtf8 (T.singleton c)) (T.unpack t))
