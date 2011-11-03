@@ -15,6 +15,8 @@ import           Test.Chell
 import           Filesystem
 import           Filesystem.Path.CurrentOS
 
+import           FilesystemTests.Util (assertionsWithTemp)
+
 test_Windows :: Suite
 test_Windows = suite "windows"
 	[ test_ListDirectory
