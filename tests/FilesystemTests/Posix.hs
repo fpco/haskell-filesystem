@@ -22,7 +22,7 @@ import           Test.Chell
 import           Filesystem
 import           Filesystem.Path.CurrentOS
 
-import           FilesystemTests.Util (assertionsWithTemp)
+import           FilesystemTests.Util (assertionsWithTemp, todo)
 
 test_Posix :: Suite
 test_Posix = suite "posix"
@@ -64,85 +64,33 @@ test_Posix = suite "posix"
 			(decode "\xA1\xA2\xA3-a.txt")
 			(decode "\xA1\xA2\xA3-b.txt")
 		]
-	, suite "createDirectory"
-		[
-		]
-	, suite "createTree"
-		[
-		]
+	, todo "createDirectory"
+	, todo "createTree"
 	, test_ListDirectory
-	, suite "removeFile"
-		[
-		]
-	, suite "removeDirectory"
-		[
-		]
-	, suite "removeTree"
-		[
-		]
-	, suite "getWorkingDirectory"
-		[
-		]
-	, suite "setWorkingDirectory"
-		[
-		]
-	, suite "getHomeDirectory"
-		[
-		]
-	, suite "getDesktopDirectory"
-		[
-		]
-	, suite "getDocumentsDirectory"
-		[
-		]
-	, suite "getAppDataDirectory"
-		[
-		]
-	, suite "getAppCacheDirectory"
-		[
-		]
-	, suite "getAppConfigDirectory"
-		[
-		]
-	, suite "copyFile"
-		[
-		]
-	, suite "getModified"
-		[
-		]
-	, suite "getSize"
-		[
-		]
-	, suite "openFile"
-		[
-		]
-	, suite "withFile"
-		[
-		]
-	, suite "readFile"
-		[
-		]
-	, suite "writeFile"
-		[
-		]
-	, suite "appendFile"
-		[
-		]
-	, suite "openTextFile"
-		[
-		]
-	, suite "withTextFile"
-		[
-		]
-	, suite "readTextFile"
-		[
-		]
-	, suite "writeTextFile"
-		[
-		]
-	, suite "appendTextFile"
-		[
-		]
+	, todo "removeFile"
+	, todo "removeDirectory"
+	, todo "removeTree"
+	, todo "getWorkingDirectory"
+	, todo "setWorkingDirectory"
+	, todo "getHomeDirectory"
+	, todo "getDesktopDirectory"
+	, todo "getDocumentsDirectory"
+	, todo "getAppDataDirectory"
+	, todo "getAppCacheDirectory"
+	, todo "getAppConfigDirectory"
+	, todo "copyFile"
+	, todo "getModified"
+	, todo "getSize"
+	, todo "openFile"
+	, todo "withFile"
+	, todo "readFile"
+	, todo "writeFile"
+	, todo "appendFile"
+	, todo "openTextFile"
+	, todo "withTextFile"
+	, todo "readTextFile"
+	, todo "writeTextFile"
+	, todo "appendTextFile"
 	]
 
 test_IsFile :: Text -> FilePath -> Suite

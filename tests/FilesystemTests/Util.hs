@@ -1,5 +1,3 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -8,6 +6,7 @@
 -- See license.txt for details
 module FilesystemTests.Util
 	( assertionsWithTemp
+	, todo
 	) where
 
 import           Prelude hiding (FilePath)
@@ -24,3 +23,6 @@ assertionsWithTemp name io = test (Test name impl) where
 		case suiteTests (assertions name (io dirPath)) of
 			[(Test _ io')] -> io' options
 			_ -> error "assertionsWithTemp: use in place of 'assertions' only."
+
+todo :: Text -> Suite
+todo name = skipIf True (assertions name (return ()))

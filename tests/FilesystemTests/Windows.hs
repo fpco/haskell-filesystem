@@ -1,5 +1,3 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -15,11 +13,41 @@ import           Test.Chell
 import           Filesystem
 import           Filesystem.Path.CurrentOS
 
-import           FilesystemTests.Util (assertionsWithTemp)
+import           FilesystemTests.Util (assertionsWithTemp, todo)
 
 test_Windows :: Suite
 test_Windows = suite "windows"
-	[ test_ListDirectory
+	[ todo "isFile"
+	, todo "isDirectory"
+	, todo "rename"
+	, todo "canonicalizePath"
+	, todo "createDirectory"
+	, todo "createTree"
+	, test_ListDirectory
+	, todo "removeFile"
+	, todo "removeDirectory"
+	, todo "removeTree"
+	, todo "getWorkingDirectory"
+	, todo "setWorkingDirectory"
+	, todo "getHomeDirectory"
+	, todo "getDesktopDirectory"
+	, todo "getDocumentsDirectory"
+	, todo "getAppDataDirectory"
+	, todo "getAppCacheDirectory"
+	, todo "getAppConfigDirectory"
+	, todo "copyFile"
+	, todo "getModified"
+	, todo "getSize"
+	, todo "openFile"
+	, todo "withFile"
+	, todo "readFile"
+	, todo "writeFile"
+	, todo "appendFile"
+	, todo "openTextFile"
+	, todo "withTextFile"
+	, todo "readTextFile"
+	, todo "writeTextFile"
+	, todo "appendTextFile"
 	]
 
 test_ListDirectory :: Suite
