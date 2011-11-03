@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 
 -- |
@@ -157,3 +158,11 @@ data Rules platformFormat = Rules
 instance Show (Rules a) where
 	showsPrec d r = showParen (d > 10)
 		(showString "Rules " . shows (rulesName r))
+
+textSplitBy :: (Char -> Bool) -> T.Text -> [T.Text]
+#if MIN_VERSION_text(0,11,0)
+textSplitBy = T.split
+#else
+textSplitBy = T.splitBy
+#endif
+

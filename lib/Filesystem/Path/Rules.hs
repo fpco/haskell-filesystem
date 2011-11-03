@@ -118,7 +118,7 @@ posixFromChunks chunks = FilePath root directories basename exts where
 	
 	(basename, exts) = if T.null (chunkText filename)
 		then (Nothing, [])
-		else case T.split (== '.') (chunkText filename) of
+		else case textSplitBy (== '.') (chunkText filename) of
 			[] -> (Nothing, [])
 			(name':exts') -> if chunkGood filename
 				then (Just (Chunk name' True), map (\e -> Chunk e True) exts')
@@ -131,7 +131,7 @@ posixFromChunks chunks = FilePath root directories basename exts where
 posixFromText :: T.Text -> FilePath
 posixFromText text = if T.null text
 	then empty
-	else posixFromChunks (map (\t -> Chunk t True) (T.split (== '/') text))
+	else posixFromChunks (map (\t -> Chunk t True) (textSplitBy (== '/') text))
 
 posixToBytes :: FilePath -> B.ByteString
 posixToBytes p = B.concat (root : chunks) where
@@ -188,7 +188,7 @@ winFromText :: T.Text -> FilePath
 winFromText text = if T.null text then empty else path where
 	path = FilePath root directories basename exts
 	
-	split = T.split (\c -> c == '/' || c == '\\') text
+	split = textSplitBy (\c -> c == '/' || c == '\\') text
 	
 	(root, pastRoot) = let
 		head' = head split
@@ -212,7 +212,7 @@ winFromText text = if T.null text then empty else path where
 	
 	(basename, exts) = if T.null filename
 		then (Nothing, [])
-		else case T.split (== '.') filename of
+		else case textSplitBy (== '.') filename of
 			[] -> (Nothing, [])
 			(name':exts') -> (Just (Chunk name' True), map (\e -> Chunk e True) exts')
 
@@ -240,4 +240,4 @@ winValid p = validRoot && noReserved && validCharacters where
 		$ not . T.any (`elem` reservedChars) . chunkText
 
 winSplit :: T.Text -> [FilePath]
-winSplit = map winFromText . filter (not . T.null) . T.split (== ';')
+winSplit = map winFromText . filter (not . T.null) . textSplitBy (== ';')

@@ -133,10 +133,9 @@ dirname :: FilePath -> FilePath
 dirname p = case reverse (pathDirectories p) of
 	[] -> FilePath Nothing [] Nothing []
 	(d:_) -> let
-		d':exts = T.split (== '.') (chunkText d)
+		d':exts = textSplitBy (== '.') (chunkText d)
 		chunk txt = d { chunkText = txt }
 		in FilePath Nothing [] (Just (chunk d')) (map chunk exts)
-
 
 -- | Retrieve a 'FilePath'&#x2019;s basename component.
 --
