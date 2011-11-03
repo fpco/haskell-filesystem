@@ -14,6 +14,7 @@ import           Prelude hiding (FilePath)
 import           Control.Monad
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString
+import           Data.Text (Text)
 import           Foreign
 import           Foreign.C
 import           Test.Chell
@@ -26,22 +27,42 @@ import           FilesystemTests.Util (assertionsWithTemp)
 test_Posix :: Suite
 test_Posix = suite "posix"
 	[ suite "isFile"
-		[ test_IsFileAscii
-		, test_IsFileUtf8
-		, test_IsFileIso8859
+		[ test_IsFile "ascii"
+			(decode "test.txt")
+		, test_IsFile "utf8"
+			(decode "\xC2\xA1\xC2\xA2.txt")
+		, test_IsFile "iso8859"
+			(decode "\xA1\xA2\xA3.txt")
 		]
 	, suite "isDirectory"
-		[ test_IsDirectoryAscii
-		, test_IsDirectoryUtf8
-		, test_IsDirectoryIso8859
+		[ test_IsDirectory "ascii"
+			(decode "test.d")
+		, test_IsDirectory "utf8"
+			(decode "\xC2\xA1\xC2\xA2.d")
+		, test_IsDirectory "iso8859"
+			(decode "\xA1\xA2\xA3.d")
 		]
 	, suite "rename"
-		[ test_RenameAscii
-		, test_RenameUtf8
-		, test_RenameIso8859
+		[ test_Rename "ascii"
+			(decode "old_test.txt")
+			(decode "new_test.txt")
+		, test_Rename "utf8"
+			(decode "old_\xC2\xA1\xC2\xA2.txt")
+			(decode "new_\xC2\xA1\xC2\xA2.txt")
+		, test_Rename "iso8859"
+			(decode "old_\xA1\xA2\xA3.txt")
+			(decode "new_\xA1\xA2\xA3.txt")
 		]
 	, suite "canonicalizePath"
-		[
+		[ test_CanonicalizePath "ascii"
+			(decode "test-a.txt")
+			(decode "test-b.txt")
+		, test_CanonicalizePath "utf8"
+			(decode "\xC2\xA1\xC2\xA2-a.txt")
+			(decode "\xC2\xA1\xC2\xA2-b.txt")
+		, test_CanonicalizePath "iso8859"
+			(decode "\xA1\xA2\xA3-a.txt")
+			(decode "\xA1\xA2\xA3-b.txt")
 		]
 	, suite "createDirectory"
 		[
@@ -124,9 +145,9 @@ test_Posix = suite "posix"
 		]
 	]
 
-test_IsFileAscii :: Suite
-test_IsFileAscii = assertionsWithTemp "ascii" $ \dir -> do
-	let path = dir </> decode "test.txt"
+test_IsFile :: Text -> FilePath -> Suite
+test_IsFile test_name file_name = assertionsWithTemp test_name $ \dir -> do
+	let path = dir </> file_name
 	
 	before <- liftIO $ Filesystem.isFile path
 	$expect (not before)
@@ -136,33 +157,9 @@ test_IsFileAscii = assertionsWithTemp "ascii" $ \dir -> do
 	after <- liftIO $ Filesystem.isFile path
 	$expect after
 
-test_IsFileUtf8 :: Suite
-test_IsFileUtf8 = assertionsWithTemp "utf8" $ \dir -> do
-	let path = dir </> decode "\xC2\xA1\xC2\xA2.txt"
-	
-	before <- liftIO $ Filesystem.isFile path
-	$expect (not before)
-	
-	touch_ffi path "contents\n"
-	
-	after <- liftIO $ Filesystem.isFile path
-	$expect after
-
-test_IsFileIso8859 :: Suite
-test_IsFileIso8859 = assertionsWithTemp "iso8859" $ \dir -> do
-	let path = dir </> decode "\xA1\xA2\xA3.txt"
-	
-	before <- liftIO $ Filesystem.isFile path
-	$expect (not before)
-	
-	touch_ffi path "contents\n"
-	
-	after <- liftIO $ Filesystem.isFile path
-	$expect after
-
-test_IsDirectoryAscii :: Suite
-test_IsDirectoryAscii = assertionsWithTemp "ascii" $ \dir -> do
-	let path = dir </> decode "test.d"
+test_IsDirectory :: Text -> FilePath -> Suite
+test_IsDirectory test_name dir_name = assertionsWithTemp test_name $ \dir -> do
+	let path = dir </> dir_name
 	
 	before <- liftIO $ Filesystem.isDirectory path
 	$expect (not before)
@@ -172,72 +169,10 @@ test_IsDirectoryAscii = assertionsWithTemp "ascii" $ \dir -> do
 	after <- liftIO $ Filesystem.isDirectory path
 	$expect after
 
-test_IsDirectoryUtf8 :: Suite
-test_IsDirectoryUtf8 = assertionsWithTemp "utf8" $ \dir -> do
-	let path = dir </> decode "\xC2\xA1\xC2\xA2.d"
-	
-	before <- liftIO $ Filesystem.isDirectory path
-	$expect (not before)
-	
-	mkdir_ffi path
-	
-	after <- liftIO $ Filesystem.isDirectory path
-	$expect after
-
-test_IsDirectoryIso8859 :: Suite
-test_IsDirectoryIso8859 = assertionsWithTemp "iso8859" $ \dir -> do
-	let path = dir </> decode "\xA1\xA2\xA3.d"
-	
-	before <- liftIO $ Filesystem.isDirectory path
-	$expect (not before)
-	
-	mkdir_ffi path
-	
-	after <- liftIO $ Filesystem.isDirectory path
-	$expect after
-
-test_RenameAscii :: Suite
-test_RenameAscii = assertionsWithTemp "ascii" $ \dir -> do
-	let old_path = dir </> decode "old_test.txt"
-	let new_path = dir </> decode "new_test.txt"
-	
-	touch_ffi old_path ""
-	
-	old_before <- liftIO $ Filesystem.isFile old_path
-	new_before <- liftIO $ Filesystem.isFile new_path
-	$expect old_before
-	$expect (not new_before)
-	
-	liftIO $ Filesystem.rename old_path new_path
-	
-	old_after <- liftIO $ Filesystem.isFile old_path
-	new_after <- liftIO $ Filesystem.isFile new_path
-	$expect (not old_after)
-	$expect new_after
-
-test_RenameUtf8 :: Suite
-test_RenameUtf8 = assertionsWithTemp "utf8" $ \dir -> do
-	let old_path = dir </> decode "old_\xC2\xA1\xC2\xA2.txt"
-	let new_path = dir </> decode "new_\xC2\xA1\xC2\xA2.txt"
-	
-	touch_ffi old_path ""
-	
-	old_before <- liftIO $ Filesystem.isFile old_path
-	new_before <- liftIO $ Filesystem.isFile new_path
-	$expect old_before
-	$expect (not new_before)
-	
-	liftIO $ Filesystem.rename old_path new_path
-	
-	old_after <- liftIO $ Filesystem.isFile old_path
-	new_after <- liftIO $ Filesystem.isFile new_path
-	$expect (not old_after)
-	$expect new_after
-
-test_RenameIso8859 :: Suite
-test_RenameIso8859 = assertionsWithTemp "iso8859" $ \dir -> do
-	let old_path = dir </> decode "old_\xA1\xA2\xA3.txt"
-	let new_path = dir </> decode "new_\xA1\xA2\xA3.txt"
+test_Rename :: Text -> FilePath -> FilePath -> Suite
+test_Rename test_name old_name new_name = assertionsWithTemp test_name $ \dir -> do
+	let old_path = dir </> old_name
+	let new_path = dir </> new_name
 	
 	touch_ffi old_path ""
 	
@@ -265,6 +200,19 @@ test_ListDirectory = assertionsWithTemp "listDirectory" $ \dir -> do
 	names <- liftIO $ Filesystem.listDirectory dir
 	$expect $ sameItems paths names
 
+test_CanonicalizePath :: Text -> FilePath -> FilePath -> Suite
+test_CanonicalizePath test_name src_name dst_name = assertionsWithTemp test_name $ \dir -> do
+	let src_path = dir </> src_name
+	let subdir = dir </> "subdir"
+	let dst_path = subdir </> dst_name
+	
+	mkdir_ffi subdir
+	touch_ffi dst_path ""
+	symlink_ffi dst_path src_path
+	
+	canonicalized <- liftIO $ Filesystem.canonicalizePath src_path
+	$expect $ equal canonicalized dst_path
+
 -- | Create a file using the raw POSIX API, via FFI
 touch_ffi :: FilePath -> Data.ByteString.ByteString -> Assertions ()
 touch_ffi path contents = do
@@ -290,6 +238,19 @@ mkdir_ffi path = do
 	
 	$assert (ret == 0)
 
+-- | Create a symlink using the raw POSIX API, via FFI
+symlink_ffi :: FilePath -> FilePath -> Assertions ()
+symlink_ffi dst src  = do
+	liftIO $ do
+		print (encode dst)
+		print (encode src)
+	ret <- liftIO $
+		Data.ByteString.useAsCString (encode dst) $ \dst_p ->
+		Data.ByteString.useAsCString (encode src) $ \src_p ->
+		c_symlink dst_p src_p
+	
+	$assert (ret == 0)
+
 foreign import ccall unsafe "fopen"
 	c_fopen :: CString -> CString -> IO (Ptr ())
 
@@ -301,3 +262,6 @@ foreign import ccall unsafe "fwrite"
 
 foreign import ccall unsafe "mkdir"
 	c_mkdir :: CString -> CInt -> IO CInt
+
+foreign import ccall unsafe "symlink"
+	c_symlink :: CString -> CString -> IO CInt
