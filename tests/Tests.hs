@@ -136,7 +136,7 @@ test_Dirname = assertions "dirname" $ do
 	$expect $ equal (dirnameExts "foo.d/bar") ["d"]
 	
 	-- reparsing preserves good/bad encoding state
-	$expect $ equal (dirnameExts "foo.\xB1.\xDD\xAA/bar") ["\xB1", "\xDD\xAA"]
+	$expect $ equal (dirnameExts "foo.\xB1.\xDD\xAA/bar") ["\xB1", "\x76A"]
 
 test_Basename :: Suite
 test_Basename = assertions "basename" $ do

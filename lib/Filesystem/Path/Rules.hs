@@ -28,16 +28,13 @@ module Filesystem.Path.Rules
 import           Prelude hiding (FilePath, null)
 import qualified Prelude as P
 
-import qualified Control.Exception as Exc
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
 import           Data.Char (toUpper, chr, ord)
 import           Data.List (intersperse)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import           Data.Text.Encoding.Error (UnicodeException)
 import           System.IO ()
-import           System.IO.Unsafe (unsafePerformIO)
 
 import           Filesystem.Path hiding (root, filename, basename)
 import           Filesystem.Path.Internal
@@ -54,16 +51,6 @@ rootText r = T.pack $ flip (maybe "") r $ \r' -> case r' of
 
 directoryChunks :: FilePath -> [T.Text]
 directoryChunks path = pathDirectories path ++ [filenameText path]
-
-maybeDecodeUtf8 :: B.ByteString -> Maybe T.Text
-maybeDecodeUtf8 = excToMaybe . TE.decodeUtf8 where
-	excToMaybe :: a -> Maybe a
-	excToMaybe x = unsafePerformIO $ Exc.catch
-		(fmap Just (Exc.evaluate x))
-		unicodeError
-	
-	unicodeError :: UnicodeException -> IO (Maybe a)
-	unicodeError _ = return Nothing
 
 -------------------------------------------------------------------------------
 -- POSIX
@@ -116,19 +103,7 @@ posixFromChunks chunks = FilePath root directories basename exts where
 	
 	goodDirs = filter (not . T.null)
 	
-	(basename, exts) = if T.null filename
-		then (Nothing, [])
-		else case textSplitBy (== '.') filename of
-			[] -> (Nothing, [])
-			(name':exts') -> (Just (checkChunk name'), map checkChunk exts')
-	
-	checkChunk t = if chunkGood t
-		then t
-		else case maybeDecodeUtf8 (unescapeBytes' t) of
-			Just text -> text
-			Nothing -> t
-	
-	chunkGood t = not (T.any (\c -> ord c >= 0xEF00 && ord c <= 0xEFFF) t)
+	(basename, exts) = parseFilename filename
 
 posixFromText :: T.Text -> FilePath
 posixFromText text = if T.null text
@@ -222,11 +197,7 @@ winFromText text = if T.null text then empty else path where
 	
 	goodDirs = filter (not . T.null)
 	
-	(basename, exts) = if T.null filename
-		then (Nothing, [])
-		else case textSplitBy (== '.') filename of
-			[] -> (Nothing, [])
-			(name':exts') -> (Just name', exts')
+	(basename, exts) = parseFilename filename
 
 winValid :: FilePath -> Bool
 winValid p = validRoot && noReserved && validCharacters where

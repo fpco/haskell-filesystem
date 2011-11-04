@@ -13,6 +13,8 @@ module Filesystem.Path.Internal where
 
 import           Prelude hiding (FilePath)
 
+import qualified Control.Exception as Exc
+import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
 import           Data.Char (chr, ord)
 import           Data.Data (Data)
@@ -20,7 +22,9 @@ import           Data.List (intersperse)
 import           Data.Ord (comparing)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import           Data.Text.Encoding.Error (UnicodeException)
 import           Data.Typeable (Typeable)
+import           System.IO.Unsafe (unsafePerformIO)
 
 -------------------------------------------------------------------------------
 -- File Paths
@@ -174,3 +178,30 @@ unescapeBytes' :: T.Text -> B8.ByteString
 unescapeBytes' t = B8.concat (map (\c -> if ord c >= 0xEF00 && ord c <= 0xEFFF
 	then B8.singleton (chr (ord c - 0xEF00))
 	else TE.encodeUtf8 (T.singleton c)) (T.unpack t))
+
+parseFilename :: T.Text -> (Maybe Basename, [Extension])
+parseFilename filename = parsed where
+	parsed = if T.null filename
+		then (Nothing, [])
+		else case textSplitBy (== '.') filename of
+			[] -> (Nothing, [])
+			(name':exts') -> (Just (checkChunk name'), map checkChunk exts')
+	
+	checkChunk t = if chunkGood t
+		then t
+		else case maybeDecodeUtf8 (unescapeBytes' t) of
+			Just text -> text
+			Nothing -> t
+	
+	chunkGood t = not (T.any (\c -> ord c >= 0xEF00 && ord c <= 0xEFFF) t)
+
+maybeDecodeUtf8 :: B.ByteString -> Maybe T.Text
+maybeDecodeUtf8 = excToMaybe . TE.decodeUtf8 where
+	excToMaybe :: a -> Maybe a
+	excToMaybe x = unsafePerformIO $ Exc.catch
+		(fmap Just (Exc.evaluate x))
+		unicodeError
+	
+	unicodeError :: UnicodeException -> IO (Maybe a)
+	unicodeError _ = return Nothing
+

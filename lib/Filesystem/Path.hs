@@ -132,9 +132,8 @@ filename p = empty
 dirname :: FilePath -> FilePath
 dirname p = case reverse (pathDirectories p) of
 	[] -> FilePath Nothing [] Nothing []
-	(d:_) -> let
-		d':exts = textSplitBy (== '.') d
-		in FilePath Nothing [] (Just d') exts
+	(d:_) -> case parseFilename d of
+		(base, exts) -> FilePath Nothing [] base exts
 
 -- | Retrieve a 'FilePath'&#x2019;s basename component.
 --
