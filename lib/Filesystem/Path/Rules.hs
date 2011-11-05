@@ -76,6 +76,8 @@ posix = Rules
 --
 -- This is a variant of 'posix' for use with GHC 7.2 or later, which tries to
 -- decode file paths in its IO computations.
+--
+-- Since: 0.3.3
 posix_ghc702 :: Rules B.ByteString
 posix_ghc702 = posix
 	{ rulesName = T.pack "POSIX (GHC 7.2)"
@@ -159,6 +161,8 @@ posixSplitSearch = map (posixFromBytes . normSearch) . B.split 0x3A where
 --
 -- This is almost identical to 'posix', but with a native path type of 'T.Text'
 -- rather than 'B.ByteString'.
+--
+-- Since: 0.3.4
 darwin :: Rules T.Text
 darwin = Rules
 	{ rulesName = T.pack "Darwin"
@@ -176,6 +180,8 @@ darwin = Rules
 --
 -- This is a variant of 'darwin' for use with GHC 7.2 or later, which tries to
 -- decode file paths in its IO computations.
+--
+-- Since: 0.3.4
 darwin_ghc702 :: Rules T.Text
 darwin_ghc702 = darwin
 	{ rulesName = T.pack "Darwin (GHC 7.2)"
