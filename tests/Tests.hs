@@ -399,6 +399,8 @@ test_DecodeString :: Suite
 test_DecodeString = suite "decodeString"
 	[ test_DecodeString_Posix
 	, test_DecodeString_Posix_Ghc702
+	, test_DecodeString_Darwin
+	, test_DecodeString_Darwin_Ghc702
 	, test_DecodeString_Win32
 	]
 
@@ -422,6 +424,20 @@ test_DecodeString_Posix_Ghc702 = assertions "posix_ghc702" $ do
 		(toText r (dec r "test\xEFA1\xEFA2"))
 		(Left "test\xA1\xA2")
 
+test_DecodeString_Darwin :: Suite
+test_DecodeString_Darwin = assertions "darwin" $ do
+	let r = darwin
+	let dec = decodeString
+	$expect $ equal (dec r "test\xC2\xA1\xC2\xA2") (fromText r "test\xA1\xA2")
+
+test_DecodeString_Darwin_Ghc702 :: Suite
+test_DecodeString_Darwin_Ghc702 = assertions "darwin_ghc702" $ do
+	let r = darwin_ghc702
+	let dec = decodeString
+	$expect $ equal (dec r "test\xC2\xA1\xC2\xA2") (fromText r "test\xC2\xA1\xC2\xA2")
+	$expect $ equal (dec r "test\xA1\xA2") (fromText r "test\xA1\xA2")
+	$expect $ equal (dec r "test\xEFA1\xEFA2") (fromChar8 "test\xA1\xA2")
+
 test_DecodeString_Win32 :: Suite
 test_DecodeString_Win32 = assertions "windows" $ do
 	let r = windows
@@ -438,6 +454,8 @@ test_EqualsIgnoresPosixEncoding = assertions "equals-ignores-posix-encoding" $ d
 
 test_ShowRules :: Suite
 test_ShowRules = assertions "show-rules" $ do
+	$expect $ equal (showsPrec 11 darwin "") "(Rules \"Darwin\")"
+	$expect $ equal (showsPrec 11 darwin_ghc702 "") "(Rules \"Darwin (GHC 7.2)\")"
 	$expect $ equal (showsPrec 11 posix "") "(Rules \"POSIX\")"
 	$expect $ equal (showsPrec 11 posix_ghc702 "") "(Rules \"POSIX (GHC 7.2)\")"
 	$expect $ equal (showsPrec 11 windows "") "(Rules \"Windows\")"

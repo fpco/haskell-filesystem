@@ -11,6 +11,8 @@ module Filesystem.Path.Rules
 	, posix
 	, posix_ghc702
 	, windows
+	, darwin
+	, darwin_ghc702
 	
 	-- * Type conversions
 	, toText
@@ -56,7 +58,7 @@ directoryChunks path = pathDirectories path ++ [filenameText path]
 -- POSIX
 -------------------------------------------------------------------------------
 
--- | Linux, BSD, OS X, and other UNIX or UNIX-like operating systems.
+-- | Linux, BSD, and other UNIX or UNIX-like operating systems.
 posix :: Rules B.ByteString
 posix = Rules
 	{ rulesName = T.pack "POSIX"
@@ -70,10 +72,10 @@ posix = Rules
 	, decodeString = posixFromBytes . B8.pack
 	}
 
--- | Linux, BSD, OS X, and other UNIX or UNIX-like operating systems.
+-- | Linux, BSD, and other UNIX or UNIX-like operating systems.
 --
--- This variant is for use with GHC 7.2 or later, which tries to decode
--- file paths in its IO computations.
+-- This is a variant of 'posix' for use with GHC 7.2 or later, which tries to
+-- decode file paths in its IO computations.
 posix_ghc702 :: Rules B.ByteString
 posix_ghc702 = posix
 	{ rulesName = T.pack "POSIX (GHC 7.2)"
@@ -148,6 +150,53 @@ posixValid p = validRoot && validDirectories where
 posixSplitSearch :: B.ByteString -> [FilePath]
 posixSplitSearch = map (posixFromBytes . normSearch) . B.split 0x3A where
 	normSearch bytes = if B.null bytes then B8.pack "." else bytes
+
+-------------------------------------------------------------------------------
+-- Darwin
+-------------------------------------------------------------------------------
+
+-- | Darwin and Mac OS X.
+--
+-- This is almost identical to 'posix', but with a native path type of 'T.Text'
+-- rather than 'B.ByteString'.
+darwin :: Rules T.Text
+darwin = Rules
+	{ rulesName = T.pack "Darwin"
+	, valid = posixValid
+	, splitSearchPath = darwinSplitSearch
+	, toText = Right . darwinToText
+	, fromText = posixFromText
+	, encode = darwinToText
+	, decode = posixFromText
+	, encodeString = darwinToString
+	, decodeString = darwinFromString
+	}
+
+-- | Darwin and Mac OS X.
+--
+-- This is a variant of 'darwin' for use with GHC 7.2 or later, which tries to
+-- decode file paths in its IO computations.
+darwin_ghc702 :: Rules T.Text
+darwin_ghc702 = darwin
+	{ rulesName = T.pack "Darwin (GHC 7.2)"
+	, encodeString = T.unpack . darwinToText
+	, decodeString = posixFromText . T.pack
+	}
+
+darwinToText :: FilePath -> T.Text
+darwinToText p = T.concat (root : chunks) where
+	root = rootText (pathRoot p)
+	chunks = intersperse (T.pack "/") (directoryChunks p)
+
+darwinToString :: FilePath -> String
+darwinToString = B8.unpack . TE.encodeUtf8 . darwinToText
+
+darwinFromString :: String -> FilePath
+darwinFromString = posixFromText . TE.decodeUtf8 . B8.pack
+
+darwinSplitSearch :: T.Text -> [FilePath]
+darwinSplitSearch = map (posixFromText . normSearch) . textSplitBy (== ':') where
+	normSearch text = if T.null text then T.pack "." else text
 
 -------------------------------------------------------------------------------
 -- Windows
