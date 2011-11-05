@@ -160,7 +160,7 @@ test_CanonicalizePath test_name src_name dst_name = assertionsWithTemp test_name
 	
 	canonicalized <- liftIO $ Filesystem.canonicalizePath src_path
 	$expect $ equal canonicalized dst_path
-	$expect $ equal (toText canonicalized) (toText dst_pth)
+	$expect $ equal (toText canonicalized) (toText dst_path)
 
 -- | Create a file using the raw POSIX API, via FFI
 touch_ffi :: FilePath -> Data.ByteString.ByteString -> Assertions ()
