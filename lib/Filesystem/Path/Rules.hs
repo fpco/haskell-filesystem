@@ -76,7 +76,8 @@ posix = Rules
 -- file paths in its IO computations.
 posix_ghc702 :: Rules B.ByteString
 posix_ghc702 = posix
-	{ encodeString = posixToGhcString
+	{ rulesName = T.pack "POSIX (GHC 7.2)"
+	, encodeString = posixToGhcString
 	, decodeString = posixFromGhcString
 	}
 

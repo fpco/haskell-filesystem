@@ -63,6 +63,7 @@ tests =
 	, test_EncodeString
 	, test_DecodeString
 	, test_EqualsIgnoresPosixEncoding
+	, test_ShowRules
 	]
 
 test_Empty :: Suite
@@ -434,6 +435,12 @@ test_EqualsIgnoresPosixEncoding = assertions "equals-ignores-posix-encoding" $ d
 	$expect $ equal
 		(fromChar8 "test\xA1\xA2")
 		(fromText posix "test\xA1\xA2")
+
+test_ShowRules :: Suite
+test_ShowRules = assertions "show-rules" $ do
+	$expect $ equal (showsPrec 11 posix "") "(Rules \"POSIX\")"
+	$expect $ equal (showsPrec 11 posix_ghc702 "") "(Rules \"POSIX (GHC 7.2)\")"
+	$expect $ equal (showsPrec 11 windows "") "(Rules \"Windows\")"
 
 posixPaths :: Gen FilePath
 posixPaths = sized $ fmap merge . genComponents where
