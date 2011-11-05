@@ -28,6 +28,11 @@ executable system-fileio_tests
 
   if os(windows)
     cpp-options: -DCABAL_OS_WINDOWS
+
+  if os(darwin)
+    cpp-options: -DCABAL_OS_DARWIN
+
+  if os(windows)
     build-depends: Win32 >= 2.2 && < 2.3
   else
     build-depends: unix >= 2.3 && < 2.6

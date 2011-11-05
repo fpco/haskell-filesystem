@@ -15,6 +15,7 @@ import           Control.Monad
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString
 import           Data.Text (Text)
+import           Data.Text.Encoding (encodeUtf8)
 import           Foreign
 import           Foreign.C
 import           Test.Chell
@@ -166,11 +167,18 @@ test_CanonicalizePath test_name src_name dst_name = assertionsWithTemp test_name
 	canonicalized <- liftIO $ Filesystem.canonicalizePath src_path
 	$expect $ equal canonicalized dst_path
 
+withPathCString :: FilePath -> (CString -> IO a) -> IO a
+withPathCString p = Data.ByteString.useAsCString bytes where
+#ifdef CABAL_OS_DARWIN
+	bytes = encodeUtf8 (encode p)
+#else
+	bytes = encode p
+#endif
+
 -- | Create a file using the raw POSIX API, via FFI
 touch_ffi :: FilePath -> Data.ByteString.ByteString -> Assertions ()
 touch_ffi path contents = do
-	let pathBytes = encode path
-	fp <- liftIO $ Data.ByteString.useAsCString pathBytes $ \path_cstr ->
+	fp <- liftIO $ withPathCString path $ \path_cstr ->
 		Foreign.C.withCString "wb" $ \mode_cstr ->
 		c_fopen path_cstr mode_cstr
 	
@@ -185,8 +193,7 @@ touch_ffi path contents = do
 -- | Create a directory using the raw POSIX API, via FFI
 mkdir_ffi :: FilePath -> Assertions ()
 mkdir_ffi path = do
-	let pathBytes = encode path
-	ret <- liftIO $ Data.ByteString.useAsCString pathBytes $ \path_cstr ->
+	ret <- liftIO $ withPathCString path $ \path_cstr ->
 		c_mkdir path_cstr 0o700
 	
 	$assert (ret == 0)
@@ -195,8 +202,8 @@ mkdir_ffi path = do
 symlink_ffi :: FilePath -> FilePath -> Assertions ()
 symlink_ffi dst src  = do
 	ret <- liftIO $
-		Data.ByteString.useAsCString (encode dst) $ \dst_p ->
-		Data.ByteString.useAsCString (encode src) $ \src_p ->
+		withPathCString dst $ \dst_p ->
+		withPathCString src $ \src_p ->
 		c_symlink dst_p src_p
 	
 	$assert (ret == 0)
