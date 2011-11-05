@@ -6,6 +6,7 @@ module Main (tests, main) where
 import           Prelude hiding (FilePath)
 
 import qualified Data.ByteString.Char8 as B8
+import           Data.Char (toUpper)
 import           Data.List (intercalate)
 import qualified Data.Text as T
 import           Data.Text (Text)
@@ -486,7 +487,7 @@ windowsPaths = sized $ \n -> genComponents n >>= merge where
 		, "LPT7", "LPT8", "LPT9", "NUL", "PRN"
 		]
 	validChar c = not (elem c reserved)
-	validComponent c = not (elem c reservedNames)
+	validComponent c = not (elem (map toUpper c) reservedNames)
 	component = do
 		size <- choose (0, 10)
 		vectorOf size $ arbitrary `suchThat` validChar
