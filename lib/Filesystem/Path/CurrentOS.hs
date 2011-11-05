@@ -41,7 +41,7 @@ import           Filesystem.Path
 import qualified Filesystem.Path as F
 import qualified Filesystem.Path.Rules as R
 
-#if defined(CABAL_OS_WINDOWS)
+#if defined(CABAL_OS_WINDOWS) || defined(CABAL_OS_DARWIN)
 #define PLATFORM_PATH_FORMAT T.Text
 #else
 #define PLATFORM_PATH_FORMAT B.ByteString
