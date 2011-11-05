@@ -189,9 +189,6 @@ mkdir_ffi path = do
 -- | Create a symlink using the raw POSIX API, via FFI
 symlink_ffi :: FilePath -> FilePath -> Assertions ()
 symlink_ffi dst src  = do
-	liftIO $ do
-		print (encode dst)
-		print (encode src)
 	ret <- liftIO $
 		Data.ByteString.useAsCString (encode dst) $ \dst_p ->
 		Data.ByteString.useAsCString (encode src) $ \src_p ->
