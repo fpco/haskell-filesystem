@@ -13,6 +13,7 @@ module Filesystem.Path.Internal where
 
 import           Prelude hiding (FilePath)
 
+import           Control.DeepSeq (NFData, rnf)
 import qualified Control.Exception as Exc
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
@@ -58,6 +59,13 @@ instance Ord FilePath where
 		, fmap unescape' (pathBasename p)
 		, fmap unescape' (pathExtensions p)
 		))
+
+instance NFData Root where
+	rnf (RootWindowsVolume c) = rnf c
+	rnf _ = ()
+
+instance NFData FilePath where
+	rnf p = rnf (pathRoot p) `seq` rnf (pathDirectories p) `seq` rnf (pathBasename p) `seq` rnf (pathExtensions p)
 
 -- | A file path with no root, directory, or filename
 empty :: FilePath
