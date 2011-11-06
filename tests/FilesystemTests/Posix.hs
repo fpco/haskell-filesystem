@@ -31,7 +31,7 @@ test_Posix = suite "posix"
 		[ test_IsFile "ascii"
 			(decode "test.txt")
 		, test_IsFile "utf8"
-			(decode "\xC2\xA1\xC2\xA2.txt")
+			(fromText "\xA1\xA2.txt")
 		, test_IsFile "iso8859"
 			(decode "\xA1\xA2\xA3.txt")
 		]
@@ -39,7 +39,7 @@ test_Posix = suite "posix"
 		[ test_IsDirectory "ascii"
 			(decode "test.d")
 		, test_IsDirectory "utf8"
-			(decode "\xC2\xA1\xC2\xA2.d")
+			(fromText "\xA1\xA2.d")
 		, test_IsDirectory "iso8859"
 			(decode "\xA1\xA2\xA3.d")
 		]
@@ -48,8 +48,8 @@ test_Posix = suite "posix"
 			(decode "old_test.txt")
 			(decode "new_test.txt")
 		, test_Rename "utf8"
-			(decode "old_\xC2\xA1\xC2\xA2.txt")
-			(decode "new_\xC2\xA1\xC2\xA2.txt")
+			(fromText "old_\xA1\xA2.txt")
+			(fromText "new_\xA1\xA2.txt")
 		, test_Rename "iso8859"
 			(decode "old_\xA1\xA2\xA3.txt")
 			(decode "new_\xA1\xA2\xA3.txt")
@@ -59,8 +59,8 @@ test_Posix = suite "posix"
 			(decode "test-a.txt")
 			(decode "test-b.txt")
 		, test_CanonicalizePath "utf8"
-			(decode "\xC2\xA1\xC2\xA2-a.txt")
-			(decode "\xC2\xA1\xC2\xA2-b.txt")
+			(fromText "\xA1\xA2-a.txt")
+			(fromText "\xA1\xA2-b.txt")
 		, test_CanonicalizePath "iso8859"
 			(decode "\xA1\xA2\xA3-a.txt")
 			(decode "\xA1\xA2\xA3-b.txt")
@@ -141,7 +141,7 @@ test_ListDirectory :: Suite
 test_ListDirectory = assertionsWithTemp "listDirectory" $ \dir -> do
 	let paths =
 		[ dir </> decode "test.txt"
-		, dir </> decode "\xC2\xA1\xC2\xA2.txt"
+		, dir </> fromText "\xA1\xA2.txt"
 		, dir </> decode "\xA1\xA2\xA3.txt"
 		]
 	forM_ paths (\path -> touch_ffi path "")
