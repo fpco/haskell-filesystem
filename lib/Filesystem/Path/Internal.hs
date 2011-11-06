@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 
 -- |
@@ -12,29 +13,27 @@ module Filesystem.Path.Internal where
 
 import           Prelude hiding (FilePath)
 
+import           Control.DeepSeq (NFData, rnf)
+import qualified Control.Exception as Exc
+import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
+import           Data.Char (chr, ord)
 import           Data.Data (Data)
 import           Data.List (intersperse)
+import           Data.Ord (comparing)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import           Data.Text.Encoding.Error (UnicodeException)
 import           Data.Typeable (Typeable)
+import           System.IO.Unsafe (unsafePerformIO)
 
 -------------------------------------------------------------------------------
 -- File Paths
 -------------------------------------------------------------------------------
 
-data Chunk = Chunk
-	{ chunkText :: T.Text
-	, chunkGood :: Bool
-	}
-	deriving (Ord, Data, Typeable)
-
-instance Eq Chunk where
-	(Chunk x _) == (Chunk y _) = x == y
-
-type Directory = Chunk
-type Basename = Chunk
-type Extension = Chunk
+type Directory = T.Text
+type Basename = T.Text
+type Extension = T.Text
 
 data Root
 	= RootPosix
@@ -48,34 +47,42 @@ data FilePath = FilePath
 	, pathBasename :: Maybe Basename
 	, pathExtensions :: [Extension]
 	}
-	deriving (Eq, Ord, Data, Typeable)
+	deriving (Data, Typeable)
+
+instance Eq FilePath where
+	x == y = compare x y == EQ
+
+instance Ord FilePath where
+	compare = comparing (\p ->
+		(pathRoot p
+		, fmap unescape' (pathDirectories p)
+		, fmap unescape' (pathBasename p)
+		, fmap unescape' (pathExtensions p)
+		))
+
+instance NFData Root where
+	rnf (RootWindowsVolume c) = rnf c
+	rnf _ = ()
+
+instance NFData FilePath where
+	rnf p = rnf (pathRoot p) `seq` rnf (pathDirectories p) `seq` rnf (pathBasename p) `seq` rnf (pathExtensions p)
 
 -- | A file path with no root, directory, or filename
 empty :: FilePath
 empty = FilePath Nothing [] Nothing []
 
-dot :: Chunk
-dot = Chunk (T.pack ".") True
+dot :: T.Text
+dot = T.pack "."
 
-dots :: Chunk
-dots = Chunk (T.pack "..") True
+dots :: T.Text
+dots = T.pack ".."
 
-filenameChunk :: Bool -> FilePath -> Chunk
-filenameChunk strict p = Chunk (T.concat texts) allGood where
-	name = maybe (Chunk T.empty True) id (pathBasename p)
+filenameText :: FilePath -> T.Text
+filenameText p = T.concat (name:exts) where
+	name = maybe T.empty id (pathBasename p)
 	exts = case pathExtensions p of
 		[] -> []
-		exts' -> intersperse dot ((Chunk T.empty True):exts')
-	chunks = name:exts
-	
-	texts = map chunkText' chunks
-	allGood = and (map chunkGood chunks)
-	
-	chunkText' c = if chunkGood c
-		then if allGood || not strict
-			then chunkText c
-			else T.pack (B8.unpack (TE.encodeUtf8 (chunkText c)))
-		else chunkText c
+		exts' -> intersperse dot (T.empty:exts')
 
 -------------------------------------------------------------------------------
 -- Rules
@@ -157,3 +164,52 @@ data Rules platformFormat = Rules
 instance Show (Rules a) where
 	showsPrec d r = showParen (d > 10)
 		(showString "Rules " . shows (rulesName r))
+
+textSplitBy :: (Char -> Bool) -> T.Text -> [T.Text]
+#if MIN_VERSION_text(0,11,0)
+textSplitBy = T.split
+#else
+textSplitBy = T.splitBy
+#endif
+
+unescape :: T.Text -> (T.Text, Bool)
+unescape t = if T.any (\c -> ord c >= 0xEF00 && ord c <= 0xEFFF) t
+	then (T.map (\c -> if ord c >= 0xEF00 && ord c <= 0xEFFF
+		then chr (ord c - 0xEF00)
+		else c) t, False)
+	else (t, True)
+
+unescape' :: T.Text -> T.Text
+unescape' = fst . unescape
+
+unescapeBytes' :: T.Text -> B8.ByteString
+unescapeBytes' t = B8.concat (map (\c -> if ord c >= 0xEF00 && ord c <= 0xEFFF
+	then B8.singleton (chr (ord c - 0xEF00))
+	else TE.encodeUtf8 (T.singleton c)) (T.unpack t))
+
+parseFilename :: T.Text -> (Maybe Basename, [Extension])
+parseFilename filename = parsed where
+	parsed = if T.null filename
+		then (Nothing, [])
+		else case textSplitBy (== '.') filename of
+			[] -> (Nothing, [])
+			(name':exts') -> (Just (checkChunk name'), map checkChunk exts')
+	
+	checkChunk t = if chunkGood t
+		then t
+		else case maybeDecodeUtf8 (unescapeBytes' t) of
+			Just text -> text
+			Nothing -> t
+	
+	chunkGood t = not (T.any (\c -> ord c >= 0xEF00 && ord c <= 0xEFFF) t)
+
+maybeDecodeUtf8 :: B.ByteString -> Maybe T.Text
+maybeDecodeUtf8 = excToMaybe . TE.decodeUtf8 where
+	excToMaybe :: a -> Maybe a
+	excToMaybe x = unsafePerformIO $ Exc.catch
+		(fmap Just (Exc.evaluate x))
+		unicodeError
+	
+	unicodeError :: UnicodeException -> IO (Maybe a)
+	unicodeError _ = return Nothing
+

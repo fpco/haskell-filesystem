@@ -1,7 +1,7 @@
 #!/bin/bash
 if [ ! -f 'system-filepath.cabal' ]; then
 	echo -n "Can't find system-filepath.cabal; please run this script as"
-	echo -n " ./scripts/run-tests from within the system-filepath source"
+	echo -n " ./scripts/run-benchmarks from within the system-filepath source"
 	echo " directory"
 	exit 1
 fi
@@ -10,8 +10,12 @@ fi
 
 require_cabal_dev
 
-pushd tests
+rm -rf dist
+cabal-dev install || exit 1
+
+pushd benchmarks
+rm -rf dist
 $CABAL_DEV -s ../cabal-dev install || exit 1
 popd
 
-cabal-dev/bin/system-filepath_tests $@
+cabal-dev/bin/system-filepath_benchmarks $@

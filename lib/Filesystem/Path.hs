@@ -132,11 +132,8 @@ filename p = empty
 dirname :: FilePath -> FilePath
 dirname p = case reverse (pathDirectories p) of
 	[] -> FilePath Nothing [] Nothing []
-	(d:_) -> let
-		d':exts = T.split (== '.') (chunkText d)
-		chunk txt = d { chunkText = txt }
-		in FilePath Nothing [] (Just (chunk d')) (map chunk exts)
-
+	(d:_) -> case parseFilename d of
+		(base, exts) -> FilePath Nothing [] base exts
 
 -- | Retrieve a 'FilePath'&#x2019;s basename component.
 --
@@ -183,7 +180,7 @@ append x y = cased where
 	directories = xDirectories ++ pathDirectories y
 	xDirectories = (pathDirectories x ++) $ if null (filename x)
 		then []
-		else [filenameChunk True x]
+		else [filenameText x]
 
 -- | An alias for 'append'.
 (</>) :: FilePath -> FilePath -> FilePath
@@ -285,7 +282,7 @@ extension p = case extensions p of
 
 -- | Get a 'FilePath'&#x2019;s full extension list.
 extensions :: FilePath -> [T.Text]
-extensions = map chunkText . pathExtensions
+extensions = map unescape' . pathExtensions
 
 -- | Get whether a 'FilePath'&#x2019;s last extension is the predicate.
 hasExtension :: FilePath -> T.Text -> Bool
@@ -298,8 +295,7 @@ addExtension p ext = addExtensions p [ext]
 -- | Append many extensions to the end of a 'FilePath'.
 addExtensions :: FilePath -> [T.Text] -> FilePath
 addExtensions p exts = p { pathExtensions = newExtensions } where
-	newExtensions = pathExtensions p ++ chunks
-	chunks = map (\e -> Chunk e True) exts
+	newExtensions = pathExtensions p ++ exts
 
 -- | An alias for 'addExtension'.
 (<.>) :: FilePath -> T.Text -> FilePath

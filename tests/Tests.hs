@@ -5,8 +5,8 @@ module Main (tests, main) where
 
 import           Prelude hiding (FilePath)
 
-import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
+import           Data.Char (toUpper)
 import           Data.List (intercalate)
 import qualified Data.Text as T
 import           Data.Text (Text)
@@ -64,6 +64,7 @@ tests =
 	, test_EncodeString
 	, test_DecodeString
 	, test_EqualsIgnoresPosixEncoding
+	, test_ShowRules
 	]
 
 test_Empty :: Suite
@@ -137,7 +138,7 @@ test_Dirname = assertions "dirname" $ do
 	$expect $ equal (dirnameExts "foo.d/bar") ["d"]
 	
 	-- reparsing preserves good/bad encoding state
-	$expect $ equal (dirnameExts "foo.\xB1.\xDD\xAA/bar") ["\xB1", "\xDD\xAA"]
+	$expect $ equal (dirnameExts "foo.\xB1.\xDD\xAA/bar") ["\xB1", "\x76A"]
 
 test_Basename :: Suite
 test_Basename = assertions "basename" $ do
@@ -201,7 +202,7 @@ test_ToText = assertions "toText" $ do
 	$expect $ equal (toText posix (p "\xF0\x9D\x84\x9E/\xED\xA0\x80")) (Left (T.pack "\x1D11E/\xED\xA0\x80"))
 	$expect $ equal (toText posix (p "\xED.\xF0\x9D\x84\x9E.\xA0\x80")) (Left (T.pack "\xED.\x1D11E.\xA0\x80"))
 	$expect $ equal (toText posix (p "\xB1.\xDD\xAA")) (Left (T.pack "\xB1.\x76A"))
-	$expect $ equal (toText posix (p "\xB1.\xDD\xAA" </> p "foo")) (Left (T.pack "\xB1.\xDD\xAA/foo"))
+	$expect $ equal (toText posix (p "\xB1.\xDD\xAA" </> p "foo")) (Left (T.pack "\xB1.\x76A/foo"))
 
 test_FromText :: Suite
 test_FromText = assertions "fromText" $ do
@@ -384,8 +385,8 @@ test_EncodeString_Posix_Ghc702 :: Suite
 test_EncodeString_Posix_Ghc702 = assertions "posix_ghc702" $ do
 	let enc = encodeString posix_ghc702
 	$expect $ equal (enc (fromChar8 "test")) "test"
-	$expect $ equal (enc (fromChar8 "test\xA1\xA2")) "test\xA1\xA2"
-	$expect $ equal (enc (fromChar8 "\xC2\xA1\xC2\xA2/test\xA1\xA2")) "\xA1\xA2/test\xA1\xA2"
+	$expect $ equal (enc (fromChar8 "test\xA1\xA2")) "test\xEFA1\xEFA2"
+	$expect $ equal (enc (fromChar8 "\xC2\xA1\xC2\xA2/test\xA1\xA2")) "\xA1\xA2/test\xEFA1\xEFA2"
 	$expect $ equal (enc (fromText posix_ghc702 "test\xA1\xA2")) "test\xA1\xA2"
 
 test_EncodeString_Win32 :: Suite
@@ -399,6 +400,8 @@ test_DecodeString :: Suite
 test_DecodeString = suite "decodeString"
 	[ test_DecodeString_Posix
 	, test_DecodeString_Posix_Ghc702
+	, test_DecodeString_Darwin
+	, test_DecodeString_Darwin_Ghc702
 	, test_DecodeString_Win32
 	]
 
@@ -417,6 +420,24 @@ test_DecodeString_Posix_Ghc702 = assertions "posix_ghc702" $ do
 	$expect $ equal (dec r "test") (fromText r "test")
 	$expect $ equal (dec r "test\xC2\xA1\xC2\xA2") (fromText r "test\xC2\xA1\xC2\xA2")
 	$expect $ equal (dec r "test\xA1\xA2") (fromText r "test\xA1\xA2")
+	$expect $ equal (dec r "test\xEFA1\xEFA2") (fromChar8 "test\xA1\xA2")
+	$expect $ equal
+		(toText r (dec r "test\xEFA1\xEFA2"))
+		(Left "test\xA1\xA2")
+
+test_DecodeString_Darwin :: Suite
+test_DecodeString_Darwin = assertions "darwin" $ do
+	let r = darwin
+	let dec = decodeString
+	$expect $ equal (dec r "test\xC2\xA1\xC2\xA2") (fromText r "test\xA1\xA2")
+
+test_DecodeString_Darwin_Ghc702 :: Suite
+test_DecodeString_Darwin_Ghc702 = assertions "darwin_ghc702" $ do
+	let r = darwin_ghc702
+	let dec = decodeString
+	$expect $ equal (dec r "test\xC2\xA1\xC2\xA2") (fromText r "test\xC2\xA1\xC2\xA2")
+	$expect $ equal (dec r "test\xA1\xA2") (fromText r "test\xA1\xA2")
+	$expect $ equal (dec r "test\xEFA1\xEFA2") (fromChar8 "test\xA1\xA2")
 
 test_DecodeString_Win32 :: Suite
 test_DecodeString_Win32 = assertions "windows" $ do
@@ -431,6 +452,14 @@ test_EqualsIgnoresPosixEncoding = assertions "equals-ignores-posix-encoding" $ d
 	$expect $ equal
 		(fromChar8 "test\xA1\xA2")
 		(fromText posix "test\xA1\xA2")
+
+test_ShowRules :: Suite
+test_ShowRules = assertions "show-rules" $ do
+	$expect $ equal (showsPrec 11 darwin "") "(Rules \"Darwin\")"
+	$expect $ equal (showsPrec 11 darwin_ghc702 "") "(Rules \"Darwin (GHC 7.2)\")"
+	$expect $ equal (showsPrec 11 posix "") "(Rules \"POSIX\")"
+	$expect $ equal (showsPrec 11 posix_ghc702 "") "(Rules \"POSIX (GHC 7.2)\")"
+	$expect $ equal (showsPrec 11 windows "") "(Rules \"Windows\")"
 
 posixPaths :: Gen FilePath
 posixPaths = sized $ fmap merge . genComponents where
@@ -458,7 +487,7 @@ windowsPaths = sized $ \n -> genComponents n >>= merge where
 		, "LPT7", "LPT8", "LPT9", "NUL", "PRN"
 		]
 	validChar c = not (elem c reserved)
-	validComponent c = not (elem c reservedNames)
+	validComponent c = not (elem (map toUpper c) reservedNames)
 	component = do
 		size <- choose (0, 10)
 		vectorOf size $ arbitrary `suchThat` validChar

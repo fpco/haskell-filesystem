@@ -11,6 +11,8 @@ module Filesystem.Path.Rules
 	, posix
 	, posix_ghc702
 	, windows
+	, darwin
+	, darwin_ghc702
 	
 	-- * Type conversions
 	, toText
@@ -28,16 +30,13 @@ module Filesystem.Path.Rules
 import           Prelude hiding (FilePath, null)
 import qualified Prelude as P
 
-import qualified Control.Exception as Exc
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
-import           Data.Char (toUpper, chr)
+import           Data.Char (toUpper, chr, ord)
 import           Data.List (intersperse)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import           Data.Text.Encoding.Error (UnicodeException)
 import           System.IO ()
-import           System.IO.Unsafe (unsafePerformIO)
 
 import           Filesystem.Path hiding (root, filename, basename)
 import           Filesystem.Path.Internal
@@ -52,24 +51,14 @@ rootText r = T.pack $ flip (maybe "") r $ \r' -> case r' of
 	RootWindowsVolume c -> c : ":\\"
 	RootWindowsCurrentVolume -> "\\"
 
-directoryChunks :: Bool -> FilePath -> [Chunk]
-directoryChunks strict path = pathDirectories path ++ [filenameChunk strict path]
-
-maybeDecodeUtf8 :: B.ByteString -> Maybe T.Text
-maybeDecodeUtf8 = excToMaybe . TE.decodeUtf8 where
-	excToMaybe :: a -> Maybe a
-	excToMaybe x = unsafePerformIO $ Exc.catch
-		(fmap Just (Exc.evaluate x))
-		unicodeError
-	
-	unicodeError :: UnicodeException -> IO (Maybe a)
-	unicodeError _ = return Nothing
+directoryChunks :: FilePath -> [T.Text]
+directoryChunks path = pathDirectories path ++ [filenameText path]
 
 -------------------------------------------------------------------------------
 -- POSIX
 -------------------------------------------------------------------------------
 
--- | Linux, BSD, OS X, and other UNIX or UNIX-like operating systems.
+-- | Linux, BSD, and other UNIX or UNIX-like operating systems.
 posix :: Rules B.ByteString
 posix = Rules
 	{ rulesName = T.pack "POSIX"
@@ -83,75 +72,78 @@ posix = Rules
 	, decodeString = posixFromBytes . B8.pack
 	}
 
--- | Linux, BSD, OS X, and other UNIX or UNIX-like operating systems.
+-- | Linux, BSD, and other UNIX or UNIX-like operating systems.
 --
--- This variant is for use with GHC 7.2 or later, which tries to decode
--- file paths in its IO computations.
+-- This is a variant of 'posix' for use with GHC 7.2 or later, which tries to
+-- decode file paths in its IO computations.
+--
+-- Since: 0.3.3
 posix_ghc702 :: Rules B.ByteString
 posix_ghc702 = posix
-	{ encodeString = T.unpack . either id id . posixToText
-	, decodeString = posixFromText . T.pack
+	{ rulesName = T.pack "POSIX (GHC 7.2)"
+	, encodeString = posixToGhcString
+	, decodeString = posixFromGhcString
 	}
 
 posixToText :: FilePath -> Either T.Text T.Text
 posixToText p = if good then Right text else Left text where
-	good = and (map chunkGood chunks)
-	text = T.concat (root : map chunkText chunks)
+	good = and (map snd chunks)
+	text = T.concat (root : map fst chunks)
 	
 	root = rootText (pathRoot p)
-	chunks = intersperse (Chunk (T.pack "/") True) (directoryChunks False p)
+	chunks = intersperse (T.pack "/", True) (map unescape (directoryChunks p))
 
-posixFromChunks :: [Chunk] -> FilePath
+posixFromChunks :: [T.Text] -> FilePath
 posixFromChunks chunks = FilePath root directories basename exts where
-	(root, pastRoot) = if T.null (chunkText (head chunks))
+	(root, pastRoot) = if T.null (head chunks)
 		then (Just RootPosix, tail chunks)
 		else (Nothing, chunks)
 	
 	(directories, filename)
-		| P.null pastRoot = ([], Chunk T.empty True)
+		| P.null pastRoot = ([], T.empty)
 		| otherwise = case last pastRoot of
-			fn | fn == dot -> (goodDirs pastRoot, Chunk T.empty True)
-			fn | fn == dots -> (goodDirs pastRoot, Chunk T.empty True)
+			fn | fn == dot -> (goodDirs pastRoot, T.empty)
+			fn | fn == dots -> (goodDirs pastRoot, T.empty)
 			fn -> (goodDirs (init pastRoot), fn)
 	
-	goodDirs = filter (not . T.null . chunkText)
+	goodDirs = filter (not . T.null)
 	
-	(basename, exts) = if T.null (chunkText filename)
-		then (Nothing, [])
-		else case T.split (== '.') (chunkText filename) of
-			[] -> (Nothing, [])
-			(name':exts') -> if chunkGood filename
-				then (Just (Chunk name' True), map (\e -> Chunk e True) exts')
-				else (Just (checkChunk name'), map checkChunk exts')
-	
-	checkChunk raw = case maybeDecodeUtf8 (B8.pack (T.unpack raw)) of
-		Just text -> Chunk text True
-		Nothing -> Chunk raw False
+	(basename, exts) = parseFilename filename
 
 posixFromText :: T.Text -> FilePath
 posixFromText text = if T.null text
 	then empty
-	else posixFromChunks (map (\t -> Chunk t True) (T.split (== '/') text))
+	else posixFromChunks (textSplitBy (== '/') text)
 
 posixToBytes :: FilePath -> B.ByteString
 posixToBytes p = B.concat (root : chunks) where
 	root = TE.encodeUtf8 (rootText (pathRoot p))
-	chunks = intersperse (B8.pack "/") (map chunkBytes (directoryChunks True p))
-	chunkBytes c = if chunkGood c
-		then TE.encodeUtf8 (chunkText c)
-		else B8.pack (T.unpack (chunkText c))
+	chunks = intersperse (B8.pack "/") (map chunkBytes (directoryChunks p))
+	chunkBytes t = if T.any (\c -> ord c >= 0xEF00 && ord c <= 0xEFFF) t
+		then unescapeBytes' t
+		else TE.encodeUtf8 t
 
 posixFromBytes :: B.ByteString -> FilePath
 posixFromBytes bytes = if B.null bytes
 	then empty
 	else posixFromChunks $ flip map (B.split 0x2F bytes) $ \b -> case maybeDecodeUtf8 b of
-		Just text -> Chunk text True
-		Nothing -> Chunk (T.pack (B8.unpack b)) False
+		Just text -> text
+		Nothing -> T.pack (map (\c -> if ord c >= 0x80
+			then chr (ord c + 0xEF00)
+			else c) (B8.unpack b))
+
+posixToGhcString :: FilePath -> String
+posixToGhcString p = P.concat (root : chunks) where
+	root = T.unpack (rootText (pathRoot p))
+	chunks = intersperse "/" (map T.unpack (directoryChunks p))
+
+posixFromGhcString :: String -> FilePath
+posixFromGhcString = posixFromText . T.pack
 
 posixValid :: FilePath -> Bool
 posixValid p = validRoot && validDirectories where
-	validDirectories = all validChunk (directoryChunks True p)
-	validChunk ch = not (T.any (\c -> c == '\0' || c == '/') (chunkText ch))
+	validDirectories = all validChunk (directoryChunks p)
+	validChunk ch = not (T.any (\c -> c == '\0' || c == '/') ch)
 	validRoot = case pathRoot p of
 		Nothing -> True
 		Just RootPosix -> True
@@ -160,6 +152,57 @@ posixValid p = validRoot && validDirectories where
 posixSplitSearch :: B.ByteString -> [FilePath]
 posixSplitSearch = map (posixFromBytes . normSearch) . B.split 0x3A where
 	normSearch bytes = if B.null bytes then B8.pack "." else bytes
+
+-------------------------------------------------------------------------------
+-- Darwin
+-------------------------------------------------------------------------------
+
+-- | Darwin and Mac OS X.
+--
+-- This is almost identical to 'posix', but with a native path type of 'T.Text'
+-- rather than 'B.ByteString'.
+--
+-- Since: 0.3.4
+darwin :: Rules T.Text
+darwin = Rules
+	{ rulesName = T.pack "Darwin"
+	, valid = posixValid
+	, splitSearchPath = darwinSplitSearch
+	, toText = Right . darwinToText
+	, fromText = posixFromText
+	, encode = darwinToText
+	, decode = posixFromText
+	, encodeString = darwinToString
+	, decodeString = darwinFromString
+	}
+
+-- | Darwin and Mac OS X.
+--
+-- This is a variant of 'darwin' for use with GHC 7.2 or later, which tries to
+-- decode file paths in its IO computations.
+--
+-- Since: 0.3.4
+darwin_ghc702 :: Rules T.Text
+darwin_ghc702 = darwin
+	{ rulesName = T.pack "Darwin (GHC 7.2)"
+	, encodeString = T.unpack . darwinToText
+	, decodeString = posixFromText . T.pack
+	}
+
+darwinToText :: FilePath -> T.Text
+darwinToText p = T.concat (root : chunks) where
+	root = rootText (pathRoot p)
+	chunks = intersperse (T.pack "/") (directoryChunks p)
+
+darwinToString :: FilePath -> String
+darwinToString = B8.unpack . TE.encodeUtf8 . darwinToText
+
+darwinFromString :: String -> FilePath
+darwinFromString = posixFromText . TE.decodeUtf8 . B8.pack
+
+darwinSplitSearch :: T.Text -> [FilePath]
+darwinSplitSearch = map (posixFromText . normSearch) . textSplitBy (== ':') where
+	normSearch text = if T.null text then T.pack "." else text
 
 -------------------------------------------------------------------------------
 -- Windows
@@ -182,13 +225,13 @@ windows = Rules
 winToText :: FilePath -> T.Text
 winToText p = T.concat (root : chunks) where
 	root = rootText (pathRoot p)
-	chunks = intersperse (T.pack "\\") (map chunkText (directoryChunks False p))
+	chunks = intersperse (T.pack "\\") (directoryChunks p)
 
 winFromText :: T.Text -> FilePath
 winFromText text = if T.null text then empty else path where
 	path = FilePath root directories basename exts
 	
-	split = T.split (\c -> c == '/' || c == '\\') text
+	split = textSplitBy (\c -> c == '/' || c == '\\') text
 	
 	(root, pastRoot) = let
 		head' = head split
@@ -204,17 +247,13 @@ winFromText text = if T.null text then empty else path where
 	(directories, filename)
 		| P.null pastRoot = ([], T.empty)
 		| otherwise = case last pastRoot of
-			fn | fn == chunkText dot -> (goodDirs pastRoot, T.empty)
-			fn | fn == chunkText dots -> (goodDirs pastRoot, T.empty)
+			fn | fn == dot -> (goodDirs pastRoot, T.empty)
+			fn | fn == dots -> (goodDirs pastRoot, T.empty)
 			fn -> (goodDirs (init pastRoot), fn)
 	
-	goodDirs = map (\t -> Chunk t True) . filter (not . T.null)
+	goodDirs = filter (not . T.null)
 	
-	(basename, exts) = if T.null filename
-		then (Nothing, [])
-		else case T.split (== '.') filename of
-			[] -> (Nothing, [])
-			(name':exts') -> (Just (Chunk name' True), map (\e -> Chunk e True) exts')
+	(basename, exts) = parseFilename filename
 
 winValid :: FilePath -> Bool
 winValid p = validRoot && noReserved && validCharacters where
@@ -233,11 +272,11 @@ winValid p = validRoot && noReserved && validCharacters where
 		_ -> False
 	
 	noExt = p { pathExtensions = [] }
-	noReserved = flip all (directoryChunks False noExt)
-		$ \fn -> notElem (T.toUpper (chunkText fn)) reservedNames
+	noReserved = flip all (directoryChunks noExt)
+		$ \fn -> notElem (T.toUpper fn) reservedNames
 	
-	validCharacters = flip all (directoryChunks False p)
-		$ not . T.any (`elem` reservedChars) . chunkText
+	validCharacters = flip all (directoryChunks p)
+		$ not . T.any (`elem` reservedChars)
 
 winSplit :: T.Text -> [FilePath]
-winSplit = map winFromText . filter (not . T.null) . T.split (== ';')
+winSplit = map winFromText . filter (not . T.null) . textSplitBy (== ';')
