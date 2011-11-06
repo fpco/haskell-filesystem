@@ -1,0 +1,28 @@
+#!/bin/bash
+if [ ! -f 'system-fileio.cabal' ]; then
+	echo -n "Can't find system-fileio.cabal; please run this script as"
+	echo -n " ./scripts/run-coverage from within the system-fileio source"
+	echo " directory"
+	exit 1
+fi
+
+. scripts/common.bash
+
+require_cabal_dev
+
+pushd tests
+$CABAL_DEV -s ../cabal-dev install --flags="coverage" || exit 1
+popd
+
+rm -f system-fileio_tests.tix
+cabal-dev/bin/system-fileio_tests $@
+
+EXCLUDES="\
+--exclude=Main \
+--exclude=FilesystemTests.Posix \
+--exclude=FilesystemTests.Util \
+--exclude=FilesystemTests.Windows
+"
+
+hpc markup --srcdir=src --srcdir=tests/ system-fileio_tests.tix --destdir=hpc-markup $EXCLUDES > /dev/null
+hpc report --srcdir=src --srcdir=tests/ system-fileio_tests.tix $EXCLUDES

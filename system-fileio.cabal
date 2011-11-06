@@ -1,5 +1,5 @@
 name: system-fileio
-version: 0.3.2.1
+version: 0.3.3
 synopsis: High-level filesystem interaction
 license: MIT
 license-file: license.txt
@@ -17,6 +17,17 @@ description:
   This is a small wrapper around the \"directory\", \"unix\", and \"Win32\"
   packages for use with \"system-filepath\".
 
+extra-source-files:
+  scripts/common.bash
+  scripts/run-coverage
+  scripts/run-tests
+  --
+  tests/system-fileio-tests.cabal
+  tests/FilesystemTests.hs
+  tests/FilesystemTests/Posix.hs
+  tests/FilesystemTests/Util.hs
+  tests/FilesystemTests/Windows.hs
+
 source-repository head
   type: bzr
   location: https://john-millikin.com/software/hs-fileio/
@@ -24,18 +35,18 @@ source-repository head
 source-repository this
   type: bzr
   location: https://john-millikin.com/branches/hs-fileio/0.3/
-  tag: system-fileio_0.3.2.1
+  tag: system-fileio_0.3.3
 
 library
   ghc-options: -Wall -O2
-  hs-source-dirs: src
+  hs-source-dirs: lib
 
   build-depends:
-      base >= 3 && < 5
+      base >= 4.0 && < 5.0
     , bytestring >= 0.9 && < 0.10
     , directory >= 1.0 && < 1.2
     , system-filepath >= 0.3.1 && < 0.5
-    , text >= 0.1 && < 0.12
+    , text >= 0.7.1 && < 0.12
     , time >= 1.0 && < 1.5
 
   if os(windows)
