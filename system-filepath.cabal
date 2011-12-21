@@ -10,7 +10,7 @@ build-type: Simple
 cabal-version: >= 1.6
 category: System
 stability: experimental
-homepage: https://john-millikin.com/software/hs-filepath/
+homepage: https://john-millikin.com/software/haskell-filesystem/
 bug-reports: mailto:jmillikin@gmail.com
 
 extra-source-files:
@@ -24,11 +24,11 @@ extra-source-files:
 
 source-repository head
   type: bzr
-  location: https://john-millikin.com/software/hs-filepath/
+  location: https://john-millikin.com/branches/system-filepath/0.3/
 
 source-repository this
   type: bzr
-  location: https://john-millikin.com/branches/hs-filepath/0.3/
+  location: https://john-millikin.com/branches/system-filepath/0.3/
   tag: system-filepath_0.3.4
 
 library
