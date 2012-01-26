@@ -69,10 +69,12 @@ import           Prelude hiding (FilePath, readFile, writeFile, appendFile)
 
 import qualified Control.Exception as Exc
 import qualified Data.ByteString as B
+import           Data.ByteString.Unsafe (unsafeUseAsCString)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import           Foreign.Ptr (Ptr, nullPtr)
-import           Foreign.C (CString, withCString, peekCString)
+import           Foreign.C (CInt, CString, withCString, peekCString)
+import           Foreign.C.Error (throwErrnoIfMinus1)
 import qualified System.Environment as SE
 
 #if MIN_VERSION_system_filepath(0,4,0)
@@ -113,13 +115,29 @@ import qualified "directory" System.Directory as SD
 --
 -- See: 'SD.doesFileExist'
 isFile :: FilePath -> IO Bool
+#ifdef CABAL_OS_WINDOWS
 isFile path = SD.doesFileExist (encodeString path)
+#else
+isFile path = Exc.catch
+	(do
+		stat <- withFd "isFile" path Posix.getFdStatus
+		return (not (Posix.isDirectory stat)))
+	((\_ -> return False) :: Exc.IOException -> IO Bool)
+#endif
 
 -- | Check if a directory exists at the given path.
 --
 -- See: 'SD.doesDirectoryExist'
 isDirectory :: FilePath -> IO Bool
+#ifdef CABAL_OS_WINDOWS
 isDirectory path = SD.doesDirectoryExist (encodeString path)
+#else
+isDirectory path = Exc.catch
+	(do
+		stat <- withFd "isFile" path Posix.getFdStatus
+		return (Posix.isDirectory stat))
+	((\_ -> return False) :: Exc.IOException -> IO Bool)
+#endif
 
 -- | Rename a filesystem object. Some operating systems have restrictions
 -- on what objects can be renamed; see linked documentation for details.
@@ -502,6 +520,7 @@ appendTextFile path text = withTextFile path IO.AppendMode
 	(\h -> T.hPutStr h text)
 
 #ifdef CABAL_OS_WINDOWS
+
 withHANDLE :: FilePath -> (Win32.HANDLE -> IO a) -> IO a
 withHANDLE path = Exc.bracket open close where
 	open = Win32.createFile
@@ -513,4 +532,17 @@ withHANDLE path = Exc.bracket open close where
 		0
 		Nothing
 	close = Win32.closeHandle
+
+#else
+
+withFd :: String -> FilePath -> (Posix.Fd -> IO a) -> IO a
+withFd fnName path = Exc.bracket open close where
+	open = unsafeUseAsCString (R.encode R.posix path) $ \cpath -> do
+		fd <- throwErrnoIfMinus1 fnName (c_open cpath 0)
+		return (Posix.Fd fd)
+	close = Posix.closeFd
+
+foreign import ccall unsafe "open"
+	c_open :: CString -> CInt -> IO CInt
+
 #endif
