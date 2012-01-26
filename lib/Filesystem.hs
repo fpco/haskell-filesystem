@@ -69,12 +69,11 @@ import           Prelude hiding (FilePath, readFile, writeFile, appendFile)
 
 import qualified Control.Exception as Exc
 import qualified Data.ByteString as B
-import           Data.ByteString.Unsafe (unsafeUseAsCString)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import           Foreign.Ptr (Ptr, nullPtr)
-import           Foreign.C (CInt, CString, withCString, peekCString)
-import           Foreign.C.Error (throwErrnoIfMinus1)
+import           Foreign.C (CInt, CString)
+import qualified Foreign.C.Error as CError
 import qualified System.Environment as SE
 
 #if MIN_VERSION_system_filepath(0,4,0)
@@ -145,12 +144,18 @@ isDirectory path = Exc.catch
 -- See: 'SD.renameFile' and 'SD.renameDirectory'
 rename :: FilePath -> FilePath -> IO ()
 rename old new =
+#ifdef CABAL_OS_WINDOWS
 	let old' = encodeString old in
 	let new' = encodeString new in
-#ifdef CABAL_OS_WINDOWS
 	Win32.moveFileEx old' new' Win32.mOVEFILE_REPLACE_EXISTING
 #else
-	Posix.rename old' new'
+	withFilePath old $ \old' ->
+	withFilePath new $ \new' ->
+	throwErrnoPathIfMinus1_ "rename" old (c_rename old' new')
+
+foreign import ccall unsafe "rename"
+	c_rename :: CString -> CString -> IO CInt
+
 #endif
 
 -- Resolve symlinks and \"..\" path elements to return a canonical path.
@@ -164,9 +169,10 @@ rename old new =
 --
 -- Since: 0.1.1
 canonicalizePath :: FilePath -> IO FilePath
-canonicalizePath path = fmap decodeString $ do
-	let path' = encodeString path
+canonicalizePath path =
+	let path' = encodeString path in
 #ifdef CABAL_OS_WINDOWS
+	fmap decodeString $
 #if MIN_VERSION_Win32(2,2,1)
 	Win32.getFullPathName path'
 #else
@@ -175,9 +181,11 @@ canonicalizePath path = fmap decodeString $ do
 			c_GetFullPathNameW c_name len buf nullPtr) 512
 #endif
 #else
-	withCString path' $ \cPath -> do
+	withFilePath path $ \cPath -> do
 		cOut <- Posix.throwErrnoPathIfNull "canonicalizePath" path' (c_realpath cPath nullPtr)
-		peekCString cOut
+		bytes <- B.packCString cOut
+		c_free cOut
+		return (R.decode R.posix bytes)
 #endif
 
 #ifdef CABAL_OS_WINDOWS
@@ -535,14 +543,26 @@ withHANDLE path = Exc.bracket open close where
 
 #else
 
+withFilePath :: FilePath -> (CString -> IO a) -> IO a
+withFilePath path = B.useAsCString (R.encode R.posix path)
+
+throwErrnoPathIfMinus1 :: String -> FilePath -> IO CInt -> IO CInt
+throwErrnoPathIfMinus1 loc path = CError.throwErrnoPathIfMinus1 loc (encodeString path)
+
+throwErrnoPathIfMinus1_ :: String -> FilePath -> IO CInt -> IO ()
+throwErrnoPathIfMinus1_ loc path = CError.throwErrnoPathIfMinus1_ loc (encodeString path)
+
 withFd :: String -> FilePath -> (Posix.Fd -> IO a) -> IO a
 withFd fnName path = Exc.bracket open close where
-	open = unsafeUseAsCString (R.encode R.posix path) $ \cpath -> do
-		fd <- throwErrnoIfMinus1 fnName (c_open cpath 0)
+	open = withFilePath path $ \cpath -> do
+		fd <- throwErrnoPathIfMinus1 fnName path (c_open cpath 0)
 		return (Posix.Fd fd)
 	close = Posix.closeFd
 
 foreign import ccall unsafe "open"
 	c_open :: CString -> CInt -> IO CInt
+
+foreign import ccall unsafe "free"
+	c_free :: Ptr a -> IO ()
 
 #endif
