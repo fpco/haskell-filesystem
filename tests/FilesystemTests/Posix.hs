@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -14,14 +13,15 @@ import           Prelude hiding (FilePath)
 import           Control.Monad
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString
+import           Data.ByteString (ByteString)
 import           Data.Text (Text)
-import           Data.Text.Encoding (encodeUtf8)
 import           Foreign
 import           Foreign.C
 import           Test.Chell
 
 import           Filesystem
-import           Filesystem.Path.CurrentOS
+import           Filesystem.Path
+import qualified Filesystem.Path.Rules as Rules
 
 import           FilesystemTests.Util (assertionsWithTemp, todo)
 
@@ -168,12 +168,16 @@ test_CanonicalizePath test_name src_name dst_name = assertionsWithTemp test_name
 	$expect $ equal canonicalized dst_path
 
 withPathCString :: FilePath -> (CString -> IO a) -> IO a
-withPathCString p = Data.ByteString.useAsCString bytes where
-#ifdef CABAL_OS_DARWIN
-	bytes = encodeUtf8 (encode p)
-#else
-	bytes = encode p
-#endif
+withPathCString p = Data.ByteString.useAsCString (encode p)
+
+decode :: ByteString -> FilePath
+decode = Rules.decode Rules.posix
+
+encode :: FilePath -> ByteString
+encode = Rules.encode Rules.posix
+
+fromText :: Text -> FilePath
+fromText = Rules.fromText Rules.posix
 
 -- | Create a file using the raw POSIX API, via FFI
 touch_ffi :: FilePath -> Data.ByteString.ByteString -> Assertions ()
