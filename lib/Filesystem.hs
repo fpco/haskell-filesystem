@@ -618,7 +618,19 @@ throwErrnoPathIfMinus1_ :: String -> FilePath -> IO CInt -> IO ()
 throwErrnoPathIfMinus1_ loc path = CError.throwErrnoPathIfMinus1_ loc (encodeString path)
 
 throwErrnoPathIfNullRetry :: String -> FilePath -> IO (Ptr a) -> IO (Ptr a)
-throwErrnoPathIfNullRetry loc path = Posix.throwErrnoPathIfNullRetry loc (encodeString path)
+throwErrnoPathIfNullRetry = throwErrnoPathIfRetry (== nullPtr)
+
+throwErrnoPathIfRetry :: (a -> Bool) -> String -> FilePath -> IO a -> IO a
+throwErrnoPathIfRetry failed loc path io = loop where
+	loop = do
+		a <- io
+		if failed a
+			then do
+				errno <- CError.getErrno
+				if errno == CError.eINTR
+					then loop
+					else CError.throwErrnoPath loc (encodeString path)
+			else return a
 
 withFd :: String -> FilePath -> (Posix.Fd -> IO a) -> IO a
 withFd fnName path = Exc.bracket open close where
