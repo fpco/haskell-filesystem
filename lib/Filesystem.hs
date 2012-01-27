@@ -228,9 +228,74 @@ createTree path = SD.createDirectoryIfMissing True (encodeString path)
 --
 -- See: 'SD.getDirectoryContents'
 listDirectory :: FilePath -> IO [FilePath]
-listDirectory path = fmap cleanup contents where
-	contents = SD.getDirectoryContents (encodeString path)
-	cleanup = map (append path) . map decodeString . filter (`notElem` [".", ".."])
+#ifdef CABAL_OS_WINDOWS
+listDirectory root = fmap cleanup contents where
+	contents = SD.getDirectoryContents (encodeString root)
+	cleanup = map (append root) . map decodeString . filter (`notElem` [".", ".."])
+#else
+listDirectory root = Exc.bracket alloc free list where
+	alloc = do
+		dirent <- c_alloc_dirent
+		dir <- openDir root
+		return (dirent, dir)
+	free (dirent, dir) = do
+		c_free_dirent dirent
+		closeDir dir
+	list (dirent, dir) = loop where
+		loop = do
+			next <- readDir dir dirent
+			case next of
+				Nothing -> return []
+				Just bytes | ignore bytes -> loop
+				Just bytes -> do
+					let name = append root (R.decode R.posix bytes)
+					names <- loop
+					return (name:names)
+
+ignore :: B.ByteString -> Bool
+ignore = ignore' where
+	dot = B.pack [46]
+	dotdot = B.pack [46, 46]
+	ignore' b = b == dot || b == dotdot
+
+data Dir = Dir FilePath (Ptr ())
+
+openDir :: FilePath -> IO Dir
+openDir root = withFilePath root $ \cRoot -> do
+	p <- throwErrnoPathIfNullRetry "listDirectory" root (c_opendir cRoot)
+	return (Dir root p)
+
+closeDir :: Dir -> IO ()
+closeDir (Dir _ p) = CError.throwErrnoIfMinus1Retry_ "listDirectory" (c_closedir p)
+
+readDir :: Dir -> Ptr () -> IO (Maybe B.ByteString)
+readDir (Dir _ p) dirent = do
+	rc <- CError.throwErrnoIfMinus1 "listDirectory" (c_readdir p dirent)
+	if rc == 0
+		then do
+			bytes <- c_dirent_name dirent >>= B.packCString
+			return (Just bytes)
+		else return Nothing
+
+foreign import ccall unsafe "opendir"
+	c_opendir :: CString -> IO (Ptr ())
+
+foreign import ccall unsafe "opendir"
+	c_closedir :: Ptr () -> IO CInt
+
+foreign import ccall unsafe "hssystemfileio_alloc_dirent"
+	c_alloc_dirent :: IO (Ptr ())
+
+foreign import ccall unsafe "hssystemfileio_free_dirent"
+	c_free_dirent :: Ptr () -> IO ()
+
+foreign import ccall unsafe "hssystemfileio_readdir"
+	c_readdir :: Ptr () -> Ptr () -> IO CInt
+
+foreign import ccall unsafe "hssystemfileio_dirent_name"
+	c_dirent_name :: Ptr () -> IO CString
+
+#endif
 
 -- | Remove a file.
 --
@@ -551,6 +616,9 @@ throwErrnoPathIfMinus1 loc path = CError.throwErrnoPathIfMinus1 loc (encodeStrin
 
 throwErrnoPathIfMinus1_ :: String -> FilePath -> IO CInt -> IO ()
 throwErrnoPathIfMinus1_ loc path = CError.throwErrnoPathIfMinus1_ loc (encodeString path)
+
+throwErrnoPathIfNullRetry :: String -> FilePath -> IO (Ptr a) -> IO (Ptr a)
+throwErrnoPathIfNullRetry loc path = Posix.throwErrnoPathIfNullRetry loc (encodeString path)
 
 withFd :: String -> FilePath -> (Posix.Fd -> IO a) -> IO a
 withFd fnName path = Exc.bracket open close where
