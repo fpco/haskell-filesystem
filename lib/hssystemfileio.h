@@ -15,9 +15,6 @@ hssystemfileio_readdir(DIR *dir, struct dirent *dirent);
 char *
 hssystemfileio_dirent_name(struct dirent *dirent);
 
-int
-hssystemfileio_mkdir(const char *path, int mode, int allow_exists);
-
 char *
 hssystemfileio_getcwd(void);
 

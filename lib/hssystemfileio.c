@@ -41,16 +41,6 @@ hssystemfileio_dirent_name(struct dirent *dirent)
 	return dirent->d_name;
 }
 
-int
-hssystemfileio_mkdir(const char *path, int mode, int allow_exists)
-{
-	int rc = mkdir(path, (mode_t)mode);
-	if (rc == -1 && errno == EEXIST && allow_exists) {
-		return 0;
-	}
-	return rc;
-}
-
 char *
 hssystemfileio_getcwd(void)
 {

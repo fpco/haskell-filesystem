@@ -76,6 +76,9 @@ test_Posix = suite "posix"
 			(fromText "\xA1\xA2.d")
 		, test_CreateDirectory "iso8859"
 			(decode "\xA1\xA2\xA3.d")
+		, test_CreateDirectory_FailExists
+		, test_CreateDirectory_SucceedExists
+		, test_CreateDirectory_FailFileExists
 		]
 	, suite "createTree"
 		[ test_CreateTree "ascii"
@@ -233,16 +236,40 @@ test_CreateDirectory test_name dir_name = assertionsWithTemp test_name $ \tmp ->
 	exists_after <- liftIO $ Filesystem.isDirectory dir_path
 	
 	$expect exists_after
+
+test_CreateDirectory_FailExists :: Suite
+test_CreateDirectory_FailExists = assertionsWithTemp "fail-if-exists" $ \tmp -> do
+	let dir_path = tmp </> "subdir"
+	mkdir_ffi dir_path
 	
-	-- False = fail if already exists
 	$expect $ throwsEq
 		(GHC.IOError Nothing GHC.AlreadyExists "createDirectory" "File exists"
 			(Just (errnoCInt eEXIST))
 			(Just (CurrentOS.encodeString dir_path)))
 		(Filesystem.createDirectory False dir_path)
+
+test_CreateDirectory_SucceedExists :: Suite
+test_CreateDirectory_SucceedExists = assertionsWithTemp "succeed-if-exists" $ \tmp -> do
+	let dir_path = tmp </> "subdir"
+	mkdir_ffi dir_path
 	
-	-- True = succeed if already exists
 	liftIO $ Filesystem.createDirectory True dir_path
+
+test_CreateDirectory_FailFileExists :: Suite
+test_CreateDirectory_FailFileExists = assertionsWithTemp "fail-if-file-exists" $ \tmp -> do
+	let dir_path = tmp </> "subdir"
+	touch_ffi dir_path ""
+	
+	$expect $ throwsEq
+		(GHC.IOError Nothing GHC.AlreadyExists "createDirectory" "File exists"
+			(Just (errnoCInt eEXIST))
+			(Just (CurrentOS.encodeString dir_path)))
+		(Filesystem.createDirectory False dir_path)
+	$expect $ throwsEq
+		(GHC.IOError Nothing GHC.AlreadyExists "createDirectory" "File exists"
+			(Just (errnoCInt eEXIST))
+			(Just (CurrentOS.encodeString dir_path)))
+		(Filesystem.createDirectory True dir_path)
 
 test_CreateTree :: Text -> FilePath -> Suite
 test_CreateTree test_name dir_name = assertionsWithTemp test_name $ \tmp -> do

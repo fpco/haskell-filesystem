@@ -215,11 +215,22 @@ createDirectory succeedIfExists path =
 		else Win32.createDirectory path' Nothing
 #else
 	withFilePath path $ \cPath ->
-	throwErrnoPathIfMinus1Retry_ "createDirectory" path $
-	c_mkdir cPath 0o777 (if succeedIfExists then 1 else 0)
+	throwErrnoPathIfMinus1Retry_ "createDirectory" path $ do
+		rc <- c_mkdir cPath 0o777
+		if rc == -1
+			then do
+				errno <- CError.getErrno
+				if errno == CError.eEXIST
+					then do
+						dirExists <- isDirectory path
+						if dirExists && succeedIfExists
+							then return 0
+							else return rc
+					else return rc
+			else return rc
 
-foreign import ccall unsafe "hssystemfileio_mkdir"
-	c_mkdir :: CString -> CInt -> CInt -> IO CInt
+foreign import ccall unsafe "mkdir"
+	c_mkdir :: CString -> CInt -> IO CInt
 #endif
 
 -- | Create a directory at a given path, including any parents which might
