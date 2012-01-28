@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -20,7 +21,11 @@ import           Foreign
 import           Foreign.C
 import           Test.Chell
 
+#if MIN_VERSION_base(4,2,0)
 import qualified GHC.IO.Exception as GHC
+#else
+import qualified GHC.IOBase as GHC
+#endif
 
 import           Filesystem
 import           Filesystem.Path
@@ -243,9 +248,7 @@ test_CreateDirectory_FailExists = assertionsWithTemp "fail-if-exists" $ \tmp -> 
 	mkdir_ffi dir_path
 	
 	$expect $ throwsEq
-		(GHC.IOError Nothing GHC.AlreadyExists "createDirectory" "File exists"
-			(Just (errnoCInt eEXIST))
-			(Just (CurrentOS.encodeString dir_path)))
+		(mkAlreadyExists "createDirectory" dir_path)
 		(Filesystem.createDirectory False dir_path)
 
 test_CreateDirectory_SucceedExists :: Suite
@@ -261,15 +264,18 @@ test_CreateDirectory_FailFileExists = assertionsWithTemp "fail-if-file-exists" $
 	touch_ffi dir_path ""
 	
 	$expect $ throwsEq
-		(GHC.IOError Nothing GHC.AlreadyExists "createDirectory" "File exists"
-			(Just (errnoCInt eEXIST))
-			(Just (CurrentOS.encodeString dir_path)))
+		(mkAlreadyExists "createDirectory" dir_path)
 		(Filesystem.createDirectory False dir_path)
 	$expect $ throwsEq
-		(GHC.IOError Nothing GHC.AlreadyExists "createDirectory" "File exists"
-			(Just (errnoCInt eEXIST))
-			(Just (CurrentOS.encodeString dir_path)))
+		(mkAlreadyExists "createDirectory" dir_path)
 		(Filesystem.createDirectory True dir_path)
+
+mkAlreadyExists :: String -> FilePath -> GHC.IOError
+mkAlreadyExists loc path = GHC.IOError Nothing GHC.AlreadyExists loc "File exists"
+#if MIN_VERSION_base(4,2,0)
+	(Just (errnoCInt eEXIST))
+#endif
+	(Just (CurrentOS.encodeString path))
 
 test_CreateTree :: Text -> FilePath -> Suite
 test_CreateTree test_name dir_name = assertionsWithTemp test_name $ \tmp -> do

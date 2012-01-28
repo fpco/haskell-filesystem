@@ -356,11 +356,10 @@ removeTree path = SD.removeDirectoryRecursive (encodeString path)
 getWorkingDirectory :: IO FilePath
 getWorkingDirectory = do
 #ifdef CABAL_OS_WINDOWS
-	fmap decodeString $
 #if MIN_VERSION_Win32(2,2,1)
-	Win32.getCurrentDirectory
+	fmap decodeString Win32.getCurrentDirectory
 #else
-	Win32.try "getWorkingDirectory" (flip c_GetCurrentDirectoryW) 512
+	fmap decodeString (Win32.try "getWorkingDirectory" (flip c_GetCurrentDirectoryW) 512)
 #endif
 #else
 	buf <- CError.throwErrnoIfNull "getWorkingDirectory" c_getcwd
