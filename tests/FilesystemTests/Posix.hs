@@ -15,6 +15,7 @@ import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString
 import           Data.ByteString (ByteString)
 import           Data.Text (Text)
+import           Data.Time.Clock (diffUTCTime, getCurrentTime)
 import           Foreign
 import           Foreign.C
 import           Test.Chell
@@ -115,8 +116,22 @@ test_Posix = suite "posix"
 	, todo "getAppCacheDirectory"
 	, todo "getAppConfigDirectory"
 	, todo "copyFile"
-	, todo "getModified"
-	, todo "getSize"
+	, suite "getModified"
+		[ test_GetModified "ascii"
+			(decode "test.txt")
+		, test_GetModified "utf8"
+			(fromText "\xA1\xA2.txt")
+		, test_GetModified "iso8859"
+			(decode "\xA1\xA2\xA3.txt")
+		]
+	, suite "getSize"
+		[ test_GetSize "ascii"
+			(decode "test.txt")
+		, test_GetSize "utf8"
+			(fromText "\xA1\xA2.txt")
+		, test_GetSize "iso8859"
+			(decode "\xA1\xA2\xA3.txt")
+		]
 	, todo "openFile"
 	, todo "withFile"
 	, todo "readFile"
@@ -278,6 +293,26 @@ test_RemoveTree test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
 	subdir_after <- liftIO $ Filesystem.isDirectory subdir
 	$expect (not dir_after)
 	$expect (not subdir_after)
+
+test_GetModified :: Text -> FilePath -> Suite
+test_GetModified test_name file_name = assertionsWithTemp test_name $ \tmp -> do
+	let file_path = tmp </> file_name
+	
+	touch_ffi file_path ""
+	now <- liftIO getCurrentTime
+	
+	mtime <- liftIO $ Filesystem.getModified file_path
+	$expect (equalWithin (diffUTCTime mtime now) 0 1)
+
+test_GetSize :: Text -> FilePath -> Suite
+test_GetSize test_name file_name = assertionsWithTemp test_name $ \tmp -> do
+	let file_path = tmp </> file_name
+	let contents = "contents\n"
+	
+	touch_ffi file_path contents
+	
+	size <- liftIO $ Filesystem.getSize file_path
+	$expect (equal size (toInteger (Data.ByteString.length contents)))
 
 withPathCString :: FilePath -> (CString -> IO a) -> IO a
 withPathCString p = Data.ByteString.useAsCString (encode p)
