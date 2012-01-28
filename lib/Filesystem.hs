@@ -119,7 +119,7 @@ isFile path = SD.doesFileExist (encodeString path)
 #else
 isFile path = Exc.catch
 	(do
-		stat <- withFd "isFile" path Posix.getFdStatus
+		stat <- posixStat "isFile" path
 		return (not (Posix.isDirectory stat)))
 	((\_ -> return False) :: Exc.IOException -> IO Bool)
 #endif
@@ -133,7 +133,7 @@ isDirectory path = SD.doesDirectoryExist (encodeString path)
 #else
 isDirectory path = Exc.catch
 	(do
-		stat <- withFd "isFile" path Posix.getFdStatus
+		stat <- posixStat "isFile" path
 		return (Posix.isDirectory stat))
 	((\_ -> return False) :: Exc.IOException -> IO Bool)
 #endif
@@ -308,11 +308,14 @@ foreign import ccall unsafe "hssystemfileio_dirent_name"
 -- See: 'SD.removeFile'
 removeFile :: FilePath -> IO ()
 removeFile path =
-	let path' = encodeString path in
 #ifdef CABAL_OS_WINDOWS
-	Win32.deleteFile path'
+	Win32.deleteFile (encodeString path)
 #else
-	Posix.removeLink path'
+	withFilePath path $ \cPath ->
+	throwErrnoPathIfMinus1_ "removeFile" path (c_unlink cPath)
+
+foreign import ccall unsafe "unlink"
+	c_unlink :: CString -> IO CInt
 #endif
 
 -- | Remove an empty directory.
@@ -320,11 +323,14 @@ removeFile path =
 -- See: 'SD.removeDirectory'
 removeDirectory :: FilePath -> IO ()
 removeDirectory path =
-	let path' = encodeString path in
 #ifdef CABAL_OS_WINDOWS
-	Win32.removeDirectory path'
+	Win32.removeDirectory (encodeString path)
 #else
-	Posix.removeDirectory path'
+	withFilePath path $ \cPath ->
+	throwErrnoPathIfMinus1Retry_ "removeDirectory" path (c_rmdir cPath)
+
+foreign import ccall unsafe "rmdir"
+	c_rmdir :: CString -> IO CInt
 #endif
 
 -- | Recursively remove a directory tree rooted at the given path.
@@ -337,15 +343,23 @@ removeTree path = SD.removeDirectoryRecursive (encodeString path)
 --
 -- See: 'SD.getCurrentDirectory'
 getWorkingDirectory :: IO FilePath
-getWorkingDirectory = fmap decodeString $ do
+getWorkingDirectory = do
 #ifdef CABAL_OS_WINDOWS
+	fmap decodeString $
 #if MIN_VERSION_Win32(2,2,1)
 	Win32.getCurrentDirectory
 #else
-	Win32.try "getCurrentDirectory" (flip c_GetCurrentDirectoryW) 512
+	Win32.try "getWorkingDirectory" (flip c_GetCurrentDirectoryW) 512
 #endif
 #else
-	Posix.getWorkingDirectory
+	buf <- CError.throwErrnoIfNull "getWorkingDirectory" c_getcwd
+	bytes <- B.packCString buf
+	c_free buf
+	return (R.decode R.posix bytes)
+
+foreign import ccall unsafe "hssystemfileio_getcwd"
+	c_getcwd :: IO CString
+
 #endif
 
 #ifdef CABAL_OS_WINDOWS
@@ -361,11 +375,15 @@ foreign import stdcall unsafe "GetCurrentDirectoryW"
 -- See: 'SD.setCurrentDirectory'
 setWorkingDirectory :: FilePath -> IO ()
 setWorkingDirectory path =
-	let path' = encodeString path in
 #ifdef CABAL_OS_WINDOWS
-	Win32.setCurrentDirectory path'
+	Win32.setCurrentDirectory (encodeString path)
 #else
-	Posix.changeWorkingDirectory path'
+	withFilePath path $ \cPath ->
+	throwErrnoPathIfMinus1Retry_ "setWorkingDirectory" path (c_chdir cPath)
+
+foreign import ccall unsafe "chdir"
+	c_chdir :: CString -> IO CInt
+
 #endif
 
 -- TODO: expose all known exceptions as specific types, for users to catch
@@ -497,7 +515,7 @@ getModified path = do
 	
 	return (UTCTime date (seconds + msecs))
 #else
-	stat <- Posix.getFileStatus (encodeString path)
+	stat <- posixStat "getModified" path
 	let mtime = Posix.modificationTime stat
 	return (posixSecondsToUTCTime (realToFrac mtime))
 #endif
@@ -513,7 +531,7 @@ getSize path = do
 	info <- withHANDLE path Win32.getFileInformationByHandle
 	return (toInteger (Win32.bhfiSize info))
 #else
-	stat <- Posix.getFileStatus (encodeString path)
+	stat <- posixStat "getSize" path
 	return (toInteger (Posix.fileSize stat))
 #endif
 
@@ -652,6 +670,9 @@ withFd fnName path = Exc.bracket open close where
 		fd <- throwErrnoPathIfMinus1 fnName path (c_open cpath 0)
 		return (Posix.Fd fd)
 	close = Posix.closeFd
+
+posixStat :: String -> FilePath -> IO Posix.FileStatus
+posixStat loc path = withFd loc path Posix.getFdStatus
 
 foreign import ccall unsafe "open"
 	c_open :: CString -> CInt -> IO CInt
