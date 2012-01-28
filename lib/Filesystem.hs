@@ -369,7 +369,7 @@ removeTree root = do
 -- itself cannot be deleted.
 isRealDir :: FilePath -> IO Bool
 isRealDir path = withFilePath path $ \cPath -> do
-	rc <- throwErrnoPathIfMinus1Retry_ "removeTree" path (c_isrealdir cPath)
+	rc <- throwErrnoPathIfMinus1Retry "removeTree" path (c_isrealdir cPath)
 	return (rc == 1)
 
 foreign import ccall unsafe "hssystemfileio_isrealdir"
@@ -680,6 +680,9 @@ throwErrnoPathIfMinus1_ loc path = CError.throwErrnoPathIfMinus1_ loc (encodeStr
 
 throwErrnoPathIfNullRetry :: String -> FilePath -> IO (Ptr a) -> IO (Ptr a)
 throwErrnoPathIfNullRetry = throwErrnoPathIfRetry (== nullPtr)
+
+throwErrnoPathIfMinus1Retry :: String -> FilePath -> IO CInt -> IO CInt
+throwErrnoPathIfMinus1Retry = throwErrnoPathIfRetry (== -1)
 
 throwErrnoPathIfMinus1Retry_ :: String -> FilePath -> IO CInt -> IO ()
 throwErrnoPathIfMinus1Retry_ = throwErrnoPathIfRetry_ (== -1)

@@ -75,7 +75,7 @@ hssystemfileio_isrealdir(const char *path)
 	if (rc == -1)
 	{ return rc; }
 	
-	if (S_ISDIR(st))
+	if (S_ISDIR(st.st_mode))
 	{ return 1; }
 	
 	return 0;
