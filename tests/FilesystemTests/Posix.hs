@@ -107,8 +107,22 @@ test_Posix = suite "posix"
 		, test_RemoveTree "iso8859"
 			(decode "\xA1\xA2\xA3.d")
 		]
-	, todo "getWorkingDirectory"
-	, todo "setWorkingDirectory"
+	, suite "getWorkingDirectory"
+		[ test_GetWorkingDirectory "ascii"
+			(decode "test.d")
+		, test_GetWorkingDirectory "utf8"
+			(fromText "\xA1\xA2.d")
+		, test_GetWorkingDirectory "iso8859"
+			(decode "\xA1\xA2\xA3.d")
+		]
+	, suite "setWorkingDirectory"
+		[ test_SetWorkingDirectory "ascii"
+			(decode "test.d")
+		, test_SetWorkingDirectory "utf8"
+			(fromText "\xA1\xA2.d")
+		, test_SetWorkingDirectory "iso8859"
+			(decode "\xA1\xA2\xA3.d")
+		]
 	, todo "getHomeDirectory"
 	, todo "getDesktopDirectory"
 	, todo "getDocumentsDirectory"
@@ -294,6 +308,26 @@ test_RemoveTree test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
 	$expect (not dir_after)
 	$expect (not subdir_after)
 
+test_GetWorkingDirectory :: Text -> FilePath -> Suite
+test_GetWorkingDirectory test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
+	let dir_path = tmp </> dir_name
+	
+	mkdir_ffi dir_path
+	chdir_ffi dir_path
+	
+	cwd <- liftIO $ Filesystem.getWorkingDirectory
+	$expect (equal cwd dir_path)
+
+test_SetWorkingDirectory :: Text -> FilePath -> Suite
+test_SetWorkingDirectory test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
+	let dir_path = tmp </> dir_name
+	
+	mkdir_ffi dir_path
+	liftIO $ Filesystem.setWorkingDirectory dir_path
+	
+	cwd <- getcwd_ffi
+	$expect (equal cwd dir_path)
+
 test_GetModified :: Text -> FilePath -> Suite
 test_GetModified test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	let file_path = tmp </> file_name
@@ -359,6 +393,21 @@ symlink_ffi dst src  = do
 	
 	$assert (ret == 0)
 
+getcwd_ffi :: Assertions FilePath
+getcwd_ffi = do
+	buf <- liftIO $ c_getcwd nullPtr 0
+	$assert (buf /= nullPtr)
+	bytes <- liftIO $ Data.ByteString.packCString buf
+	liftIO $ c_free buf
+	return (decode bytes)
+
+chdir_ffi :: FilePath -> Assertions ()
+chdir_ffi path = do
+	ret <- liftIO $
+		withPathCString path $ \path_p ->
+		c_chdir path_p
+	$assert (ret == 0)
+
 foreign import ccall unsafe "fopen"
 	c_fopen :: CString -> CString -> IO (Ptr ())
 
@@ -373,3 +422,12 @@ foreign import ccall unsafe "mkdir"
 
 foreign import ccall unsafe "symlink"
 	c_symlink :: CString -> CString -> IO CInt
+
+foreign import ccall unsafe "getcwd"
+	c_getcwd :: CString -> CSize -> IO CString
+
+foreign import ccall unsafe "chdir"
+	c_chdir :: CString -> IO CInt
+
+foreign import ccall unsafe "free"
+	c_free :: Ptr a -> IO ()
