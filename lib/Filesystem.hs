@@ -68,6 +68,7 @@ module Filesystem
 import           Prelude hiding (FilePath, readFile, writeFile, appendFile)
 
 import qualified Control.Exception as Exc
+import           Control.Monad (forM_)
 import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -348,7 +349,20 @@ foreign import ccall unsafe "rmdir"
 --
 -- See: 'SD.removeDirectoryRecursive'
 removeTree :: FilePath -> IO ()
-removeTree path = SD.removeDirectoryRecursive (encodeString path)
+#ifdef CABAL_OS_WINDOWS
+removeTree root = SD.removeDirectoryRecursive (encodeString root)
+#else
+removeTree root = do
+	items <- listDirectory root
+	forM_ items $ \item -> Exc.catch
+		(removeFile item)
+		(\exc -> do
+			isDir <- isDirectory item
+			if isDir
+				then removeTree item
+				else Exc.throwIO (exc :: Exc.SomeException))
+	removeDirectory root
+#endif
 
 -- | Get the current working directory.
 --
