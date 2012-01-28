@@ -65,12 +65,47 @@ test_Posix = suite "posix"
 			(decode "\xA1\xA2\xA3-a.txt")
 			(decode "\xA1\xA2\xA3-b.txt")
 		]
-	, todo "createDirectory"
-	, todo "createTree"
+	, suite "createDirectory"
+		[ test_CreateDirectory "ascii"
+			(decode "test.d")
+		, test_CreateDirectory "utf8"
+			(fromText "\xA1\xA2.d")
+		, test_CreateDirectory "iso8859"
+			(decode "\xA1\xA2\xA3.d")
+		]
+	, suite "createTree"
+		[ test_CreateTree "ascii"
+			(decode "test.d")
+		, test_CreateTree "utf8"
+			(fromText "\xA1\xA2.d")
+		, test_CreateTree "iso8859"
+			(decode "\xA1\xA2\xA3.d")
+		]
 	, test_ListDirectory
-	, todo "removeFile"
-	, todo "removeDirectory"
-	, todo "removeTree"
+	, suite "removeFile"
+		[ test_RemoveFile "ascii"
+			(decode "test.txt")
+		, test_RemoveFile "utf8"
+			(fromText "\xA1\xA2.txt")
+		, test_RemoveFile "iso8859"
+			(decode "\xA1\xA2\xA3.txt")
+		]
+	, suite "removeDirectory"
+		[ test_RemoveDirectory "ascii"
+			(decode "test.d")
+		, test_RemoveDirectory "utf8"
+			(fromText "\xA1\xA2.d")
+		, test_RemoveDirectory "iso8859"
+			(decode "\xA1\xA2\xA3.d")
+		]
+	, suite "removeTree"
+		[ test_RemoveTree "ascii"
+			(decode "test.d")
+		, test_RemoveTree "utf8"
+			(fromText "\xA1\xA2.d")
+		, test_RemoveTree "iso8859"
+			(decode "\xA1\xA2\xA3.d")
+		]
 	, todo "getWorkingDirectory"
 	, todo "setWorkingDirectory"
 	, todo "getHomeDirectory"
@@ -95,8 +130,8 @@ test_Posix = suite "posix"
 	]
 
 test_IsFile :: Text -> FilePath -> Suite
-test_IsFile test_name file_name = assertionsWithTemp test_name $ \dir -> do
-	let path = dir </> file_name
+test_IsFile test_name file_name = assertionsWithTemp test_name $ \tmp -> do
+	let path = tmp </> file_name
 	
 	before <- liftIO $ Filesystem.isFile path
 	$expect (not before)
@@ -107,8 +142,8 @@ test_IsFile test_name file_name = assertionsWithTemp test_name $ \dir -> do
 	$expect after
 
 test_IsDirectory :: Text -> FilePath -> Suite
-test_IsDirectory test_name dir_name = assertionsWithTemp test_name $ \dir -> do
-	let path = dir </> dir_name
+test_IsDirectory test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
+	let path = tmp </> dir_name
 	
 	before <- liftIO $ Filesystem.isDirectory path
 	$expect (not before)
@@ -119,9 +154,9 @@ test_IsDirectory test_name dir_name = assertionsWithTemp test_name $ \dir -> do
 	$expect after
 
 test_Rename :: Text -> FilePath -> FilePath -> Suite
-test_Rename test_name old_name new_name = assertionsWithTemp test_name $ \dir -> do
-	let old_path = dir </> old_name
-	let new_path = dir </> new_name
+test_Rename test_name old_name new_name = assertionsWithTemp test_name $ \tmp -> do
+	let old_path = tmp </> old_name
+	let new_path = tmp </> new_name
 	
 	touch_ffi old_path ""
 	
@@ -137,22 +172,10 @@ test_Rename test_name old_name new_name = assertionsWithTemp test_name $ \dir ->
 	$expect (not old_after)
 	$expect new_after
 
-test_ListDirectory :: Suite
-test_ListDirectory = assertionsWithTemp "listDirectory" $ \dir -> do
-	let paths =
-		[ dir </> decode "test.txt"
-		, dir </> fromText "\xA1\xA2.txt"
-		, dir </> decode "\xA1\xA2\xA3.txt"
-		]
-	forM_ paths (\path -> touch_ffi path "")
-	
-	names <- liftIO $ Filesystem.listDirectory dir
-	$expect $ sameItems paths names
-
 test_CanonicalizePath :: Text -> FilePath -> FilePath -> Suite
-test_CanonicalizePath test_name src_name dst_name = assertionsWithTemp test_name $ \dir -> do
-	let src_path = dir </> src_name
-	let subdir = dir </> "subdir"
+test_CanonicalizePath test_name src_name dst_name = assertionsWithTemp test_name $ \tmp -> do
+	let src_path = tmp </> src_name
+	let subdir = tmp </> "subdir"
 	
 	-- canonicalize the directory first, to avoid false negatives if
 	-- it gets placed in a symlinked location.
@@ -166,6 +189,95 @@ test_CanonicalizePath test_name src_name dst_name = assertionsWithTemp test_name
 	
 	canonicalized <- liftIO $ Filesystem.canonicalizePath src_path
 	$expect $ equal canonicalized dst_path
+
+test_CreateDirectory :: Text -> FilePath -> Suite
+test_CreateDirectory test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
+	let dir_path = tmp </> dir_name
+	
+	exists_before <- liftIO $ Filesystem.isDirectory dir_path
+	$assert (not exists_before)
+	
+	liftIO $ Filesystem.createDirectory False dir_path
+	exists_after <- liftIO $ Filesystem.isDirectory dir_path
+	
+	$expect exists_after
+
+test_CreateTree :: Text -> FilePath -> Suite
+test_CreateTree test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
+	let dir_path = tmp </> dir_name
+	let subdir = dir_path </> "subdir"
+	
+	dir_exists_before <- liftIO $ Filesystem.isDirectory dir_path
+	subdir_exists_before <- liftIO $ Filesystem.isDirectory subdir
+	$assert (not dir_exists_before)
+	$assert (not subdir_exists_before)
+	
+	liftIO $ Filesystem.createTree subdir
+	dir_exists_after <- liftIO $ Filesystem.isDirectory dir_path
+	subdir_exists_after <- liftIO $ Filesystem.isDirectory subdir
+	
+	$expect dir_exists_after
+	$expect subdir_exists_after
+
+test_ListDirectory :: Suite
+test_ListDirectory = assertionsWithTemp "listDirectory" $ \tmp -> do
+	let paths =
+		[ tmp </> decode "test.txt"
+		, tmp </> fromText "\xA1\xA2.txt"
+		, tmp </> decode "\xA1\xA2\xA3.txt"
+		]
+	forM_ paths (\path -> touch_ffi path "")
+	
+	names <- liftIO $ Filesystem.listDirectory tmp
+	$expect $ sameItems paths names
+
+test_RemoveFile :: Text -> FilePath -> Suite
+test_RemoveFile test_name file_name = assertionsWithTemp test_name $ \tmp -> do
+	let file_path = tmp </> file_name
+	
+	touch_ffi file_path "contents\n"
+	
+	before <- liftIO $ Filesystem.isFile file_path
+	$assert before
+	
+	liftIO $ Filesystem.removeFile file_path
+	
+	after <- liftIO $ Filesystem.isFile file_path
+	$expect (not after)
+
+test_RemoveDirectory :: Text -> FilePath -> Suite
+test_RemoveDirectory test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
+	let dir_path = tmp </> dir_name
+	
+	mkdir_ffi dir_path
+	
+	before <- liftIO $ Filesystem.isDirectory dir_path
+	$assert before
+	
+	liftIO $ Filesystem.removeDirectory dir_path
+	
+	after <- liftIO $ Filesystem.isDirectory dir_path
+	$expect (not after)
+
+test_RemoveTree :: Text -> FilePath -> Suite
+test_RemoveTree test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
+	let dir_path = tmp </> dir_name
+	let subdir = dir_path </> "subdir"
+	
+	mkdir_ffi dir_path
+	mkdir_ffi subdir
+	
+	dir_before <- liftIO $ Filesystem.isDirectory dir_path
+	subdir_before <- liftIO $ Filesystem.isDirectory subdir
+	$assert dir_before
+	$assert subdir_before
+	
+	liftIO $ Filesystem.removeTree dir_path
+	
+	dir_after <- liftIO $ Filesystem.isDirectory dir_path
+	subdir_after <- liftIO $ Filesystem.isDirectory subdir
+	$expect (not dir_after)
+	$expect (not subdir_after)
 
 withPathCString :: FilePath -> (CString -> IO a) -> IO a
 withPathCString p = Data.ByteString.useAsCString (encode p)
