@@ -20,9 +20,12 @@ import           Foreign
 import           Foreign.C
 import           Test.Chell
 
+import qualified GHC.IO.Exception as GHC
+
 import           Filesystem
 import           Filesystem.Path
 import qualified Filesystem.Path.Rules as Rules
+import qualified Filesystem.Path.CurrentOS as CurrentOS
 
 import           FilesystemTests.Util (assertionsWithTemp, todo)
 
@@ -230,6 +233,16 @@ test_CreateDirectory test_name dir_name = assertionsWithTemp test_name $ \tmp ->
 	exists_after <- liftIO $ Filesystem.isDirectory dir_path
 	
 	$expect exists_after
+	
+	-- False = fail if already exists
+	$expect $ throwsEq
+		(GHC.IOError Nothing GHC.AlreadyExists "createDirectory" "File exists"
+			(Just (errnoCInt eEXIST))
+			(Just (CurrentOS.encodeString dir_path)))
+		(Filesystem.createDirectory False dir_path)
+	
+	-- True = succeed if already exists
+	liftIO $ Filesystem.createDirectory True dir_path
 
 test_CreateTree :: Text -> FilePath -> Suite
 test_CreateTree test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
@@ -336,7 +349,7 @@ test_GetModified test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	now <- liftIO getCurrentTime
 	
 	mtime <- liftIO $ Filesystem.getModified file_path
-	$expect (equalWithin (diffUTCTime mtime now) 0 1)
+	$expect (equalWithin (diffUTCTime mtime now) 0 2)
 
 test_GetSize :: Text -> FilePath -> Suite
 test_GetSize test_name file_name = assertionsWithTemp test_name $ \tmp -> do
@@ -407,6 +420,9 @@ chdir_ffi path = do
 		withPathCString path $ \path_p ->
 		c_chdir path_p
 	$assert (ret == 0)
+
+errnoCInt :: Errno -> CInt
+errnoCInt (Errno x) = x
 
 foreign import ccall unsafe "fopen"
 	c_fopen :: CString -> CString -> IO (Ptr ())
