@@ -25,12 +25,7 @@ hssystemfileio_readdir(DIR *dir, struct dirent *dirent)
 	{
 		int rc = readdir_r(dir, dirent, &dirent_result);
 		if (rc != 0)
-		{
-			if (errno == EINTR)
-			{ continue; }
-			
-			return -1;
-		}
+		{ return -1; }
 		
 		if (dirent_result == NULL)
 		{ return 1; }

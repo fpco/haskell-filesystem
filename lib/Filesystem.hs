@@ -276,7 +276,7 @@ closeDir (Dir _ p) = CError.throwErrnoIfMinus1Retry_ "listDirectory" (c_closedir
 
 readDir :: Dir -> Ptr () -> IO (Maybe B.ByteString)
 readDir (Dir _ p) dirent = do
-	rc <- CError.throwErrnoIfMinus1 "listDirectory" (c_readdir p dirent)
+	rc <- CError.throwErrnoIfMinus1Retry "listDirectory" (c_readdir p dirent)
 	if rc == 0
 		then do
 			bytes <- c_dirent_name dirent >>= B.packCString
