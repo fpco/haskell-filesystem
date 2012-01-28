@@ -66,3 +66,18 @@ hssystemfileio_getcwd(void)
 		return NULL;
 	}
 }
+
+int
+hssystemfileio_isrealdir(const char *path)
+{
+	struct stat st;
+	int rc = lstat(path, &st);
+	if (rc == -1)
+	{ return rc; }
+	
+	if (S_ISDIR(st))
+	{ return 1; }
+	
+	return 0;
+}
+

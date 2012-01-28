@@ -357,11 +357,24 @@ removeTree root = do
 	forM_ items $ \item -> Exc.catch
 		(removeFile item)
 		(\exc -> do
-			isDir <- isDirectory item
+			isDir <- isRealDir item
 			if isDir
 				then removeTree item
 				else Exc.throwIO (exc :: Exc.SomeException))
 	removeDirectory root
+
+-- Check whether a path is a directory, and not just a symlink to a directory.
+--
+-- This is used in 'removeTree' to prevent recursing into symlinks if the link
+-- itself cannot be deleted.
+isRealDir :: FilePath -> IO Bool
+isRealDir path = withFilePath path $ \cPath -> do
+	rc <- throwErrnoPathIfMinus1Retry_ "removeTree" path (c_isrealdir cPath)
+	return (rc == 1)
+
+foreign import ccall unsafe "hssystemfileio_isrealdir"
+	c_isrealdir :: CString -> IO CInt
+
 #endif
 
 -- | Get the current working directory.

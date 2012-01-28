@@ -18,4 +18,7 @@ hssystemfileio_dirent_name(struct dirent *dirent);
 char *
 hssystemfileio_getcwd(void);
 
+int
+hssystemfileio_isrealdir(const char *);
+
 #endif
