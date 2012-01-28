@@ -207,14 +207,20 @@ foreign import ccall unsafe "realpath"
 -- See: 'SD.createDirectory'.
 createDirectory :: Bool -- ^ Succeed if the directory already exists
                 -> FilePath -> IO ()
-createDirectory False path =
-	let path' = encodeString path in
+createDirectory succeedIfExists path =
 #ifdef CABAL_OS_WINDOWS
-	Win32.createDirectory path' Nothing
+	let path' = encodeString path in
+	if succeedIfExists
+		then SD.createDirectoryIfMissing False path'
+		else Win32.createDirectory path' Nothing
 #else
-	Posix.createDirectory path' 0o777
+	withFilePath path $ \cPath ->
+	throwErrnoPathIfMinus1Retry_ "createDirectory" path $
+	c_mkdir cPath 0o777 (if succeedIfExists then 1 else 0)
+
+foreign import ccall unsafe "hssystemfileio_mkdir"
+	c_mkdir :: CString -> CInt -> CInt -> IO CInt
 #endif
-createDirectory True path = SD.createDirectoryIfMissing False (encodeString path)
 
 -- | Create a directory at a given path, including any parents which might
 -- be missing.
@@ -620,6 +626,9 @@ throwErrnoPathIfMinus1_ loc path = CError.throwErrnoPathIfMinus1_ loc (encodeStr
 throwErrnoPathIfNullRetry :: String -> FilePath -> IO (Ptr a) -> IO (Ptr a)
 throwErrnoPathIfNullRetry = throwErrnoPathIfRetry (== nullPtr)
 
+throwErrnoPathIfMinus1Retry_ :: String -> FilePath -> IO CInt -> IO ()
+throwErrnoPathIfMinus1Retry_ = throwErrnoPathIfRetry_ (== -1)
+
 throwErrnoPathIfRetry :: (a -> Bool) -> String -> FilePath -> IO a -> IO a
 throwErrnoPathIfRetry failed loc path io = loop where
 	loop = do
@@ -631,6 +640,11 @@ throwErrnoPathIfRetry failed loc path io = loop where
 					then loop
 					else CError.throwErrnoPath loc (encodeString path)
 			else return a
+
+throwErrnoPathIfRetry_ :: (a -> Bool) -> String -> FilePath -> IO a -> IO ()
+throwErrnoPathIfRetry_ failed loc path io = do
+	_ <- throwErrnoPathIfRetry failed loc path io
+	return ()
 
 withFd :: String -> FilePath -> (Posix.Fd -> IO a) -> IO a
 withFd fnName path = Exc.bracket open close where
