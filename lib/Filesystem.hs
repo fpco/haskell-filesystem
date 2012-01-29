@@ -528,7 +528,7 @@ homeSlash path = do
 getenv :: String -> IO (Maybe FilePath)
 #ifdef CABAL_OS_WINDOWS
 getenv key = Exc.catch
-	(fmap Just (SE.getEnv key))
+	(fmap (Just . decodeString) (SE.getEnv key))
 	(\e -> if isDoesNotExistError e
 		then return Nothing
 		else Exc.throwIO e)
