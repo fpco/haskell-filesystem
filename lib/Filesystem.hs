@@ -101,6 +101,7 @@ import           Data.Time ( UTCTime(..)
                            , fromGregorian
                            , secondsToDiffTime
                            , picosecondsToDiffTime)
+import           Foreign.C (CWString, withCWString)
 import qualified System.Win32 as Win32
 import           System.IO.Error (isDoesNotExistError)
 import qualified "directory" System.Directory as SD
@@ -583,8 +584,17 @@ copyPermissions oldPath newPath =
 	CError.throwErrnoIfMinus1Retry_ "copyPermissions" $
 	c_copy_permissions cOldPath cNewPath
 
+#ifdef CABAL_OS_WINDOWS
+
+foreign import ccall unsafe "hssystemfileio_copy_permissions"
+	c_copy_permissions :: CWString -> CWString -> IO CInt
+
+#else
+
 foreign import ccall unsafe "hssystemfileio_copy_permissions"
 	c_copy_permissions :: CString -> CString -> IO CInt
+
+#endif
 
 -- | Copy the contents and permissions of a file to a new entry in the
 -- filesystem. If a file already exists at the new location, it will be
@@ -739,6 +749,9 @@ withHANDLE path = Exc.bracket open close where
 		0
 		Nothing
 	close = Win32.closeHandle
+
+withFilePath :: FilePath -> (CWString -> IO a) -> IO a
+withFilePath path = withCWString (encodeString path)
 
 #else
 
