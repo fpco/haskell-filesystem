@@ -23,6 +23,8 @@ module Filesystem
 	, getModified
 	, getSize
 	, copyFile
+	, copyFileContent
+	, copyPermissions
 	, removeFile
 	
 	-- ** Binary files
@@ -70,6 +72,7 @@ import           Prelude hiding (FilePath, readFile, writeFile, appendFile)
 import qualified Control.Exception as Exc
 import           Control.Monad (forM_, unless)
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import           Foreign.Ptr (Ptr, nullPtr)
@@ -90,7 +93,6 @@ import qualified System.FilePath.Rules as R
 #endif
 
 import qualified System.IO as IO
-import           System.IO.Error (isDoesNotExistError)
 
 #ifdef CABAL_OS_WINDOWS
 
@@ -100,6 +102,8 @@ import           Data.Time ( UTCTime(..)
                            , secondsToDiffTime
                            , picosecondsToDiffTime)
 import qualified System.Win32 as Win32
+import           System.IO.Error (isDoesNotExistError)
+import qualified "directory" System.Directory as SD
 
 #else
 
@@ -109,9 +113,6 @@ import qualified System.Posix as Posix
 import qualified System.Posix.Error as Posix
 
 #endif
-
--- hopefully temporary
-import qualified "directory" System.Directory as SD
 
 -- | Check if a file exists at the given path.
 --
@@ -556,16 +557,48 @@ xdg envkey label fallback = do
 		Just text -> append dir (R.fromText currentOS text)
 		Nothing -> dir
 
--- | Copy a file to a new entry in the filesystem. If a file already exists
--- at the new location, it will be replaced.
+-- | Copy the contents of a file to a new entry in the filesystem. If a
+-- file already exists at the new location, it will be replaced. Copying
+-- a file is not atomic.
 --
--- See: 'SD.copyFile'
+-- Since: 0.2.4
+copyFileContent :: FilePath -- ^ Old location
+                -> FilePath -- ^ New location
+                -> IO ()
+copyFileContent oldPath newPath =
+	withFile oldPath IO.ReadMode $ \old ->
+	withFile newPath IO.WriteMode $ \new ->
+	BL.hGetContents old >>= BL.hPut new
+
+-- | Copy the permissions from one path to another. Both paths must already
+-- exist.
+--
+-- Since: 0.2.4
+copyPermissions :: FilePath -- ^ Old location
+                -> FilePath -- ^ New location
+                -> IO ()
+copyPermissions oldPath newPath =
+	withFilePath oldPath $ \cOldPath ->
+	withFilePath newPath $ \cNewPath ->
+	CError.throwErrnoIfMinus1Retry_ "copyPermissions" $
+	c_copy_permissions cOldPath cNewPath
+
+foreign import ccall unsafe "hssystemfileio_copy_permissions"
+	c_copy_permissions :: CString -> CString -> IO CInt
+
+-- | Copy the contents and permissions of a file to a new entry in the
+-- filesystem. If a file already exists at the new location, it will be
+-- replaced. Copying a file is not atomic.
 --
 -- Since: 0.1.1
 copyFile :: FilePath -- ^ Old location
          -> FilePath -- ^ New location
          -> IO ()
-copyFile old new = SD.copyFile (encodeString old) (encodeString new)
+copyFile oldPath newPath = do
+	copyFileContent oldPath newPath
+	Exc.catch
+		(copyPermissions oldPath newPath)
+		((\_ -> return ()) :: Exc.IOException -> IO ())
 
 -- | Get when the object at a given path was last modified.
 --

@@ -1,5 +1,5 @@
-#ifndef HSSYSTEMFILEIO_SHIM_H
-#define HSSYSTEMFILEIO_SHIM_H
+#ifndef HSSYSTEMFILEIO_UNIX_H
+#define HSSYSTEMFILEIO_UNIX_H
 
 #include <dirent.h>
 
@@ -20,5 +20,8 @@ hssystemfileio_getcwd(void);
 
 int
 hssystemfileio_isrealdir(const char *);
+
+int
+hssystemfileio_copy_permissions(const char *old_path, const char *new_path);
 
 #endif

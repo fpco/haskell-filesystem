@@ -1,4 +1,4 @@
-#include "hssystemfileio.h"
+#include "hssystemfileio-unix.h"
 
 #include <errno.h>
 #include <stdlib.h>
@@ -81,3 +81,13 @@ hssystemfileio_isrealdir(const char *path)
 	return 0;
 }
 
+int
+hssystemfileio_copy_permissions(const char *old_path, const char *new_path)
+{
+	struct stat st;
+	int rc = stat(old_path, &st);
+	if (rc == -1)
+	{ return rc; }
+	
+	return chmod(new_path, st.st_mode);
+}
