@@ -112,7 +112,7 @@ parent p = empty
 -- | Retrieve a 'FilePath'&#x2019;s filename component.
 --
 -- @
--- filename \"foo/bar.txt\" == \"bar.txt\"
+-- filename \"foo\/bar.txt\" == \"bar.txt\"
 -- @
 filename :: FilePath -> FilePath
 filename p = empty
@@ -124,7 +124,7 @@ filename p = empty
 -- /file name/ of the directory, not its full path.
 --
 -- @
--- dirname \"foo/bar/baz.txt\" == \"bar\"
+-- dirname \"foo\/bar\/baz.txt\" == \"bar\"
 -- dirname \"/\" == \"\"
 -- @
 --
