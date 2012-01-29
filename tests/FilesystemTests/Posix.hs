@@ -11,6 +11,7 @@ module FilesystemTests.Posix
 	) where
 
 import           Prelude hiding (FilePath)
+import           Control.Exception (bracket)
 import           Control.Monad
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString
@@ -140,13 +141,26 @@ test_Posix = suite "posix"
 		, test_SetWorkingDirectory "iso8859"
 			(decode "\xA1\xA2\xA3.d")
 		]
-	, todo "getHomeDirectory"
-	, todo "getDesktopDirectory"
+	, suite "getHomeDirectory"
+		[ test_GetHomeDirectory "ascii"
+			(decode "/home/test.d")
+		, test_GetHomeDirectory "utf8"
+			(decode "/home/\xA1\xA2.d")
+		, test_GetHomeDirectory "iso8859"
+			(decode "/home/\xA1\xA2\xA3.d")
+		]
+	, suite "getDesktopDirectory"
+		[ test_GetDesktopDirectory "ascii"
+			(decode "/desktop/test.d")
+		, test_GetDesktopDirectory "utf8"
+			(decode "/desktop/\xA1\xA2.d")
+		, test_GetDesktopDirectory "iso8859"
+			(decode "/desktop/\xA1\xA2\xA3.d")
+		]
 	, todo "getDocumentsDirectory"
 	, todo "getAppDataDirectory"
 	, todo "getAppCacheDirectory"
 	, todo "getAppConfigDirectory"
-	, todo "copyFile"
 	, suite "getModified"
 		[ test_GetModified "ascii"
 			(decode "test.txt")
@@ -163,6 +177,7 @@ test_Posix = suite "posix"
 		, test_GetSize "iso8859"
 			(decode "\xA1\xA2\xA3.txt")
 		]
+	, todo "copyFile"
 	, todo "openFile"
 	, todo "withFile"
 	, todo "readFile"
@@ -380,6 +395,24 @@ test_SetWorkingDirectory test_name dir_name = assertionsWithTemp test_name $ \tm
 	cwd <- getcwd_ffi
 	$expect (equal cwd dir_path)
 
+test_GetHomeDirectory :: Text -> FilePath -> Suite
+test_GetHomeDirectory test_name dir_name = assertions test_name $ do
+	path <- liftIO $ withEnv "HOME" (Just dir_name) Filesystem.getHomeDirectory
+	$expect (equal path dir_name)
+
+test_GetDesktopDirectory :: Text -> FilePath -> Suite
+test_GetDesktopDirectory test_name dir_name = assertions test_name $ do
+	path <- liftIO $
+		withEnv "XDG_DESKTOP_DIR" (Just dir_name) $
+		Filesystem.getDesktopDirectory
+	$expect (equal path dir_name)
+	
+	fallback <- liftIO $
+		withEnv "XDG_DESKTOP_DIR" Nothing $
+		withEnv "HOME" (Just dir_name) $
+		Filesystem.getDesktopDirectory
+	$expect (equal fallback (dir_name </> "Desktop"))
+
 test_GetModified :: Text -> FilePath -> Suite
 test_GetModified test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	let file_path = tmp </> file_name
@@ -463,6 +496,29 @@ chdir_ffi path = do
 errnoCInt :: Errno -> CInt
 errnoCInt (Errno x) = x
 
+withEnv :: ByteString -> Maybe FilePath -> IO a -> IO a
+withEnv name val io = bracket set unset (\_ -> io) where
+	set = do
+		old <- getEnv name
+		setEnv name (fmap encode val)
+		return old
+	unset = setEnv name
+
+getEnv :: ByteString -> IO (Maybe ByteString)
+getEnv name = Data.ByteString.useAsCString name $ \cName -> do
+	ret <- liftIO (c_getenv cName)
+	if ret == nullPtr
+		then return Nothing
+		else fmap Just (Data.ByteString.packCString ret)
+
+setEnv :: ByteString -> Maybe ByteString -> IO ()
+setEnv name Nothing = throwErrnoIfMinus1_ "setEnv" $
+	Data.ByteString.useAsCString name c_unsetenv
+setEnv name (Just val) = throwErrnoIfMinus1_ "setEnv" $
+	Data.ByteString.useAsCString name $ \cName ->
+	Data.ByteString.useAsCString val $ \cVal ->
+	c_setenv cName cVal 1
+
 foreign import ccall unsafe "fopen"
 	c_fopen :: CString -> CString -> IO (Ptr ())
 
@@ -486,3 +542,12 @@ foreign import ccall unsafe "chdir"
 
 foreign import ccall unsafe "free"
 	c_free :: Ptr a -> IO ()
+
+foreign import ccall unsafe "getenv"
+	c_getenv :: CString -> IO CString
+
+foreign import ccall unsafe "setenv"
+	c_setenv :: CString -> CString -> CInt -> IO CInt
+
+foreign import ccall unsafe "unsetenv"
+	c_unsetenv :: CString -> IO CInt

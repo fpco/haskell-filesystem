@@ -73,7 +73,7 @@ import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import           Foreign.Ptr (Ptr, nullPtr)
-import           Foreign.C (CInt, CString)
+import           Foreign.C (CInt, CString, withCAString)
 import qualified Foreign.C.Error as CError
 import qualified System.Environment as SE
 
@@ -453,7 +453,17 @@ foreign import ccall unsafe "chdir"
 --
 -- See: 'SD.getHomeDirectory'
 getHomeDirectory :: IO FilePath
+#ifdef CABAL_OS_WINDOWS
 getHomeDirectory = fmap decodeString SD.getHomeDirectory
+#else
+getHomeDirectory = do
+	path <- getenv "HOME"
+	case path of
+		Just p -> return p
+		Nothing -> do
+			-- use getEnv to throw the right exception type
+			fmap decodeString (SE.getEnv "HOME")
+#endif
 
 -- | Get the user&#x2019;s home directory. This is a good starting point for
 -- file dialogs and other user queries. For data files the user does not
@@ -515,18 +525,32 @@ homeSlash path = do
 	home <- getHomeDirectory
 	return (append home (decodeString path))
 
-getenv :: String -> IO (Maybe String)
+getenv :: String -> IO (Maybe FilePath)
+#ifdef CABAL_OS_WINDOWS
 getenv key = Exc.catch
 	(fmap Just (SE.getEnv key))
 	(\e -> if isDoesNotExistError e
 		then return Nothing
 		else Exc.throwIO e)
+#else
+getenv key = withCAString key $ \cKey -> do
+	ret <- c_getenv cKey
+	if ret == nullPtr
+		then return Nothing
+		else do
+			bytes <- B.packCString ret
+			return (Just (R.decode R.posix bytes))
+
+foreign import ccall unsafe "getenv"
+	c_getenv :: CString -> IO CString
+
+#endif
 
 xdg :: String -> Maybe T.Text -> IO FilePath -> IO FilePath
 xdg envkey label fallback = do
 	env <- getenv envkey
 	dir <- case env of
-		Just var -> return (decodeString var)
+		Just var -> return var
 		Nothing -> fallback
 	return $ case label of
 		Just text -> append dir (R.fromText currentOS text)
