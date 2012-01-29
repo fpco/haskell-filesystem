@@ -88,10 +88,16 @@ test_Posix = suite "posix"
 	, suite "createTree"
 		[ test_CreateTree "ascii"
 			(decode "test.d")
+		, test_CreateTree "ascii-slash"
+			(decode "test.d/")
 		, test_CreateTree "utf8"
 			(fromText "\xA1\xA2.d")
+		, test_CreateTree "utf8-slash"
+			(fromText "\xA1\xA2.d/")
 		, test_CreateTree "iso8859"
 			(decode "\xA1\xA2\xA3.d")
+		, test_CreateTree "iso8859-slash"
+			(decode "\xA1\xA2\xA3.d/")
 		]
 	, test_ListDirectory
 	, suite "removeFile"

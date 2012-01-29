@@ -68,7 +68,7 @@ module Filesystem
 import           Prelude hiding (FilePath, readFile, writeFile, appendFile)
 
 import qualified Control.Exception as Exc
-import           Control.Monad (forM_)
+import           Control.Monad (forM_, unless)
 import qualified Data.ByteString as B
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -79,10 +79,12 @@ import qualified System.Environment as SE
 
 #if MIN_VERSION_system_filepath(0,4,0)
 import           Filesystem.Path (FilePath, append)
+import qualified Filesystem.Path as Path
 import           Filesystem.Path.CurrentOS (currentOS, encodeString, decodeString)
 import qualified Filesystem.Path.Rules as R
 #else
 import           System.FilePath (FilePath, append)
+import qualified System.FilePath as Path
 import           System.FilePath.CurrentOS (currentOS, encodeString, decodeString)
 import qualified System.FilePath.Rules as R
 #endif
@@ -216,19 +218,24 @@ createDirectory succeedIfExists path =
 		else Win32.createDirectory path' Nothing
 #else
 	withFilePath path $ \cPath ->
-	throwErrnoPathIfMinus1Retry_ "createDirectory" path $ do
-		rc <- c_mkdir cPath 0o777
-		if rc == -1
-			then do
-				errno <- CError.getErrno
-				if errno == CError.eEXIST
-					then do
-						dirExists <- isDirectory path
-						if dirExists && succeedIfExists
-							then return 0
-							else return rc
-					else return rc
-			else return rc
+	throwErrnoPathIfMinus1Retry_ "createDirectory" path $ if succeedIfExists
+		then mkdirIfMissing path cPath 0o777
+		else c_mkdir cPath 0o777
+
+mkdirIfMissing :: FilePath -> CString -> CInt -> IO CInt
+mkdirIfMissing path cPath mode = do
+	rc <- c_mkdir cPath mode
+	if rc == -1
+		then do
+			errno <- CError.getErrno
+			if errno == CError.eEXIST
+				then do
+					dirExists <- isDirectory path
+					if dirExists
+						then return 0
+						else return rc
+				else return rc
+		else return rc
 
 foreign import ccall unsafe "mkdir"
 	c_mkdir :: CString -> CInt -> IO CInt
@@ -239,7 +246,16 @@ foreign import ccall unsafe "mkdir"
 --
 -- See: 'SD.createDirectoryIfMissing'
 createTree :: FilePath -> IO ()
+#ifdef CABAL_OS_WINDOWS
 createTree path = SD.createDirectoryIfMissing True (encodeString path)
+#else
+createTree path = do
+	let parent = Path.parent path
+	parentExists <- isDirectory parent
+	unless parentExists (createTree parent)
+	withFilePath path $ \cPath ->
+		throwErrnoPathIfMinus1Retry_ "createTree" path (mkdirIfMissing path cPath 0o777)
+#endif
 
 -- | List contents of a directory, excluding @\".\"@ and @\"..\"@. Each
 -- returned 'FilePath' includes the path of the directory.
