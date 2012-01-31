@@ -16,7 +16,10 @@ import           Control.Monad
 import           Control.Monad.IO.Class (liftIO)
 import qualified Data.ByteString
 import           Data.ByteString (ByteString)
+import qualified Data.ByteString.Char8 as Char8
+import qualified Data.Text
 import           Data.Text (Text)
+import qualified Data.Text.IO
 import           Data.Time.Clock (diffUTCTime, getCurrentTime)
 import           Foreign
 import           Foreign.C
@@ -179,12 +182,26 @@ test_Posix = suite "posix"
 		]
 	, todo "copyFile"
 	, todo "openFile"
-	, todo "withFile"
+	, suite "withFile"
+		[ test_WithFile "ascii"
+			(decode "test.txt")
+		, test_WithFile "utf8"
+			(fromText "\xA1\xA2.txt")
+		, test_WithFile "iso8859"
+			(decode "\xA1\xA2\xA3.txt")
+		]
 	, todo "readFile"
 	, todo "writeFile"
 	, todo "appendFile"
 	, todo "openTextFile"
-	, todo "withTextFile"
+	, suite "withTextFile"
+		[ test_WithTextFile "ascii"
+			(decode "test.txt")
+		, test_WithTextFile "utf8"
+			(fromText "\xA1\xA2.txt")
+		, test_WithTextFile "iso8859"
+			(decode "\xA1\xA2\xA3.txt")
+		]
 	, todo "readTextFile"
 	, todo "writeTextFile"
 	, todo "appendTextFile"
@@ -432,6 +449,30 @@ test_GetSize test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	
 	size <- liftIO $ Filesystem.getSize file_path
 	$expect (equal size (toInteger (Data.ByteString.length contents)))
+
+test_WithFile :: Text -> FilePath -> Suite
+test_WithFile test_name file_name = assertionsWithTemp test_name $ \tmp -> do
+	let file_path = tmp </> file_name
+	let contents = "contents\n"
+	
+	touch_ffi file_path contents
+	
+	read_contents <- liftIO $
+		Filesystem.withFile file_path ReadMode $
+		Data.ByteString.hGetContents
+	$expect (equalLines contents read_contents)
+
+test_WithTextFile :: Text -> FilePath -> Suite
+test_WithTextFile test_name file_name = assertionsWithTemp test_name $ \tmp -> do
+	let file_path = tmp </> file_name
+	let contents = "contents\n"
+	
+	touch_ffi file_path (Char8.pack contents)
+	
+	read_contents <- liftIO $
+		Filesystem.withTextFile file_path ReadMode $
+		Data.Text.IO.hGetContents
+	$expect (equalLines (Data.Text.pack contents) read_contents)
 
 withPathCString :: FilePath -> (CString -> IO a) -> IO a
 withPathCString p = Data.ByteString.useAsCString (encode p)

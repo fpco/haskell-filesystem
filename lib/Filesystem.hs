@@ -67,10 +67,16 @@ module Filesystem
 	, getAppConfigDirectory
 	) where
 
+#ifndef CABAL_OS_WINDOWS
+#if MIN_VERSION_base(4,2,0)
+#define SYSTEMFILEIO_LOCAL_OPEN_FILE
+#endif
+#endif
+
 import           Prelude hiding (FilePath, readFile, writeFile, appendFile)
 
 import qualified Control.Exception as Exc
-import           Control.Monad (forM_, unless)
+import           Control.Monad (forM_, unless, when)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
@@ -114,6 +120,15 @@ import qualified System.Posix as Posix
 import qualified System.Posix.Error as Posix
 
 #endif
+
+#ifdef SYSTEMFILEIO_LOCAL_OPEN_FILE
+import           Data.Bits ((.|.))
+import           GHC.IO.Handle.FD (mkHandleFromFD)
+import           GHC.IO.FD (mkFD)
+import qualified GHC.IO.Device
+import qualified System.Posix.Internals
+#endif
+
 
 -- | Check if a file exists at the given path.
 --
@@ -663,7 +678,11 @@ getSize path = do
 --
 -- See: 'IO.openBinaryFile'
 openFile :: FilePath -> IO.IOMode -> IO IO.Handle
+#ifdef SYSTEMFILEIO_LOCAL_OPEN_FILE
+openFile path mode = openFile' "openFile" path mode Nothing
+#else
 openFile path = IO.openBinaryFile (encodeString path)
+#endif
 
 -- | Open a file in binary mode, and pass its 'Handle' to a provided
 -- computation. The 'Handle' will be automatically closed when the
@@ -704,7 +723,11 @@ appendFile path bytes = withFile path IO.AppendMode
 --
 -- See: 'IO.openFile'
 openTextFile :: FilePath -> IO.IOMode -> IO IO.Handle
+#ifdef SYSTEMFILEIO_LOCAL_OPEN_FILE
+openTextFile path mode = openFile' "openTextFile" path mode (Just IO.localeEncoding)
+#else
 openTextFile path = IO.openFile (encodeString path)
+#endif
 
 -- | Open a file in text mode, and pass its 'Handle' to a provided
 -- computation. The 'Handle' will be automatically closed when the
@@ -735,6 +758,33 @@ writeTextFile path text = withTextFile path IO.WriteMode
 appendTextFile :: FilePath -> T.Text -> IO ()
 appendTextFile path text = withTextFile path IO.AppendMode
 	(\h -> T.hPutStr h text)
+
+#ifdef SYSTEMFILEIO_LOCAL_OPEN_FILE
+openFile' :: String -> FilePath -> IO.IOMode -> (Maybe IO.TextEncoding) -> IO IO.Handle
+openFile' loc path mode codec = open where
+	mode_flags = case mode of
+		IO.ReadMode -> System.Posix.Internals.o_RDONLY
+		IO.WriteMode -> System.Posix.Internals.o_WRONLY
+		IO.ReadWriteMode -> System.Posix.Internals.o_RDWR
+		IO.AppendMode -> System.Posix.Internals.o_APPEND
+	flags = mode_flags .|.
+	        System.Posix.Internals.o_NOCTTY .|.
+	        System.Posix.Internals.o_NONBLOCK
+	
+	sys_c_open = System.Posix.Internals.c_open
+	sys_c_close = System.Posix.Internals.c_close
+	open = withFilePath path $ \cPath -> do
+		c_fd <- throwErrnoPathIfMinus1Retry loc path (sys_c_open cPath flags 0o666)
+		(fd, fd_type) <- Exc.onException
+			(mkFD c_fd mode Nothing False True)
+			(sys_c_close c_fd)
+		when (mode == IO.WriteMode && fd_type == GHC.IO.Device.RegularFile) $ do
+			GHC.IO.Device.setSize fd 0
+		Exc.onException
+			(mkHandleFromFD fd fd_type (encodeString path) mode False codec)
+			(GHC.IO.Device.close fd)
+
+#endif
 
 #ifdef CABAL_OS_WINDOWS
 
