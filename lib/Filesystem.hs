@@ -393,7 +393,7 @@ removeTree root = do
 			isDir <- isRealDir item
 			if isDir
 				then removeTree item
-				else Exc.throwIO (exc :: Exc.SomeException))
+				else Exc.throwIO (exc :: Exc.IOException))
 	removeDirectory root
 
 -- Check whether a path is a directory, and not just a symlink to a directory.
