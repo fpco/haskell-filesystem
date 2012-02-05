@@ -76,7 +76,11 @@ test_Posix = suite "posix"
 			(fromText "\xA1\xA2-b.txt")
 		, test_CanonicalizePath "iso8859"
 			(decode "\xA1\xA2\xA3-a.txt")
+#ifdef CABAL_OS_DARWIN
+			(decode "%A1%A2%A3-b.txt")
+#else
 			(decode "\xA1\xA2\xA3-b.txt")
+#endif
 		]
 	, suite "createDirectory"
 		[ test_CreateDirectory "ascii"
@@ -334,11 +338,19 @@ test_CreateTree test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
 
 test_ListDirectory :: Suite
 test_ListDirectory = assertionsWithTemp "listDirectory" $ \tmp -> do
+	-- OSX replaces non-UTF8 filenames with http-style %XX escapes
 	let paths =
+#ifdef CABAL_OS_DARWIN
+		[ tmp </> decode "%A1%A2%A3.txt"
+		, tmp </> decode "test.txt"
+		, tmp </> fromText "\xA1\xA2.txt"
+		]
+#else
 		[ tmp </> decode "test.txt"
 		, tmp </> fromText "\xA1\xA2.txt"
 		, tmp </> decode "\xA1\xA2\xA3.txt"
 		]
+#endif
 	forM_ paths (\path -> touch_ffi path "")
 	
 	names <- liftIO $ Filesystem.listDirectory tmp
