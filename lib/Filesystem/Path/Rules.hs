@@ -128,6 +128,14 @@ posixFromBytes bytes = if B.null bytes
 	then empty
 	else posixFromChunks $ flip map (B.split 0x2F bytes) $ \b -> case maybeDecodeUtf8 b of
 		Just text -> text
+		Nothing -> processInvalidUtf8 b
+
+processInvalidUtf8 :: B.ByteString -> T.Text
+processInvalidUtf8 bytes = T.intercalate (T.pack ".") textChunks where
+	byteChunks = B.split 0x2E bytes
+	textChunks = map unicodeDammit byteChunks
+	unicodeDammit b = case maybeDecodeUtf8 b of
+		Just t -> t
 		Nothing -> T.pack (map (\c -> if ord c >= 0x80
 			then chr (ord c + 0xEF00)
 			else c) (B8.unpack b))

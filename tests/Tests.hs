@@ -42,6 +42,7 @@ tests =
 	, property "stripPrefix" prop_StripPrefix
 	, test_SplitExtension
 	, test_Collapse
+	, test_InvalidUtf8InDirectoryComponent
 	
 	, suite "to-from-bytes"
 		[ test_Identity "posix" posix posixPaths
@@ -320,6 +321,17 @@ test_Collapse = assertions "collapse" $ do
 	$expect $ equal (collapse "parent/foo/baz/../bar") "parent/foo/bar"
 	$expect $ equal (collapse "parent/foo/baz/../../bar") "parent/bar"
 	$expect $ equal (collapse "parent/foo/..") "parent/"
+
+test_InvalidUtf8InDirectoryComponent :: Suite
+test_InvalidUtf8InDirectoryComponent = assertions "invalid-utf8-in-directory-component" $ do
+	$expect $ equal (toText posix (fromChar8 "/\218\130.\137\141")) (Left (T.pack "/\1666.\137\141"))
+	$expect $ equal (encode posix (fromChar8 "/\218\130.\137\141")) (B8.pack "/\218\130.\137\141")
+	
+	$expect $ equal (toText posix (fromChar8 "/\218\130.\137\141/")) (Left (T.pack "/\1666.\137\141/"))
+	$expect $ equal (encode posix (fromChar8 "/\218\130.\137\141/")) (B8.pack "/\218\130.\137\141/")
+	
+	$expect $ equal (toText posix (fromChar8 "/\218\130.\137\141//baz")) (Left (T.pack "/\1666.\137\141/baz"))
+	$expect $ equal (encode posix (fromChar8 "/\218\130.\137\141//baz")) (B8.pack "/\218\130.\137\141/baz")
 
 test_Parsing :: Suite
 test_Parsing = assertions "parsing" $ do

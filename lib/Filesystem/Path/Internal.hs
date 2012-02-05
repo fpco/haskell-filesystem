@@ -193,15 +193,7 @@ parseFilename filename = parsed where
 		then (Nothing, [])
 		else case textSplitBy (== '.') filename of
 			[] -> (Nothing, [])
-			(name':exts') -> (Just (checkChunk name'), map checkChunk exts')
-	
-	checkChunk t = if chunkGood t
-		then t
-		else case maybeDecodeUtf8 (unescapeBytes' t) of
-			Just text -> text
-			Nothing -> t
-	
-	chunkGood t = not (T.any (\c -> ord c >= 0xEF00 && ord c <= 0xEFFF) t)
+			(name':exts') -> (Just name', exts')
 
 maybeDecodeUtf8 :: B.ByteString -> Maybe T.Text
 maybeDecodeUtf8 = excToMaybe . TE.decodeUtf8 where
