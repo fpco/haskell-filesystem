@@ -21,15 +21,6 @@ description:
   In particular, this library supports working with POSIX files that have
   paths which can't be decoded in the current locale encoding.
 
-source-repository head
-  type: bazaar
-  location: https://john-millikin.com/branches/system-fileio/0.2/
-
-source-repository this
-  type: bazaar
-  location: https://john-millikin.com/branches/system-fileio/0.2/
-  tag: system-fileio_0.2.4
-
 extra-source-files:
   scripts/common.bash
   scripts/run-coverage
@@ -40,6 +31,15 @@ extra-source-files:
   tests/FilesystemTests/Posix.hs
   tests/FilesystemTests/Util.hs
   tests/FilesystemTests/Windows.hs
+
+source-repository head
+  type: bazaar
+  location: https://john-millikin.com/branches/system-fileio/0.2/
+
+source-repository this
+  type: bazaar
+  location: https://john-millikin.com/branches/system-fileio/0.2/
+  tag: system-fileio_0.2.4
 
 library
   ghc-options: -Wall -O2
