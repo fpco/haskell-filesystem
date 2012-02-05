@@ -110,7 +110,7 @@ import           Data.Time ( UTCTime(..)
 import           Foreign.C (CWString, withCWString)
 import qualified System.Win32 as Win32
 import           System.IO.Error (isDoesNotExistError)
-import qualified "directory" System.Directory as SD
+import qualified System.Directory as SD
 
 #else
 
