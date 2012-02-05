@@ -173,19 +173,27 @@ textSplitBy = T.splitBy
 #endif
 
 unescape :: T.Text -> (T.Text, Bool)
-unescape t = if T.any (\c -> ord c >= 0xEF00 && ord c <= 0xEFFF) t
-	then (T.map (\c -> if ord c >= 0xEF00 && ord c <= 0xEFFF
-		then chr (ord c - 0xEF00)
-		else c) t, False)
-	else (t, True)
+unescape t = if anyEscaped then (impl, False) else (t, True) where
+	anyEscaped = T.any (== '\xEF00') t
+	impl = T.pack (reverse (snd folded))
+	folded = T.foldl' step (False, []) t
+	step (prevEsc, acc) c = if prevEsc
+		then (False, c:acc)
+		else if c == '\xEF00'
+			then (True, acc)
+			else (False, c:acc)
 
 unescape' :: T.Text -> T.Text
 unescape' = fst . unescape
 
 unescapeBytes' :: T.Text -> B8.ByteString
-unescapeBytes' t = B8.concat (map (\c -> if ord c >= 0xEF00 && ord c <= 0xEFFF
-	then B8.singleton (chr (ord c - 0xEF00))
-	else TE.encodeUtf8 (T.singleton c)) (T.unpack t))
+unescapeBytes' t = B8.concat (reverse (snd folded)) where
+	folded = T.foldl' step (False, []) t
+	step (prevEsc, acc) c = if prevEsc
+		then (False, B8.singleton (chr (ord c)) : acc)
+		else if c == '\xEF00'
+			then (True, acc)
+			else (False, TE.encodeUtf8 (T.singleton c) : acc)
 
 parseFilename :: T.Text -> (Maybe Basename, [Extension])
 parseFilename filename = parsed where
@@ -193,15 +201,7 @@ parseFilename filename = parsed where
 		then (Nothing, [])
 		else case textSplitBy (== '.') filename of
 			[] -> (Nothing, [])
-			(name':exts') -> (Just (checkChunk name'), map checkChunk exts')
-	
-	checkChunk t = if chunkGood t
-		then t
-		else case maybeDecodeUtf8 (unescapeBytes' t) of
-			Just text -> text
-			Nothing -> t
-	
-	chunkGood t = not (T.any (\c -> ord c >= 0xEF00 && ord c <= 0xEFFF) t)
+			(name':exts') -> (Just name', exts')
 
 maybeDecodeUtf8 :: B.ByteString -> Maybe T.Text
 maybeDecodeUtf8 = excToMaybe . TE.decodeUtf8 where
