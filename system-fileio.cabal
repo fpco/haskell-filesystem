@@ -1,21 +1,34 @@
 name: system-fileio
 version: 0.3.4
-synopsis: High-level filesystem interaction
 license: MIT
 license-file: license.txt
 author: John Millikin <jmillikin@gmail.com>
 maintainer: John Millikin <jmillikin@gmail.com>
-copyright: John Millikin 2011
 build-type: Simple
 cabal-version: >= 1.6
 category: System
 stability: experimental
-homepage: https://john-millikin.com/software/hs-fileio/
+homepage: https://john-millikin.com/software/haskell-filesystem/
 bug-reports: mailto:jmillikin@gmail.com
 
+synopsis: Consistent filesystem interaction across GHC versions
 description:
   This is a small wrapper around the \"directory\", \"unix\", and \"Win32\"
-  packages for use with \"system-filepath\".
+  packages, for use with \"system-filepath\". It provides a consistent API
+  to the various versions of these packages distributed with different
+  versions of GHC.
+  .
+  In particular, this library supports working with POSIX files that have
+  paths which can't be decoded in the current locale encoding.
+
+source-repository head
+  type: bazaar
+  location: https://john-millikin.com/branches/system-fileio/0.3/
+
+source-repository this
+  type: bazaar
+  location: https://john-millikin.com/branches/system-fileio/0.3/
+  tag: system-fileio_0.3.4
 
 extra-source-files:
   scripts/common.bash
@@ -27,15 +40,6 @@ extra-source-files:
   tests/FilesystemTests/Posix.hs
   tests/FilesystemTests/Util.hs
   tests/FilesystemTests/Windows.hs
-
-source-repository head
-  type: bzr
-  location: https://john-millikin.com/software/hs-fileio/
-
-source-repository this
-  type: bzr
-  location: https://john-millikin.com/branches/hs-fileio/0.3/
-  tag: system-fileio_0.3.4
 
 library
   ghc-options: -Wall -O2
