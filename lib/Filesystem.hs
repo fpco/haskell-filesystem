@@ -4,19 +4,23 @@
 
 -- |
 -- Module: Filesystem
--- Copyright: 2011 John Millikin
+-- Copyright: 2011-2012 John Millikin <jmillikin@gmail.com>
 -- License: MIT
 --
--- Maintainer: jmillikin@gmail.com
+-- Maintainer: John Millikin <jmillikin@gmail.com>
 -- Portability: portable
 --
--- Simple 'FilePath'&#x2010;aware wrappers around standard "System.IO"
--- computations. See the linked documentation for each computation for
--- details on exceptions and operating system interaction.
+-- Simple 'FilePath'&#8208;aware wrappers around standard "System.IO"
+-- computations. These wrappers are designed to work as similarly as
+-- possible across various versions of GHC.
+--
+-- In particular, they do not require POSIX file paths to be valid strings,
+-- and can therefore open paths regardless of the current locale encoding.
 module Filesystem
-	( IO.Handle
+	(
+	-- * Exports from System.IO
+	  IO.Handle
 	, IO.IOMode(..)
-	, rename
 	
 	-- * Files
 	, isFile
@@ -46,11 +50,11 @@ module Filesystem
 	, canonicalizePath
 	, listDirectory
 	
-	-- ** Creating
+	-- ** Creating directories
 	, createDirectory
 	, createTree
 	
-	-- ** Removing
+	-- ** Removing directories
 	, removeDirectory
 	, removeTree
 	
@@ -65,6 +69,9 @@ module Filesystem
 	, getAppDataDirectory
 	, getAppCacheDirectory
 	, getAppConfigDirectory
+	
+	-- * Other
+	, rename
 	) where
 
 #ifndef CABAL_OS_WINDOWS
@@ -99,6 +106,7 @@ import qualified System.FilePath.Rules as R
 #endif
 
 import qualified System.IO as IO
+import           System.IO.Error (IOError)
 
 #ifdef CABAL_OS_WINDOWS
 
@@ -132,7 +140,11 @@ import qualified System.Posix.Internals
 
 -- | Check if a file exists at the given path.
 --
--- See: 'SD.doesFileExist'
+-- Any non&#8208;directory object, including devices and pipes, are
+-- considered to be files. Symbolic links are resolved to their targets
+-- before checking their type.
+--
+-- This computation does not throw exceptions.
 isFile :: FilePath -> IO Bool
 #ifdef CABAL_OS_WINDOWS
 isFile path = SD.doesFileExist (encodeString path)
@@ -140,13 +152,15 @@ isFile path = SD.doesFileExist (encodeString path)
 isFile path = Exc.catch
 	(do
 		stat <- posixStat "isFile" path
-		return (Posix.isRegularFile stat))
-	((\_ -> return False) :: Exc.IOException -> IO Bool)
+		return (not (Posix.isDirectory stat)))
+	((\_ -> return False) :: IOError -> IO Bool)
 #endif
 
 -- | Check if a directory exists at the given path.
 --
--- See: 'SD.doesDirectoryExist'
+-- Symbolic links are resolved to their targets before checking their type.
+--
+-- This computation does not throw exceptions.
 isDirectory :: FilePath -> IO Bool
 #ifdef CABAL_OS_WINDOWS
 isDirectory path = SD.doesDirectoryExist (encodeString path)
@@ -155,13 +169,14 @@ isDirectory path = Exc.catch
 	(do
 		stat <- posixStat "isFile" path
 		return (Posix.isDirectory stat))
-	((\_ -> return False) :: Exc.IOException -> IO Bool)
+	((\_ -> return False) :: IOError -> IO Bool)
 #endif
 
--- | Rename a filesystem object. Some operating systems have restrictions
--- on what objects can be renamed; see linked documentation for details.
+-- | Rename a filesystem object.
 --
--- See: 'SD.renameFile' and 'SD.renameDirectory'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 rename :: FilePath -> FilePath -> IO ()
 rename old new =
 #ifdef CABAL_OS_WINDOWS
@@ -178,14 +193,16 @@ foreign import ccall unsafe "rename"
 
 #endif
 
--- Resolve symlinks and \"..\" path elements to return a canonical path.
+-- | Resolve symlinks and \"..\" path elements to return a canonical path.
 -- It is intended that two paths referring to the same object will always
 -- resolve to the same canonical path.
 --
 -- Note that on many operating systems, it is impossible to guarantee that
 -- two paths to the same file will resolve to the same canonical path.
 --
--- See: 'SD.canonicalizePath'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 --
 -- Since: 0.1.1
 canonicalizePath :: FilePath -> IO FilePath
@@ -224,7 +241,9 @@ foreign import ccall unsafe "realpath"
 -- | Create a directory at a given path. The user may choose whether it is
 -- an error for a directory to already exist at that path.
 --
--- See: 'SD.createDirectory'.
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 createDirectory :: Bool -- ^ Succeed if the directory already exists
                 -> FilePath -> IO ()
 createDirectory succeedIfExists path =
@@ -261,7 +280,9 @@ foreign import ccall unsafe "mkdir"
 -- | Create a directory at a given path, including any parents which might
 -- be missing.
 --
--- See: 'SD.createDirectoryIfMissing'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 createTree :: FilePath -> IO ()
 #ifdef CABAL_OS_WINDOWS
 createTree path = SD.createDirectoryIfMissing True (encodeString path)
@@ -274,10 +295,13 @@ createTree path = do
 		throwErrnoPathIfMinus1Retry_ "createTree" path (mkdirIfMissing path cPath 0o777)
 #endif
 
--- | List contents of a directory, excluding @\".\"@ and @\"..\"@. Each
--- returned 'FilePath' includes the path of the directory.
+-- | List objects in a directory, excluding @\".\"@ and @\"..\"@. Each
+-- returned 'FilePath' includes the path of the directory. Entries are not
+-- sorted.
 --
--- See: 'SD.getDirectoryContents'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 listDirectory :: FilePath -> IO [FilePath]
 #ifdef CABAL_OS_WINDOWS
 listDirectory root = fmap cleanup contents where
@@ -348,9 +372,14 @@ foreign import ccall unsafe "hssystemfileio_dirent_name"
 
 #endif
 
--- | Remove a file.
+-- | Remove a file. This will fail if the file does not exist.
 --
--- See: 'SD.removeFile'
+-- This computation cannot remove directories. For that, use 'removeDirectory'
+-- or 'removeTree'.
+--
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 removeFile :: FilePath -> IO ()
 removeFile path =
 #ifdef CABAL_OS_WINDOWS
@@ -365,7 +394,9 @@ foreign import ccall unsafe "unlink"
 
 -- | Remove an empty directory.
 --
--- See: 'SD.removeDirectory'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 removeDirectory :: FilePath -> IO ()
 removeDirectory path =
 #ifdef CABAL_OS_WINDOWS
@@ -380,7 +411,15 @@ foreign import ccall unsafe "rmdir"
 
 -- | Recursively remove a directory tree rooted at the given path.
 --
--- See: 'SD.removeDirectoryRecursive'
+-- This computation does not follow symlinks. If the tree contains symlinks,
+-- the links themselves will be removed, but not the objects they point to.
+--
+-- If the root path is a symlink, then it will be treated as if it were a
+-- regular directory.
+--
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 removeTree :: FilePath -> IO ()
 #ifdef CABAL_OS_WINDOWS
 removeTree root = SD.removeDirectoryRecursive (encodeString root)
@@ -393,7 +432,7 @@ removeTree root = do
 			isDir <- isRealDir item
 			if isDir
 				then removeTree item
-				else Exc.throwIO (exc :: Exc.IOException))
+				else Exc.throwIO (exc :: IOError))
 	removeDirectory root
 
 -- Check whether a path is a directory, and not just a symlink to a directory.
@@ -412,7 +451,9 @@ foreign import ccall unsafe "hssystemfileio_isrealdir"
 
 -- | Get the current working directory.
 --
--- See: 'SD.getCurrentDirectory'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 getWorkingDirectory :: IO FilePath
 getWorkingDirectory = do
 #ifdef CABAL_OS_WINDOWS
@@ -442,7 +483,9 @@ foreign import stdcall unsafe "GetCurrentDirectoryW"
 
 -- | Set the current working directory.
 --
--- See: 'SD.setCurrentDirectory'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 setWorkingDirectory :: FilePath -> IO ()
 setWorkingDirectory path =
 #ifdef CABAL_OS_WINDOWS
@@ -468,7 +511,9 @@ foreign import ccall unsafe "chdir"
 -- For data files the user does not explicitly create, such as automatic
 -- saves, use 'getAppDataDirectory'.
 --
--- See: 'SD.getHomeDirectory'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 getHomeDirectory :: IO FilePath
 #ifdef CABAL_OS_WINDOWS
 getHomeDirectory = fmap decodeString SD.getHomeDirectory
@@ -482,18 +527,24 @@ getHomeDirectory = do
 			fmap decodeString (SE.getEnv "HOME")
 #endif
 
--- | Get the user&#x2019;s home directory. This is a good starting point for
+-- | Get the user&#x2019;s desktop directory. This is a good starting point for
 -- file dialogs and other user queries. For data files the user does not
 -- explicitly create, such as automatic saves, use 'getAppDataDirectory'.
+--
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 getDesktopDirectory :: IO FilePath
 getDesktopDirectory = xdg "XDG_DESKTOP_DIR" Nothing
 	(homeSlash "Desktop")
 
 -- | Get the user&#x2019;s documents directory. This is a good place to save
--- user-created files. For data files the user does not explicitly create,
--- such as automatic saves, use 'getAppDataDirectory'.
+-- user&#8208;created files. For data files the user does not explicitly
+-- create, such as automatic saves, use 'getAppDataDirectory'.
 --
--- See: 'SD.getUserDocumentsDirectory'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 getDocumentsDirectory :: IO FilePath
 getDocumentsDirectory = xdg "XDG_DOCUMENTS_DIR" Nothing
 #ifdef CABAL_OS_WINDOWS
@@ -506,7 +557,9 @@ getDocumentsDirectory = xdg "XDG_DOCUMENTS_DIR" Nothing
 -- label. This directory is where applications should store data the user did
 -- not explicitly create, such as databases and automatic saves.
 --
--- See: 'SD.getAppUserDataDirectory'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 getAppDataDirectory :: T.Text -> IO FilePath
 getAppDataDirectory label = xdg "XDG_DATA_HOME" (Just label)
 #ifdef CABAL_OS_WINDOWS
@@ -518,6 +571,10 @@ getAppDataDirectory label = xdg "XDG_DATA_HOME" (Just label)
 -- | Get the user&#x2019;s application cache directory, given an application
 -- label. This directory is where applications should store caches, which
 -- might be large and can be safely deleted.
+--
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 getAppCacheDirectory :: T.Text -> IO FilePath
 getAppCacheDirectory label = xdg "XDG_CACHE_HOME" (Just label)
 #ifdef CABAL_OS_WINDOWS
@@ -529,6 +586,10 @@ getAppCacheDirectory label = xdg "XDG_CACHE_HOME" (Just label)
 -- | Get the user&#x2019;s application configuration directory, given an
 -- application label. This directory is where applications should store their
 -- configurations and settings.
+--
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 getAppConfigDirectory :: T.Text -> IO FilePath
 getAppConfigDirectory label = xdg "XDG_CONFIG_HOME" (Just label)
 #ifdef CABAL_OS_WINDOWS
@@ -573,9 +634,13 @@ xdg envkey label fallback = do
 		Just text -> append dir (R.fromText currentOS text)
 		Nothing -> dir
 
--- | Copy the contents of a file to a new entry in the filesystem. If a
+-- | Copy the content of a file to a new entry in the filesystem. If a
 -- file already exists at the new location, it will be replaced. Copying
 -- a file is not atomic.
+--
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 --
 -- Since: 0.2.4
 copyFileContent :: FilePath -- ^ Old location
@@ -588,6 +653,10 @@ copyFileContent oldPath newPath =
 
 -- | Copy the permissions from one path to another. Both paths must already
 -- exist.
+--
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 --
 -- Since: 0.2.4
 copyPermissions :: FilePath -- ^ Old location
@@ -611,9 +680,13 @@ foreign import ccall unsafe "hssystemfileio_copy_permissions"
 
 #endif
 
--- | Copy the contents and permissions of a file to a new entry in the
+-- | Copy the content and permissions of a file to a new entry in the
 -- filesystem. If a file already exists at the new location, it will be
 -- replaced. Copying a file is not atomic.
+--
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 --
 -- Since: 0.1.1
 copyFile :: FilePath -- ^ Old location
@@ -623,9 +696,13 @@ copyFile oldPath newPath = do
 	copyFileContent oldPath newPath
 	Exc.catch
 		(copyPermissions oldPath newPath)
-		((\_ -> return ()) :: Exc.IOException -> IO ())
+		((\_ -> return ()) :: IOError -> IO ())
 
 -- | Get when the object at a given path was last modified.
+--
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 --
 -- Since: 0.2
 getModified :: FilePath -> IO UTCTime
@@ -656,8 +733,12 @@ getModified path = do
 #endif
 
 -- | Get the size of an object at a given path. For special objects like
--- links or directories, the size is filesystem&#x2010; and
--- platform&#x2010;dependent.
+-- links or directories, the size is filesystem&#8208; and
+-- platform&#8208;dependent.
+--
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 --
 -- Since: 0.2
 getSize :: FilePath -> IO Integer
@@ -671,12 +752,14 @@ getSize path = do
 #endif
 
 -- | Open a file in binary mode, and return an open 'Handle'. The 'Handle'
--- should be 'IO.hClose'd when it is no longer needed.
+-- should be closed with 'IO.hClose' when it is no longer needed.
 --
 -- 'withFile' is easier to use, because it will handle the 'Handle'&#x2019;s
 -- lifetime automatically.
 --
--- See: 'IO.openBinaryFile'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 openFile :: FilePath -> IO.IOMode -> IO IO.Handle
 #ifdef SYSTEMFILEIO_LOCAL_OPEN_FILE
 openFile path mode = openFile' "openFile" path mode Nothing
@@ -688,21 +771,27 @@ openFile path = IO.openBinaryFile (encodeString path)
 -- computation. The 'Handle' will be automatically closed when the
 -- computation returns.
 --
--- See: 'IO.withBinaryFile'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 withFile :: FilePath -> IO.IOMode -> (IO.Handle -> IO a) -> IO a
 withFile path mode = Exc.bracket (openFile path mode) IO.hClose
 
--- | Read in the entire contents of a binary file.
+-- | Read in the entire content of a binary file.
 --
--- See: 'B.readFile'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 readFile :: FilePath -> IO B.ByteString
 readFile path = withFile path IO.ReadMode
 	(\h -> IO.hFileSize h >>= B.hGet h . fromIntegral)
 
--- | Replace the entire contents of a binary file with the provided
+-- | Replace the entire content of a binary file with the provided
 -- 'B.ByteString'.
 --
--- See: 'B.writeFile'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 writeFile :: FilePath -> B.ByteString -> IO ()
 writeFile path bytes = withFile path IO.WriteMode
 	(\h -> B.hPut h bytes)
@@ -710,18 +799,22 @@ writeFile path bytes = withFile path IO.WriteMode
 -- | Append a 'B.ByteString' to a file. If the file does not exist, it will
 -- be created.
 --
--- See: 'B.appendFile'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 appendFile :: FilePath -> B.ByteString -> IO ()
 appendFile path bytes = withFile path IO.AppendMode
 	(\h -> B.hPut h bytes)
 
 -- | Open a file in text mode, and return an open 'Handle'. The 'Handle'
--- should be 'IO.hClose'd when it is no longer needed.
+-- should be closed with 'IO.hClose' when it is no longer needed.
 --
 -- 'withTextFile' is easier to use, because it will handle the
 -- 'Handle'&#x2019;s lifetime automatically.
 --
--- See: 'IO.openFile'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 openTextFile :: FilePath -> IO.IOMode -> IO IO.Handle
 #ifdef SYSTEMFILEIO_LOCAL_OPEN_FILE
 openTextFile path mode = openFile' "openTextFile" path mode (Just IO.localeEncoding)
@@ -733,20 +826,26 @@ openTextFile path = IO.openFile (encodeString path)
 -- computation. The 'Handle' will be automatically closed when the
 -- computation returns.
 --
--- See: 'IO.withFile'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 withTextFile :: FilePath -> IO.IOMode -> (IO.Handle -> IO a) -> IO a
 withTextFile path mode = Exc.bracket (openTextFile path mode) IO.hClose
 
--- | Read in the entire contents of a text file.
+-- | Read in the entire content of a text file.
 --
--- See: 'T.readFile'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 readTextFile :: FilePath -> IO T.Text
 readTextFile path = openTextFile path IO.ReadMode >>= T.hGetContents
 
--- | Replace the entire contents of a text file with the provided
+-- | Replace the entire content of a text file with the provided
 -- 'T.Text'.
 --
--- See: 'T.writeFile'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 writeTextFile :: FilePath -> T.Text -> IO ()
 writeTextFile path text = withTextFile path IO.WriteMode
 	(\h -> T.hPutStr h text)
@@ -754,7 +853,9 @@ writeTextFile path text = withTextFile path IO.WriteMode
 -- | Append 'T.Text' to a file. If the file does not exist, it will
 -- be created.
 --
--- See: 'T.appendFile'
+-- This computation throws 'IOError' on failure. See &#8220;Classifying
+-- I/O errors&#8221; in the "System.IO.Error" documentation for information on
+-- why the failure occured.
 appendTextFile :: FilePath -> T.Text -> IO ()
 appendTextFile path text = withTextFile path IO.AppendMode
 	(\h -> T.hPutStr h text)
