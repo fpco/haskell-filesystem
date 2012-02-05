@@ -394,7 +394,9 @@ test_RemoveTree test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
 
 test_GetWorkingDirectory :: Text -> FilePath -> Suite
 test_GetWorkingDirectory test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
-	let dir_path = tmp </> dir_name
+	-- canonicalize to avoid issues with symlinked temp dirs
+	canon_tmp <- liftIO (Filesystem.canonicalizePath tmp)
+	let dir_path = canon_tmp </> dir_name
 	
 	mkdir_ffi dir_path
 	chdir_ffi dir_path
@@ -404,7 +406,9 @@ test_GetWorkingDirectory test_name dir_name = assertionsWithTemp test_name $ \tm
 
 test_SetWorkingDirectory :: Text -> FilePath -> Suite
 test_SetWorkingDirectory test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
-	let dir_path = tmp </> dir_name
+	-- canonicalize to avoid issues with symlinked temp dirs
+	canon_tmp <- liftIO (Filesystem.canonicalizePath tmp)
+	let dir_path = canon_tmp </> dir_name
 	
 	mkdir_ffi dir_path
 	liftIO $ Filesystem.setWorkingDirectory dir_path
