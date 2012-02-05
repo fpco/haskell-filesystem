@@ -43,6 +43,7 @@ tests =
 	, test_SplitExtension
 	, test_Collapse
 	, test_InvalidUtf8InDirectoryComponent
+	, test_Utf8CharInGhcEscapeArea
 	
 	, suite "to-from-bytes"
 		[ test_Identity "posix" posix posixPaths
@@ -333,6 +334,13 @@ test_InvalidUtf8InDirectoryComponent = assertions "invalid-utf8-in-directory-com
 	$expect $ equal (toText posix (fromChar8 "/\218\130.\137\141//baz")) (Left (T.pack "/\1666.\137\141/baz"))
 	$expect $ equal (encode posix (fromChar8 "/\218\130.\137\141//baz")) (B8.pack "/\218\130.\137\141/baz")
 
+test_Utf8CharInGhcEscapeArea :: Suite
+test_Utf8CharInGhcEscapeArea = assertions "utf8-char-in-ghc-escape-area" $ do
+	let chars = "/a/\238\189\178/b"
+	let path = fromChar8 chars
+	$expect (equal (toChar8 path) chars)
+	$expect (equal (toText posix path) (Right (T.pack "/a/\61298/b")))
+
 test_Parsing :: Suite
 test_Parsing = assertions "parsing" $ do
 	let p x = toChar8 (fromChar8 x)
@@ -449,7 +457,6 @@ test_DecodeString_Darwin_Ghc702 = assertions "darwin_ghc702" $ do
 	let dec = decodeString
 	$expect $ equal (dec r "test\xC2\xA1\xC2\xA2") (fromText r "test\xC2\xA1\xC2\xA2")
 	$expect $ equal (dec r "test\xA1\xA2") (fromText r "test\xA1\xA2")
-	$expect $ equal (dec r "test\xEFA1\xEFA2") (fromChar8 "test\xA1\xA2")
 
 test_DecodeString_Win32 :: Suite
 test_DecodeString_Win32 = assertions "windows" $ do

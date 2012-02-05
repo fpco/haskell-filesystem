@@ -119,7 +119,7 @@ posixToBytes :: FilePath -> B.ByteString
 posixToBytes p = B.concat (root : chunks) where
 	root = TE.encodeUtf8 (rootText (pathRoot p))
 	chunks = intersperse (B8.pack "/") (map chunkBytes (directoryChunks p))
-	chunkBytes t = if T.any (\c -> ord c >= 0xEF00 && ord c <= 0xEFFF) t
+	chunkBytes t = if T.any (== '\xEF00') t
 		then unescapeBytes' t
 		else TE.encodeUtf8 t
 
@@ -136,17 +136,34 @@ processInvalidUtf8 bytes = T.intercalate (T.pack ".") textChunks where
 	textChunks = map unicodeDammit byteChunks
 	unicodeDammit b = case maybeDecodeUtf8 b of
 		Just t -> t
-		Nothing -> T.pack (map (\c -> if ord c >= 0x80
-			then chr (ord c + 0xEF00)
-			else c) (B8.unpack b))
+		Nothing -> T.pack (concatMap (\c -> if ord c >= 0x80
+			then ['\xEF00', c]
+			else [c]) (B8.unpack b))
 
 posixToGhcString :: FilePath -> String
 posixToGhcString p = P.concat (root : chunks) where
 	root = T.unpack (rootText (pathRoot p))
-	chunks = intersperse "/" (map T.unpack (directoryChunks p))
+	chunks = intersperse "/" (map escapeToGhc (directoryChunks p))
+
+escapeToGhc :: T.Text -> String
+escapeToGhc t = if anyEscaped then impl else T.unpack t where
+	anyEscaped = T.any (== '\xEF00') t
+	impl = reverse (snd folded)
+	folded = T.foldl' step (False, []) t
+	step (prevEsc, acc) c = if prevEsc
+		then (False, (chr (ord c + 0xEF00)):acc)
+		else if c == '\xEF00'
+			then (True, acc)
+			else (False, c:acc)
 
 posixFromGhcString :: String -> FilePath
-posixFromGhcString = posixFromText . T.pack
+posixFromGhcString = posixFromText . T.pack . escapeFromGhc
+
+escapeFromGhc :: String -> String
+escapeFromGhc = concatMap step where
+	step c = if ord c >= 0xEF00 && ord c <= 0xEFFF
+		then ['\xEF00', chr (ord c - 0xEF00)]
+		else [c]
 
 posixValid :: FilePath -> Bool
 posixValid p = validRoot && validDirectories where
