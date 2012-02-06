@@ -57,7 +57,9 @@ currentOS = R.darwin_ghc702
 currentOS = R.darwin
 #endif
 #else
-#if __GLASGOW_HASKELL__ >= 702
+#if __GLASGOW_HASKELL__ >= 704
+currentOS = R.posix_ghc704
+#elif __GLASGOW_HASKELL__ >= 702
 currentOS = R.posix_ghc702
 #else
 currentOS = R.posix

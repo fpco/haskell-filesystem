@@ -340,6 +340,11 @@ test_Utf8CharInGhcEscapeArea = assertions "utf8-char-in-ghc-escape-area" $ do
 	let path = fromChar8 chars
 	$expect (equal (toChar8 path) chars)
 	$expect (equal (toText posix path) (Right (T.pack "/a/\61298/b")))
+	
+	let chars = "/a/\xEE\xBC\x80/b"
+	let path = fromChar8 chars
+	$expect (equal (toChar8 path) chars)
+	$expect (equal (toText posix path) (Right (T.pack "/a/\61184/b")))
 
 test_Parsing :: Suite
 test_Parsing = assertions "parsing" $ do
@@ -389,6 +394,7 @@ test_EncodeString :: Suite
 test_EncodeString = suite "encodeString"
 	[ test_EncodeString_Posix
 	, test_EncodeString_Posix_Ghc702
+	, test_EncodeString_Posix_Ghc704
 	, test_EncodeString_Win32
 	]
 
@@ -409,6 +415,14 @@ test_EncodeString_Posix_Ghc702 = assertions "posix_ghc702" $ do
 	$expect $ equal (enc (fromChar8 "\xC2\xA1\xC2\xA2/test\xA1\xA2")) "\xA1\xA2/test\xEFA1\xEFA2"
 	$expect $ equal (enc (fromText posix_ghc702 "test\xA1\xA2")) "test\xA1\xA2"
 
+test_EncodeString_Posix_Ghc704 :: Suite
+test_EncodeString_Posix_Ghc704 = assertions "posix_ghc704" $ do
+	let enc = encodeString posix_ghc704
+	$expect $ equal (enc (fromChar8 "test")) "test"
+	$expect $ equal (enc (fromChar8 "test\xA1\xA2")) "test\xDCA1\xDCA2"
+	$expect $ equal (enc (fromChar8 "\xC2\xA1\xC2\xA2/test\xA1\xA2")) "\xA1\xA2/test\xDCA1\xDCA2"
+	$expect $ equal (enc (fromText posix_ghc704 "test\xA1\xA2")) "test\xA1\xA2"
+
 test_EncodeString_Win32 :: Suite
 test_EncodeString_Win32 = assertions "windows" $ do
 	let enc = encodeString windows
@@ -420,6 +434,7 @@ test_DecodeString :: Suite
 test_DecodeString = suite "decodeString"
 	[ test_DecodeString_Posix
 	, test_DecodeString_Posix_Ghc702
+	, test_DecodeString_Posix_Ghc704
 	, test_DecodeString_Darwin
 	, test_DecodeString_Darwin_Ghc702
 	, test_DecodeString_Win32
@@ -443,6 +458,18 @@ test_DecodeString_Posix_Ghc702 = assertions "posix_ghc702" $ do
 	$expect $ equal (dec r "test\xEFA1\xEFA2") (fromChar8 "test\xA1\xA2")
 	$expect $ equal
 		(toText r (dec r "test\xEFA1\xEFA2"))
+		(Left "test\xA1\xA2")
+
+test_DecodeString_Posix_Ghc704 :: Suite
+test_DecodeString_Posix_Ghc704 = assertions "posix_ghc704" $ do
+	let r = posix_ghc704
+	let dec = decodeString
+	$expect $ equal (dec r "test") (fromText r "test")
+	$expect $ equal (dec r "test\xC2\xA1\xC2\xA2") (fromText r "test\xC2\xA1\xC2\xA2")
+	$expect $ equal (dec r "test\xA1\xA2") (fromText r "test\xA1\xA2")
+	$expect $ equal (dec r "test\xDCA1\xDCA2") (fromChar8 "test\xA1\xA2")
+	$expect $ equal
+		(toText r (dec r "test\xDCA1\xDCA2"))
 		(Left "test\xA1\xA2")
 
 test_DecodeString_Darwin :: Suite
