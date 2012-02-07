@@ -31,9 +31,10 @@ import           System.IO.Unsafe (unsafePerformIO)
 -- File Paths
 -------------------------------------------------------------------------------
 
-type Directory = T.Text
-type Basename = T.Text
-type Extension = T.Text
+type Chunk = String
+type Directory = Chunk
+type Basename = Chunk
+type Extension = Chunk
 
 data Root
 	= RootPosix
@@ -71,18 +72,18 @@ instance NFData FilePath where
 empty :: FilePath
 empty = FilePath Nothing [] Nothing []
 
-dot :: T.Text
-dot = T.pack "."
+dot :: Chunk
+dot = "."
 
-dots :: T.Text
-dots = T.pack ".."
+dots :: Chunk
+dots = ".."
 
-filenameText :: FilePath -> T.Text
-filenameText p = T.concat (name:exts) where
-	name = maybe T.empty id (pathBasename p)
+filenameChunk :: FilePath -> Chunk
+filenameChunk p = concat (name:exts) where
+	name = maybe "" id (pathBasename p)
 	exts = case pathExtensions p of
 		[] -> []
-		exts' -> intersperse dot (T.empty:exts')
+		exts' -> intersperse dot ("":exts')
 
 -------------------------------------------------------------------------------
 -- Rules
@@ -165,6 +166,33 @@ instance Show (Rules a) where
 	showsPrec d r = showParen (d > 10)
 		(showString "Rules " . shows (rulesName r))
 
+escape :: T.Text -> Chunk
+escape t = T.unpack t
+
+unescape :: Chunk -> (T.Text, Bool)
+unescape cs = if any (\c -> ord c >= 0xDC80 && ord c <= 0xDCFF) cs
+	then (T.pack (map (\c -> if ord c >= 0xDC80 && ord c <= 0xDCFF
+		then chr (ord c - 0xDC00)
+		else c) cs), False)
+	else (T.pack cs, True)
+
+unescape' :: Chunk -> T.Text
+unescape' = fst . unescape
+
+unescapeBytes' :: Chunk -> B.ByteString
+unescapeBytes' cs = if any (\c -> ord c >= 0xDC80 && ord c <= 0xDCFF) cs
+	then B8.concat (map (\c -> if ord c >= 0xDC80 && ord c <= 0xDCFF
+		then B8.singleton (chr (ord c - 0xDC00))
+		else TE.encodeUtf8 (T.singleton c)) cs)
+	else TE.encodeUtf8 (T.pack cs)
+
+splitBy :: (a -> Bool) -> [a] -> [[a]]
+splitBy p = loop where
+	loop xs = let
+		(chunk, rest) = break p xs
+		cont = chunk : loop (tail rest)
+		in if null rest then [chunk] else cont
+
 textSplitBy :: (Char -> Bool) -> T.Text -> [T.Text]
 #if MIN_VERSION_text(0,11,0)
 textSplitBy = T.split
@@ -172,34 +200,11 @@ textSplitBy = T.split
 textSplitBy = T.splitBy
 #endif
 
-unescape :: T.Text -> (T.Text, Bool)
-unescape t = if anyEscaped then (impl, False) else (t, True) where
-	anyEscaped = T.any (== '\xEF00') t
-	impl = T.pack (reverse (snd folded))
-	folded = T.foldl' step (False, []) t
-	step (prevEsc, acc) c = if prevEsc
-		then (False, c:acc)
-		else if c == '\xEF00'
-			then (True, acc)
-			else (False, c:acc)
-
-unescape' :: T.Text -> T.Text
-unescape' = fst . unescape
-
-unescapeBytes' :: T.Text -> B8.ByteString
-unescapeBytes' t = B8.concat (reverse (snd folded)) where
-	folded = T.foldl' step (False, []) t
-	step (prevEsc, acc) c = if prevEsc
-		then (False, B8.singleton (chr (ord c)) : acc)
-		else if c == '\xEF00'
-			then (True, acc)
-			else (False, TE.encodeUtf8 (T.singleton c) : acc)
-
-parseFilename :: T.Text -> (Maybe Basename, [Extension])
+parseFilename :: Chunk -> (Maybe Basename, [Extension])
 parseFilename filename = parsed where
-	parsed = if T.null filename
+	parsed = if null filename
 		then (Nothing, [])
-		else case textSplitBy (== '.') filename of
+		else case splitBy (== '.') filename of
 			[] -> (Nothing, [])
 			(name':exts') -> (Just name', exts')
 
@@ -212,4 +217,3 @@ maybeDecodeUtf8 = excToMaybe . TE.decodeUtf8 where
 	
 	unicodeError :: UnicodeException -> IO (Maybe a)
 	unicodeError _ = return Nothing
-

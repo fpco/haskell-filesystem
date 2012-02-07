@@ -180,7 +180,7 @@ append x y = cased where
 	directories = xDirectories ++ pathDirectories y
 	xDirectories = (pathDirectories x ++) $ if null (filename x)
 		then []
-		else [filenameText x]
+		else [filenameChunk x]
 
 -- | An alias for 'append'.
 (</>) :: FilePath -> FilePath -> FilePath
@@ -284,6 +284,7 @@ extension p = case extensions p of
 extensions :: FilePath -> [T.Text]
 extensions = map unescape' . pathExtensions
 
+
 -- | Get whether a 'FilePath'&#x2019;s last extension is the predicate.
 hasExtension :: FilePath -> T.Text -> Bool
 hasExtension p e = extension p == Just e
@@ -295,7 +296,7 @@ addExtension p ext = addExtensions p [ext]
 -- | Append many extensions to the end of a 'FilePath'.
 addExtensions :: FilePath -> [T.Text] -> FilePath
 addExtensions p exts = p { pathExtensions = newExtensions } where
-	newExtensions = pathExtensions p ++ exts
+	newExtensions = pathExtensions p ++ map escape exts
 
 -- | An alias for 'addExtension'.
 (<.>) :: FilePath -> T.Text -> FilePath
