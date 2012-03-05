@@ -355,7 +355,7 @@ readDir (Dir _ p) dirent = do
 foreign import ccall unsafe "opendir"
 	c_opendir :: CString -> IO (Ptr ())
 
-foreign import ccall unsafe "opendir"
+foreign import ccall unsafe "closedir"
 	c_closedir :: Ptr () -> IO CInt
 
 foreign import ccall unsafe "hssystemfileio_alloc_dirent"
