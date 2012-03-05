@@ -852,19 +852,12 @@ appendTextFile path text = withTextFile path IO.AppendMode
 	(\h -> T.hPutStr h text)
 
 #ifdef SYSTEMFILEIO_LOCAL_OPEN_FILE
+-- | Copied from GHC.IO.FD.openFile
 openFile' :: String -> FilePath -> IO.IOMode -> (Maybe IO.TextEncoding) -> IO IO.Handle
 openFile' loc path mode codec = open where
-	mode_flags = case mode of
-		IO.ReadMode -> System.Posix.Internals.o_RDONLY
-		IO.WriteMode -> System.Posix.Internals.o_WRONLY
-		IO.ReadWriteMode -> System.Posix.Internals.o_RDWR
-		IO.AppendMode -> System.Posix.Internals.o_APPEND
-	flags = mode_flags .|.
-	        System.Posix.Internals.o_NOCTTY .|.
-	        System.Posix.Internals.o_NONBLOCK
-	
 	sys_c_open = System.Posix.Internals.c_open
 	sys_c_close = System.Posix.Internals.c_close
+	flags = iomodeFlags mode
 	open = withFilePath path $ \cPath -> do
 		c_fd <- throwErrnoPathIfMinus1Retry loc path (sys_c_open cPath flags 0o666)
 		(fd, fd_type) <- Exc.onException
@@ -875,6 +868,27 @@ openFile' loc path mode codec = open where
 		Exc.onException
 			(mkHandleFromFD fd fd_type (encodeString path) mode False codec)
 			(GHC.IO.Device.close fd)
+
+iomodeFlags :: IO.IOMode -> CInt
+iomodeFlags mode = cased .|. commonFlags where
+	cased = case mode of
+		IO.ReadMode -> flagsR
+#ifdef mingw32_HOST_OS
+		IO.WriteMode -> flagsW .|. System.Posix.Internals.o_TRUNC
+#else
+		IO.WriteMode -> flagsW
+#endif
+		IO.ReadWriteMode -> flagsRW
+		IO.AppendMode -> flagsA
+	
+	flagsR  = System.Posix.Internals.o_RDONLY
+	flagsW  = outputFlags .|. System.Posix.Internals.o_WRONLY
+	flagsRW = outputFlags .|. System.Posix.Internals.o_RDWR
+	flagsA  = flagsW      .|. System.Posix.Internals.o_APPEND
+	
+	commonFlags = System.Posix.Internals.o_NOCTTY .|.
+	              System.Posix.Internals.o_NONBLOCK
+	outputFlags = System.Posix.Internals.o_CREAT
 
 #endif
 

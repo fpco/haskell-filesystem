@@ -184,15 +184,35 @@ test_Posix = suite "posix"
 		, test_GetSize "iso8859"
 			(decode "\xA1\xA2\xA3.txt")
 		]
-	, todo "copyFile"
+	, suite "copyFile"
+		[ test_CopyFile "ascii"
+			(decode "old_test.txt")
+			(decode "new_test.txt")
+		, test_CopyFile "utf8"
+			(fromText "old_\xA1\xA2.txt")
+			(fromText "new_\xA1\xA2.txt")
+		, test_CopyFile "iso8859"
+			(decode "old_\xA1\xA2\xA3.txt")
+			(decode "new_\xA1\xA2\xA3.txt")
+		]
 	, todo "openFile"
 	, suite "withFile"
-		[ test_WithFile "ascii"
-			(decode "test.txt")
-		, test_WithFile "utf8"
-			(fromText "\xA1\xA2.txt")
-		, test_WithFile "iso8859"
-			(decode "\xA1\xA2\xA3.txt")
+		[ suite "read"
+			[ test_WithFile_Read "ascii"
+				(decode "test.txt")
+			, test_WithFile_Read "utf8"
+				(fromText "\xA1\xA2.txt")
+			, test_WithFile_Read "iso8859"
+				(decode "\xA1\xA2\xA3.txt")
+			]
+		, suite "write"
+			[ test_WithFile_Write "ascii"
+				(decode "test.txt")
+			, test_WithFile_Write "utf8"
+				(fromText "\xA1\xA2.txt")
+			, test_WithFile_Write "iso8859"
+				(decode "\xA1\xA2\xA3.txt")
+			]
 		]
 	, todo "readFile"
 	, todo "writeFile"
@@ -253,6 +273,32 @@ test_Rename test_name old_name new_name = assertionsWithTemp test_name $ \tmp ->
 	new_after <- liftIO $ Filesystem.isFile new_path
 	$expect (not old_after)
 	$expect new_after
+
+test_CopyFile :: Text -> FilePath -> FilePath -> Suite
+test_CopyFile test_name old_name new_name = assertionsWithTemp test_name $ \tmp -> do
+	let old_path = tmp </> old_name
+	let new_path = tmp </> new_name
+	
+	touch_ffi old_path ""
+	
+	old_before <- liftIO $ Filesystem.isFile old_path
+	new_before <- liftIO $ Filesystem.isFile new_path
+	$expect old_before
+	$expect (not new_before)
+	
+	liftIO $ Filesystem.copyFile old_path new_path
+	
+	old_after <- liftIO $ Filesystem.isFile old_path
+	new_after <- liftIO $ Filesystem.isFile new_path
+	$expect old_after
+	$expect new_after
+	old_contents <- liftIO $
+		Filesystem.withTextFile old_path ReadMode $
+		Data.Text.IO.hGetContents
+	new_contents <- liftIO $
+		Filesystem.withTextFile new_path ReadMode $
+		Data.Text.IO.hGetContents
+	$expect (equalLines old_contents new_contents)
 
 test_CanonicalizePath :: Text -> FilePath -> FilePath -> Suite
 test_CanonicalizePath test_name src_name dst_name = assertionsWithTemp test_name $ \tmp -> do
@@ -466,12 +512,26 @@ test_GetSize test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	size <- liftIO $ Filesystem.getSize file_path
 	$expect (equal size (toInteger (Data.ByteString.length contents)))
 
-test_WithFile :: Text -> FilePath -> Suite
-test_WithFile test_name file_name = assertionsWithTemp test_name $ \tmp -> do
+test_WithFile_Read :: Text -> FilePath -> Suite
+test_WithFile_Read test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	let file_path = tmp </> file_name
 	let contents = "contents\n"
 	
 	touch_ffi file_path contents
+	
+	read_contents <- liftIO $
+		Filesystem.withFile file_path ReadMode $
+		Data.ByteString.hGetContents
+	$expect (equalLines contents read_contents)
+
+test_WithFile_Write :: Text -> FilePath -> Suite
+test_WithFile_Write test_name file_name = assertionsWithTemp test_name $ \tmp -> do
+	let file_path = tmp </> file_name
+	let contents = "contents\n"
+	
+	liftIO $
+		Filesystem.withFile file_path WriteMode $
+		(\h -> Data.ByteString.hPut h contents)
 	
 	read_contents <- liftIO $
 		Filesystem.withFile file_path ReadMode $
