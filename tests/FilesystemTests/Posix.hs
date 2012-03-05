@@ -31,6 +31,8 @@ import qualified GHC.IO.Exception as GHC
 import qualified GHC.IOBase as GHC
 #endif
 
+import qualified System.Posix.IO as PosixIO
+
 import           Filesystem
 import           Filesystem.Path
 import qualified Filesystem.Path.Rules as Rules
@@ -229,6 +231,9 @@ test_Posix = suite "posix"
 	, todo "readTextFile"
 	, todo "writeTextFile"
 	, todo "appendTextFile"
+	, suite "regression-tests"
+		[ test_ListDirectoryLeaksFds
+		]
 	]
 
 test_IsFile :: Text -> FilePath -> Suite
@@ -549,6 +554,22 @@ test_WithTextFile test_name file_name = assertionsWithTemp test_name $ \tmp -> d
 		Filesystem.withTextFile file_path ReadMode $
 		Data.Text.IO.hGetContents
 	$expect (equalLines (Data.Text.pack contents) read_contents)
+
+test_ListDirectoryLeaksFds :: Suite
+test_ListDirectoryLeaksFds = assertionsWithTemp "listDirectory-leaks-fds" $ \tmp -> do
+	-- Test that listDirectory doesn't leak file descriptors.
+	let dir_path = tmp </> "subdir"
+	mkdir_ffi dir_path
+	
+	nullfd1 <- liftIO $ PosixIO.openFd "/dev/null" PosixIO.ReadOnly Nothing PosixIO.defaultFileFlags
+	liftIO $ PosixIO.closeFd nullfd1
+	
+	subdirContents <- liftIO $ listDirectory dir_path
+	
+	nullfd2 <- liftIO $ PosixIO.openFd "/dev/null" PosixIO.ReadOnly Nothing PosixIO.defaultFileFlags
+	liftIO $ PosixIO.closeFd nullfd2
+	
+	$assert (equal nullfd1 nullfd2)
 
 withPathCString :: FilePath -> (CString -> IO a) -> IO a
 withPathCString p = Data.ByteString.useAsCString (encode p)
