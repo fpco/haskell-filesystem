@@ -9,7 +9,6 @@ import qualified Data.ByteString.Char8 as B8
 import           Data.Char (toUpper)
 import           Data.List (intercalate)
 import qualified Data.Text as T
-import           Data.Text (Text)
 import           Test.Chell
 import           Test.Chell.QuickCheck
 import           Test.QuickCheck hiding (property)
@@ -19,63 +18,61 @@ import           Filesystem.Path.CurrentOS ()
 import           Filesystem.Path.Rules
 
 main :: IO ()
-main = Test.Chell.defaultMain tests
+main = Test.Chell.defaultMain [tests]
 
-tests :: [Suite]
-tests =
-	[
+tests :: Suite
+tests = suite "tests"
 	-- Basic properties
-	  test_Empty
-	, test_Root
-	, test_Directory
-	, test_Parent
-	, test_Filename
-	, test_Dirname
-	, test_Basename
-	, test_Absolute
-	, test_Relative
+	test_Empty
+	test_Root
+	test_Directory
+	test_Parent
+	test_Filename
+	test_Dirname
+	test_Basename
+	test_Absolute
+	test_Relative
 	
 	-- Basic operations
-	, test_Append
-	, test_CommonPrefix
-	, test_StripPrefix
-	, property "stripPrefix" prop_StripPrefix
-	, test_SplitExtension
-	, test_Collapse
-	, test_InvalidUtf8InDirectoryComponent
-	, test_Utf8CharInGhcEscapeArea
+	test_Append
+	test_CommonPrefix
+	test_StripPrefix
+	(property "stripPrefix" prop_StripPrefix)
+	test_SplitExtension
+	test_Collapse
+	test_InvalidUtf8InDirectoryComponent
+	test_Utf8CharInGhcEscapeArea
 	
-	, suite "to-from-bytes"
-		[ test_Identity "posix" posix posixPaths
-		, test_Identity "windows" windows windowsPaths
-		, test_MixedValidityToBytes
-		]
+	(suite "to-from-bytes"
+		(test_Identity "posix" posix posixPaths)
+		(test_Identity "windows" windows windowsPaths)
+		test_MixedValidityToBytes
+		:: Suite)
 	
-	, suite "to-from-text"
-		[ test_ToText
-		, test_FromText
-		]
+	(suite "to-from-text"
+		test_ToText
+		test_FromText
+		:: Suite)
 	
-	, suite "validity"
-		[ property "posix" (forAll posixPaths (valid posix))
-		, property "windows" (forAll windowsPaths (valid windows))
-		]
+	(suite "validity"
+		(property "posix" (forAll posixPaths (valid posix)))
+		(property "windows" (forAll windowsPaths (valid windows)))
+		:: Suite)
 	
-	, test_SplitSearchPath
-	, test_Parsing
-	, test_EncodeString
-	, test_DecodeString
-	, test_EqualsIgnoresPosixEncoding
-	, test_ShowRules
-	]
+	test_SplitSearchPath
+	test_Parsing
+	test_EncodeString
+	test_DecodeString
+	test_EqualsIgnoresPosixEncoding
+	test_ShowRules
 
-test_Empty :: Suite
+test_Empty :: Test
 test_Empty = assertions "empty" $ do
 	$expect $ P.null empty
 	$expect $ equal (toChar8 empty) ""
 	$expect $ equal (toString empty) ""
 
-test_Root :: Suite
+test_Root :: Test
 test_Root = assertions "root" $ do
 	let root x = toChar8 (P.root (fromChar8 x))
 	
@@ -84,7 +81,7 @@ test_Root = assertions "root" $ do
 	$expect $ equal (root "foo") ""
 	$expect $ equal (root "/foo") "/"
 
-test_Directory :: Suite
+test_Directory :: Test
 test_Directory = assertions "directory" $ do
 	let directory x = toChar8 (P.directory (fromChar8 x))
 	
@@ -99,7 +96,7 @@ test_Directory = assertions "directory" $ do
 	$expect $ equal (directory "foo") "./"
 	$expect $ equal (directory "foo/bar") "./foo/"
 
-test_Parent :: Suite
+test_Parent :: Test
 test_Parent = assertions "parent" $ do
 	let parent x = toChar8 (P.parent (fromChar8 x))
 	
@@ -114,7 +111,7 @@ test_Parent = assertions "parent" $ do
 	$expect $ equal (parent "foo") "./"
 	$expect $ equal (parent "foo/bar") "./foo/"
 
-test_Filename :: Suite
+test_Filename :: Test
 test_Filename = assertions "filename" $ do
 	let filename x = toChar8 (P.filename (fromChar8 x))
 	
@@ -124,7 +121,7 @@ test_Filename = assertions "filename" $ do
 	$expect $ equal (filename "/foo/bar") "bar"
 	$expect $ equal (filename "/foo/bar.txt") "bar.txt"
 
-test_Dirname :: Suite
+test_Dirname :: Test
 test_Dirname = assertions "dirname" $ do
 	let dirname x = toChar8 (P.dirname (fromChar8 x))
 	
@@ -142,7 +139,7 @@ test_Dirname = assertions "dirname" $ do
 	-- reparsing preserves good/bad encoding state
 	$expect $ equal (dirnameExts "foo.\xB1.\xDD\xAA/bar") ["\xB1", "\x76A"]
 
-test_Basename :: Suite
+test_Basename :: Test
 test_Basename = assertions "basename" $ do
 	let basename_posix x = toChar8 (basename (fromChar8 x))
 	let basename_windows x = toString (basename (fromString x))
@@ -157,7 +154,7 @@ test_Basename = assertions "basename" $ do
 	$expect $ equal (basename_windows ".") ""
 	$expect $ equal (basename_windows "..") ""
 
-test_Absolute :: Suite
+test_Absolute :: Test
 test_Absolute = assertions "absolute" $ do
 	$expect $ absolute (fromChar8 "/")
 	$expect $ absolute (fromChar8 "/foo/bar")
@@ -170,7 +167,7 @@ test_Absolute = assertions "absolute" $ do
 	$expect . not $ absolute (fromString "foo\\bar")
 	$expect . not $ absolute (fromString "\\foo\\bar")
 
-test_Relative :: Suite
+test_Relative :: Test
 test_Relative = assertions "relative" $ do
 	$expect . not $ relative (fromChar8 "/")
 	$expect . not $ relative (fromChar8 "/foo/bar")
@@ -183,17 +180,17 @@ test_Relative = assertions "relative" $ do
 	$expect $ relative (fromString "foo\\bar")
 	$expect . not $ relative (fromString "\\foo\\bar")
 
-test_Identity :: Text -> Rules a -> Gen FilePath -> Suite
+test_Identity :: String -> Rules a -> Gen FilePath -> Test
 test_Identity name r gen = property name $ forAll gen $ \p -> p == decode r (encode r p)
 
-test_MixedValidityToBytes :: Suite
+test_MixedValidityToBytes :: Test
 test_MixedValidityToBytes = assertions "mixed-validity-to-bytes" $ do
 	let p = fromChar8
 	
 	$expect $ equal (encode posix (p "\xB1.\xDD\xAA")) (B8.pack "\xB1.\xDD\xAA")
 	$expect $ equal (encode posix (p "\xB1.\xDD\xAA" </> p "foo")) (B8.pack "\xB1.\xDD\xAA/foo")
 
-test_ToText :: Suite
+test_ToText :: Test
 test_ToText = assertions "toText" $ do
 	let p = fromChar8
 	
@@ -206,7 +203,7 @@ test_ToText = assertions "toText" $ do
 	$expect $ equal (toText posix (p "\xB1.\xDD\xAA")) (Left (T.pack "\xB1.\x76A"))
 	$expect $ equal (toText posix (p "\xB1.\xDD\xAA" </> p "foo")) (Left (T.pack "\xB1.\x76A/foo"))
 
-test_FromText :: Suite
+test_FromText :: Test
 test_FromText = assertions "fromText" $ do
 	let pt x = fromText posix (T.pack x)
 	let p = fromChar8
@@ -215,7 +212,7 @@ test_FromText = assertions "fromText" $ do
 	$expect $ equal (pt "\x1D11E") (p "\xF0\x9D\x84\x9E")
 	$expect $ equal (pt "\xED\xA0\x80") (p "\xC3\xAD\xC2\xA0\xC2\x80")
 
-test_Append :: Suite
+test_Append :: Test
 test_Append = assertions "append" $ do
 	let appendP x y = toChar8 (P.append (fromChar8 x) (fromChar8 y))
 	let appendW x y = toString (P.append (fromString x) (fromString y))
@@ -252,7 +249,7 @@ test_Append = assertions "append" $ do
 	$expect $ equal (appendW "c:\\foo" "\\bar") "C:\\bar"
 	$expect $ equal (appendW "foo\\bar" "\\baz") "\\baz"
 
-test_CommonPrefix :: Suite
+test_CommonPrefix :: Test
 test_CommonPrefix = assertions "commonPrefix" $ do
 	let commonPrefix xs = toChar8 (P.commonPrefix (map (fromChar8) xs))
 	
@@ -264,7 +261,7 @@ test_CommonPrefix = assertions "commonPrefix" $ do
 	$expect $ equal (commonPrefix ["/foo/", "/foo/"]) "/foo/"
 	$expect $ equal (commonPrefix ["/foo/bar/baz.txt.gz", "/foo/bar/baz.txt.gz.bar"]) "/foo/bar/baz.txt.gz"
 
-test_StripPrefix :: Suite
+test_StripPrefix :: Test
 test_StripPrefix = assertions "stripPrefix" $ do
 	let stripPrefix x y = fmap (toChar8) (P.stripPrefix (fromChar8 x) (fromChar8 y))
 	
@@ -295,7 +292,7 @@ prop_StripPrefix =
 		Nothing -> False
 		Just stripped -> prefix </> stripped == full
 
-test_SplitExtension :: Suite
+test_SplitExtension :: Test
 test_SplitExtension = assertions "splitExtension" $ do
 	let splitExtension x = (toChar8 base, ext) where
 		(base, ext) = P.splitExtension (fromChar8 x)
@@ -309,7 +306,7 @@ test_SplitExtension = assertions "splitExtension" $ do
 	$expect $ equal (splitExtension "foo.a/bar.b") ("foo.a/bar", Just (T.pack "b"))
 	$expect $ equal (splitExtension "foo.a/bar.b.c") ("foo.a/bar.b", Just (T.pack "c"))
 
-test_Collapse :: Suite
+test_Collapse :: Test
 test_Collapse = assertions "collapse" $ do
 	let collapse x = toChar8 (P.collapse (fromChar8 x))
 	
@@ -323,7 +320,7 @@ test_Collapse = assertions "collapse" $ do
 	$expect $ equal (collapse "parent/foo/baz/../../bar") "parent/bar"
 	$expect $ equal (collapse "parent/foo/..") "parent/"
 
-test_InvalidUtf8InDirectoryComponent :: Suite
+test_InvalidUtf8InDirectoryComponent :: Test
 test_InvalidUtf8InDirectoryComponent = assertions "invalid-utf8-in-directory-component" $ do
 	$expect $ equal (toText posix (fromChar8 "/\218\130.\137\141")) (Left (T.pack "/\1666.\137\141"))
 	$expect $ equal (encode posix (fromChar8 "/\218\130.\137\141")) (B8.pack "/\218\130.\137\141")
@@ -334,7 +331,7 @@ test_InvalidUtf8InDirectoryComponent = assertions "invalid-utf8-in-directory-com
 	$expect $ equal (toText posix (fromChar8 "/\218\130.\137\141//baz")) (Left (T.pack "/\1666.\137\141/baz"))
 	$expect $ equal (encode posix (fromChar8 "/\218\130.\137\141//baz")) (B8.pack "/\218\130.\137\141/baz")
 
-test_Utf8CharInGhcEscapeArea :: Suite
+test_Utf8CharInGhcEscapeArea :: Test
 test_Utf8CharInGhcEscapeArea = assertions "utf8-char-in-ghc-escape-area" $ do
 	let chars = "/a/\238\189\178/b"
 	let path = fromChar8 chars
@@ -346,7 +343,7 @@ test_Utf8CharInGhcEscapeArea = assertions "utf8-char-in-ghc-escape-area" $ do
 	$expect (equal (toChar8 path) chars)
 	$expect (equal (toText posix path) (Right (T.pack "/a/\61184/b")))
 
-test_Parsing :: Suite
+test_Parsing :: Test
 test_Parsing = assertions "parsing" $ do
 	let p x = toChar8 (fromChar8 x)
 	let w x = toString (fromString x)
@@ -380,7 +377,7 @@ test_Parsing = assertions "parsing" $ do
 	$expect $ equal (w "..") "..\\"
 	$expect $ equal (w "..\\") "..\\"
 
-test_SplitSearchPath :: Suite
+test_SplitSearchPath :: Test
 test_SplitSearchPath = assertions "splitSearchPath" $ do
 	let p x = map (toChar8) (splitSearchPath posix (B8.pack x))
 	let w x = map (toString) (splitSearchPath windows (T.pack x))
@@ -392,13 +389,12 @@ test_SplitSearchPath = assertions "splitSearchPath" $ do
 
 test_EncodeString :: Suite
 test_EncodeString = suite "encodeString"
-	[ test_EncodeString_Posix
-	, test_EncodeString_Posix_Ghc702
-	, test_EncodeString_Posix_Ghc704
-	, test_EncodeString_Win32
-	]
+	test_EncodeString_Posix
+	test_EncodeString_Posix_Ghc702
+	test_EncodeString_Posix_Ghc704
+	test_EncodeString_Win32
 
-test_EncodeString_Posix :: Suite
+test_EncodeString_Posix :: Test
 test_EncodeString_Posix = assertions "posix" $ do
 	let enc = encodeString posix
 	$expect $ equal (enc (fromChar8 "test")) "test"
@@ -407,7 +403,7 @@ test_EncodeString_Posix = assertions "posix" $ do
 	$expect $ equal (enc (fromChar8 "\xC2\xA1\xC2\xA2/test\xA1\xA2")) "\xC2\xA1\xC2\xA2/test\xA1\xA2"
 	$expect $ equal (enc (fromText posix "test\xA1\xA2")) "test\xC2\xA1\xC2\xA2"
 
-test_EncodeString_Posix_Ghc702 :: Suite
+test_EncodeString_Posix_Ghc702 :: Test
 test_EncodeString_Posix_Ghc702 = assertions "posix_ghc702" $ do
 	let enc = encodeString posix_ghc702
 	$expect $ equal (enc (fromChar8 "test")) "test"
@@ -415,7 +411,7 @@ test_EncodeString_Posix_Ghc702 = assertions "posix_ghc702" $ do
 	$expect $ equal (enc (fromChar8 "\xC2\xA1\xC2\xA2/test\xA1\xA2")) "\xA1\xA2/test\xEFA1\xEFA2"
 	$expect $ equal (enc (fromText posix_ghc702 "test\xA1\xA2")) "test\xA1\xA2"
 
-test_EncodeString_Posix_Ghc704 :: Suite
+test_EncodeString_Posix_Ghc704 :: Test
 test_EncodeString_Posix_Ghc704 = assertions "posix_ghc704" $ do
 	let enc = encodeString posix_ghc704
 	$expect $ equal (enc (fromChar8 "test")) "test"
@@ -423,7 +419,7 @@ test_EncodeString_Posix_Ghc704 = assertions "posix_ghc704" $ do
 	$expect $ equal (enc (fromChar8 "\xC2\xA1\xC2\xA2/test\xA1\xA2")) "\xA1\xA2/test\xDCA1\xDCA2"
 	$expect $ equal (enc (fromText posix_ghc704 "test\xA1\xA2")) "test\xA1\xA2"
 
-test_EncodeString_Win32 :: Suite
+test_EncodeString_Win32 :: Test
 test_EncodeString_Win32 = assertions "windows" $ do
 	let enc = encodeString windows
 	$expect $ equal (enc (fromString "test")) "test"
@@ -432,15 +428,14 @@ test_EncodeString_Win32 = assertions "windows" $ do
 
 test_DecodeString :: Suite
 test_DecodeString = suite "decodeString"
-	[ test_DecodeString_Posix
-	, test_DecodeString_Posix_Ghc702
-	, test_DecodeString_Posix_Ghc704
-	, test_DecodeString_Darwin
-	, test_DecodeString_Darwin_Ghc702
-	, test_DecodeString_Win32
-	]
+	test_DecodeString_Posix
+	test_DecodeString_Posix_Ghc702
+	test_DecodeString_Posix_Ghc704
+	test_DecodeString_Darwin
+	test_DecodeString_Darwin_Ghc702
+	test_DecodeString_Win32
 
-test_DecodeString_Posix :: Suite
+test_DecodeString_Posix :: Test
 test_DecodeString_Posix = assertions "posix" $ do
 	let r = posix
 	let dec = decodeString
@@ -448,7 +443,7 @@ test_DecodeString_Posix = assertions "posix" $ do
 	$expect $ equal (dec r "test\xC2\xA1\xC2\xA2") (fromText r "test\xA1\xA2")
 	$expect $ equal (dec r "test\xA1\xA2") (fromText r "test\xA1\xA2")
 
-test_DecodeString_Posix_Ghc702 :: Suite
+test_DecodeString_Posix_Ghc702 :: Test
 test_DecodeString_Posix_Ghc702 = assertions "posix_ghc702" $ do
 	let r = posix_ghc702
 	let dec = decodeString
@@ -460,7 +455,7 @@ test_DecodeString_Posix_Ghc702 = assertions "posix_ghc702" $ do
 		(toText r (dec r "test\xEFA1\xEFA2"))
 		(Left "test\xA1\xA2")
 
-test_DecodeString_Posix_Ghc704 :: Suite
+test_DecodeString_Posix_Ghc704 :: Test
 test_DecodeString_Posix_Ghc704 = assertions "posix_ghc704" $ do
 	let r = posix_ghc704
 	let dec = decodeString
@@ -472,20 +467,20 @@ test_DecodeString_Posix_Ghc704 = assertions "posix_ghc704" $ do
 		(toText r (dec r "test\xDCA1\xDCA2"))
 		(Left "test\xA1\xA2")
 
-test_DecodeString_Darwin :: Suite
+test_DecodeString_Darwin :: Test
 test_DecodeString_Darwin = assertions "darwin" $ do
 	let r = darwin
 	let dec = decodeString
 	$expect $ equal (dec r "test\xC2\xA1\xC2\xA2") (fromText r "test\xA1\xA2")
 
-test_DecodeString_Darwin_Ghc702 :: Suite
+test_DecodeString_Darwin_Ghc702 :: Test
 test_DecodeString_Darwin_Ghc702 = assertions "darwin_ghc702" $ do
 	let r = darwin_ghc702
 	let dec = decodeString
 	$expect $ equal (dec r "test\xC2\xA1\xC2\xA2") (fromText r "test\xC2\xA1\xC2\xA2")
 	$expect $ equal (dec r "test\xA1\xA2") (fromText r "test\xA1\xA2")
 
-test_DecodeString_Win32 :: Suite
+test_DecodeString_Win32 :: Test
 test_DecodeString_Win32 = assertions "windows" $ do
 	let r = windows
 	let dec = decodeString
@@ -493,13 +488,13 @@ test_DecodeString_Win32 = assertions "windows" $ do
 	$expect $ equal (dec r "test\xC2\xA1\xC2\xA2") (fromText r "test\xC2\xA1\xC2\xA2")
 	$expect $ equal (dec r "test\xA1\xA2") (fromText r "test\xA1\xA2")
 
-test_EqualsIgnoresPosixEncoding :: Suite
+test_EqualsIgnoresPosixEncoding :: Test
 test_EqualsIgnoresPosixEncoding = assertions "equals-ignores-posix-encoding" $ do
 	$expect $ equal
 		(fromChar8 "test\xA1\xA2")
 		(fromText posix "test\xA1\xA2")
 
-test_ShowRules :: Suite
+test_ShowRules :: Test
 test_ShowRules = assertions "show-rules" $ do
 	$expect $ equal (showsPrec 11 darwin "") "(Rules \"Darwin\")"
 	$expect $ equal (showsPrec 11 darwin_ghc702 "") "(Rules \"Darwin (GHC 7.2)\")"

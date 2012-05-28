@@ -12,14 +12,18 @@ executable system-filepath_tests
   ghc-options: -Wall
   hs-source-dirs: ../lib,.
 
+  -- http://hackage.haskell.org/trac/ghc/ticket/5395
+  if impl(ghc < 7.2)
+    ghc-options: -fcontext-stack=200
+
   if flag(coverage)
     ghc-options: -fhpc
 
   build-depends:
-      base > 3 && < 5
+      base > 4.0 && < 5.0
     , bytestring
-    , chell >= 0.2 && < 0.3
-    , chell-quickcheck >= 0.1 && < 0.2
+    , chell >= 0.3 && < 0.4
+    , chell-quickcheck >= 0.2 && < 0.3
     , deepseq >= 1.1 && < 1.4
     , QuickCheck
     , text
