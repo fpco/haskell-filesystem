@@ -198,6 +198,7 @@ foreign import ccall unsafe "rename"
 -- Since: 0.1.1
 canonicalizePath :: FilePath -> IO FilePath
 canonicalizePath path =
+	fmap (preserveFinalSlash path) $
 	let path' = encodeString path in
 #ifdef CABAL_OS_WINDOWS
 	fmap decodeString $
@@ -215,6 +216,11 @@ canonicalizePath path =
 		c_free cOut
 		return (R.decode R.posix bytes)
 #endif
+
+preserveFinalSlash :: FilePath -> FilePath -> FilePath
+preserveFinalSlash orig out = if Path.null (Path.filename orig)
+	then Path.append out Path.empty
+	else out
 
 #ifdef CABAL_OS_WINDOWS
 #if MIN_VERSION_Win32(2,2,1)

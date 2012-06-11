@@ -83,6 +83,7 @@ test_Posix = suite "posix"
 #else
 			(decode "\xA1\xA2\xA3-b.txt")
 #endif
+		, test_CanonicalizePath_TrailingSlash
 		]
 	, suite "createDirectory"
 		[ test_CreateDirectory "ascii"
@@ -322,6 +323,24 @@ test_CanonicalizePath test_name src_name dst_name = assertionsWithTemp test_name
 	
 	canonicalized <- liftIO $ Filesystem.canonicalizePath src_path
 	$expect $ equal canonicalized dst_path
+
+test_CanonicalizePath_TrailingSlash :: Suite
+test_CanonicalizePath_TrailingSlash = assertionsWithTemp "trailing-slash" $ \tmp -> do
+	let src_path = tmp </> "src"
+	let subdir = tmp </> "subdir"
+	
+	-- canonicalize the directory first, to avoid false negatives if
+	-- it gets placed in a symlinked location.
+	mkdir_ffi subdir
+	canon_subdir <- liftIO (Filesystem.canonicalizePath (tmp </> "subdir"))
+	
+	let dst_path = canon_subdir </> "dst"
+	
+	mkdir_ffi dst_path
+	symlink_ffi dst_path src_path
+	
+	canonicalized <- liftIO (Filesystem.canonicalizePath (src_path </> empty))
+	$expect (equal canonicalized (dst_path </> empty))
 
 test_CreateDirectory :: Text -> FilePath -> Suite
 test_CreateDirectory test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
