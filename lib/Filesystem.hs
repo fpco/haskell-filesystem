@@ -307,8 +307,9 @@ listDirectory root = fmap cleanup contents where
 #else
 listDirectory root = Exc.bracket alloc free list where
 	alloc = do
-		dirent <- c_alloc_dirent
 		dir <- openDir root
+		let Dir _ dirp = dir
+		dirent <- c_alloc_dirent dirp
 		return (dirent, dir)
 	free (dirent, dir) = do
 		c_free_dirent dirent
@@ -356,7 +357,7 @@ foreign import ccall unsafe "closedir"
 	c_closedir :: Ptr () -> IO CInt
 
 foreign import ccall unsafe "hssystemfileio_alloc_dirent"
-	c_alloc_dirent :: IO (Ptr ())
+	c_alloc_dirent :: Ptr () -> IO (Ptr ())
 
 foreign import ccall unsafe "hssystemfileio_free_dirent"
 	c_free_dirent :: Ptr () -> IO ()

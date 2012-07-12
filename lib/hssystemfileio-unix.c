@@ -1,15 +1,43 @@
 #include "hssystemfileio-unix.h"
 
+/* Enable POSIX-compliant readdir_r on Solaris */
+#define _POSIX_PTHREAD_SEMANTICS
+
+/* Enable dirfd() */
+#define _BSD_SOURCE
+
+#include <dirent.h>
 #include <errno.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 struct dirent *
-hssystemfileio_alloc_dirent()
+hssystemfileio_alloc_dirent(void *void_dir)
 {
-	return malloc(sizeof (struct dirent));
+	DIR *dir = (DIR *)void_dir;
+	long name_max;
+	size_t name_end;
+	
+	name_max = fpathconf(dirfd(dir), _PC_NAME_MAX);
+	if (name_max == -1)
+	{
+#if defined(NAME_MAX) && NAME_MAX > 255
+		name_max = NAME_MAX;
+#else
+		name_max = 4096;
+#endif
+	}
+	
+	name_end = (size_t)offsetof(struct dirent, d_name) + name_max + 1;
+	if (name_end > sizeof(struct dirent))
+	{
+		return malloc(name_end);
+	}
+	
+	return malloc(sizeof(struct dirent));
 }
 
 void
@@ -19,9 +47,10 @@ hssystemfileio_free_dirent(struct dirent *p)
 }
 
 int
-hssystemfileio_readdir(DIR *dir, struct dirent *dirent)
+hssystemfileio_readdir(void *void_dir, struct dirent *dirent)
 {
 	struct dirent *dirent_result;
+	DIR *dir = (DIR *)void_dir;
 	while (1)
 	{
 		int rc = readdir_r(dir, dirent, &dirent_result);
