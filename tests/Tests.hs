@@ -40,6 +40,7 @@ tests = suite "tests"
 	(property "stripPrefix" prop_StripPrefix)
 	test_SplitExtension
 	test_Collapse
+	test_SplitDirectories
 	test_InvalidUtf8InDirectoryComponent
 	test_Utf8CharInGhcEscapeArea
 	
@@ -319,6 +320,21 @@ test_Collapse = assertions "collapse" $ do
 	$expect $ equal (collapse "parent/foo/baz/../bar") "parent/foo/bar"
 	$expect $ equal (collapse "parent/foo/baz/../../bar") "parent/bar"
 	$expect $ equal (collapse "parent/foo/..") "parent/"
+
+test_SplitDirectories :: Test
+test_SplitDirectories = assertions "splitDirectories" $ do
+	let splitDirectories x = map toChar8 (P.splitDirectories (fromChar8 x))
+	
+	$expect $ equal (splitDirectories "") []
+	$expect $ equal (splitDirectories "/") ["/"]
+	$expect $ equal (splitDirectories "/a") ["/", "a"]
+	$expect $ equal (splitDirectories "/ab/cd") ["/", "ab", "cd"]
+	$expect $ equal (splitDirectories "/ab/cd/") ["/", "ab", "cd"]
+	$expect $ equal (splitDirectories "ab/cd") ["ab", "cd"]
+	$expect $ equal (splitDirectories "ab/cd/") ["ab", "cd"]
+	$expect $ equal (splitDirectories "ab/cd.txt") ["ab", "cd.txt"]
+	$expect $ equal (splitDirectories "ab/cd/.txt") ["ab", "cd", ".txt"]
+	$expect $ equal (splitDirectories "ab/./cd") ["ab", ".", "cd"]
 
 test_InvalidUtf8InDirectoryComponent :: Test
 test_InvalidUtf8InDirectoryComponent = assertions "invalid-utf8-in-directory-component" $ do

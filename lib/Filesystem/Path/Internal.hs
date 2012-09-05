@@ -85,6 +85,18 @@ filenameChunk p = concat (name:exts) where
 		[] -> []
 		exts' -> intersperse dot ("":exts')
 
+rootChunk :: Maybe Root -> Chunk
+rootChunk r = flip (maybe "") r $ \r' -> case r' of
+	RootPosix -> "/"
+	RootWindowsVolume c -> c : ":\\"
+	RootWindowsCurrentVolume -> "\\"
+
+rootText :: Maybe Root -> T.Text
+rootText = T.pack . rootChunk
+
+directoryChunks :: FilePath -> [Chunk]
+directoryChunks path = pathDirectories path ++ [filenameChunk path]
+
 -------------------------------------------------------------------------------
 -- Rules
 -------------------------------------------------------------------------------

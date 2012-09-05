@@ -43,22 +43,6 @@ import           Filesystem.Path hiding (root, filename, basename)
 import           Filesystem.Path.Internal
 
 -------------------------------------------------------------------------------
--- Generic
--------------------------------------------------------------------------------
-
-rootChunk :: Maybe Root -> Chunk
-rootChunk r = flip (maybe "") r $ \r' -> case r' of
-	RootPosix -> "/"
-	RootWindowsVolume c -> c : ":\\"
-	RootWindowsCurrentVolume -> "\\"
-
-rootText :: Maybe Root -> T.Text
-rootText = T.pack . rootChunk
-
-directoryChunks :: FilePath -> [Chunk]
-directoryChunks path = pathDirectories path ++ [filenameChunk path]
-
--------------------------------------------------------------------------------
 -- POSIX
 -------------------------------------------------------------------------------
 
