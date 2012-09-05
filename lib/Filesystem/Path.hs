@@ -212,7 +212,7 @@ commonPrefix ps = foldr1 step ps where
 		then x : common xs ys
 		else []
 
--- Remove a prefix from a path.
+-- | Remove a prefix from a path.
 --
 -- @
 -- stripPrefix "/foo/" "/foo/bar/baz.txt" == Just "bar/baz.txt"
