@@ -216,8 +216,8 @@ commonPrefix ps = foldr1 step ps where
 -- | Remove a prefix from a path.
 --
 -- @
--- stripPrefix "/foo/" "/foo/bar/baz.txt" == Just "bar/baz.txt"
--- stripPrefix "/foo/" "/bar/baz.txt" == Nothing
+-- 'stripPrefix' \"/foo/\" \"/foo/bar/baz.txt\" == Just \"bar/baz.txt\"
+-- 'stripPrefix' \"/foo/\" \"/bar/baz.txt\" == Nothing
 -- @
 --
 -- Since: 0.4.1
