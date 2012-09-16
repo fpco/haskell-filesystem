@@ -88,7 +88,7 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import           Foreign.Ptr (Ptr, nullPtr)
-import           Foreign.C (CInt, CString, withCAString)
+import           Foreign.C (CInt(..), CString, withCAString)
 import qualified Foreign.C.Error as CError
 import qualified System.Environment as SE
 
