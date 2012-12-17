@@ -270,6 +270,9 @@ collapse p = p { pathDirectories = reverse newDirs } where
 		       | otherwise -> (False, ts)
 	step (_, acc) c = (False, c:acc)
 
+-- | expand a FilePath into a list of the root name, directories, and file name
+--
+-- Since: 0.4.7
 splitDirectories :: FilePath -> [FilePath]
 splitDirectories p = rootName ++ dirNames ++ fileName where
 	rootName = case pathRoot p of
