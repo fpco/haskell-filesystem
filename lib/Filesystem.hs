@@ -118,6 +118,9 @@ import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified System.Posix as Posix
 import qualified System.Posix.Error as Posix
+#if MIN_VERSION_unix(2,5,1)
+import qualified System.Posix.Files.ByteString
+#endif
 
 #endif
 
@@ -953,6 +956,12 @@ throwErrnoPathIfRetry_ failed loc path io = do
 	_ <- throwErrnoPathIfRetry failed loc path io
 	return ()
 
+posixStat :: String -> FilePath -> IO Posix.FileStatus
+#if MIN_VERSION_unix(2,5,1)
+posixStat _ path = System.Posix.Files.ByteString.getFileStatus (R.encode R.posix path)
+#else
+posixStat loc path = withFd loc path Posix.getFdStatus
+
 withFd :: String -> FilePath -> (Posix.Fd -> IO a) -> IO a
 withFd fnName path = Exc.bracket open close where
 	open = withFilePath path $ \cpath -> do
@@ -960,11 +969,10 @@ withFd fnName path = Exc.bracket open close where
 		return (Posix.Fd fd)
 	close = Posix.closeFd
 
-posixStat :: String -> FilePath -> IO Posix.FileStatus
-posixStat loc path = withFd loc path Posix.getFdStatus
-
 foreign import ccall unsafe "hssystemfileio_open_nonblocking"
 	c_open_nonblocking :: CString -> CInt -> IO CInt
+
+#endif
 
 foreign import ccall unsafe "free"
 	c_free :: Ptr a -> IO ()
