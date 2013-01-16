@@ -73,12 +73,6 @@ module Filesystem
 	, rename
 	) where
 
-#ifndef CABAL_OS_WINDOWS
-#if MIN_VERSION_base(4,2,0)
-#define SYSTEMFILEIO_LOCAL_OPEN_FILE
-#endif
-#endif
-
 import           Prelude hiding (FilePath, readFile, writeFile, appendFile)
 
 import qualified Control.Exception as Exc

@@ -65,6 +65,8 @@ library
     build-depends:
         unix >= 2.3
     c-sources: lib/hssystemfileio-unix.c
+    if impl(ghc >= 7.2.0) && impl(ghc < 7.4.0)
+      cpp-options: -DSYSTEMFILEIO_LOCAL_OPEN_FILE
 
   exposed-modules:
     Filesystem
