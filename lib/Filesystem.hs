@@ -158,7 +158,7 @@ isDirectory path = SD.doesDirectoryExist (encodeString path)
 #else
 isDirectory path = Exc.catch
 	(do
-		stat <- posixStat "isFile" path
+		stat <- posixStat "isDirectory" path
 		return (Posix.isDirectory stat))
 	((\_ -> return False) :: IOError -> IO Bool)
 #endif
