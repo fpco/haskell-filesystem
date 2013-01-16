@@ -49,6 +49,14 @@ test_Posix = suite "posix"
 			(fromText "\xA1\xA2.txt")
 		, test_IsFile "iso8859"
 			(decode "\xA1\xA2\xA3.txt")
+		, suite "pipe"
+			[ test_PipeIsFile "ascii"
+				(decode "test.txt")
+			, test_PipeIsFile "utf8"
+				(fromText "\xA1\xA2.txt")
+			, test_PipeIsFile "iso8859"
+				(decode "\xA1\xA2\xA3.txt")
+			]
 		]
 	, suite "isDirectory"
 		[ test_IsDirectory "ascii"
@@ -245,6 +253,18 @@ test_IsFile test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	$expect (not before)
 	
 	touch_ffi path "contents\n"
+	
+	after <- liftIO $ Filesystem.isFile path
+	$expect after
+
+test_PipeIsFile :: Text -> FilePath -> Suite
+test_PipeIsFile test_name file_name = assertionsWithTemp test_name $ \tmp -> do
+	let path = tmp </> file_name
+	
+	before <- liftIO $ Filesystem.isFile path
+	$expect (not before)
+	
+	mkfifo_ffi path
 	
 	after <- liftIO $ Filesystem.isFile path
 	$expect after
@@ -635,6 +655,14 @@ symlink_ffi dst src  = do
 	
 	$assert (ret == 0)
 
+-- | Create a FIFO using the raw POSIX API, via FFI
+mkfifo_ffi :: FilePath -> Assertions ()
+mkfifo_ffi path = do
+	ret <- liftIO $ withPathCString path $ \path_cstr ->
+		c_mkfifo path_cstr 0o700
+	
+	$assert (ret == 0)
+
 getcwd_ffi :: Assertions FilePath
 getcwd_ffi = do
 	buf <- liftIO $ c_getcwd nullPtr 0
@@ -690,6 +718,9 @@ foreign import ccall unsafe "mkdir"
 
 foreign import ccall unsafe "symlink"
 	c_symlink :: CString -> CString -> IO CInt
+
+foreign import ccall unsafe "mkfifo"
+	c_mkfifo :: CString -> CInt -> IO CInt
 
 foreign import ccall unsafe "getcwd"
 	c_getcwd :: CString -> CSize -> IO CString

@@ -24,4 +24,7 @@ hssystemfileio_isrealdir(const char *);
 int
 hssystemfileio_copy_permissions(const char *old_path, const char *new_path);
 
+int
+hssystemfileio_open_nonblocking(const char *path, int mode);
+
 #endif

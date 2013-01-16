@@ -956,15 +956,15 @@ throwErrnoPathIfRetry_ failed loc path io = do
 withFd :: String -> FilePath -> (Posix.Fd -> IO a) -> IO a
 withFd fnName path = Exc.bracket open close where
 	open = withFilePath path $ \cpath -> do
-		fd <- throwErrnoPathIfMinus1 fnName path (c_open cpath 0)
+		fd <- throwErrnoPathIfMinus1 fnName path (c_open_nonblocking cpath 0)
 		return (Posix.Fd fd)
 	close = Posix.closeFd
 
 posixStat :: String -> FilePath -> IO Posix.FileStatus
 posixStat loc path = withFd loc path Posix.getFdStatus
 
-foreign import ccall unsafe "open"
-	c_open :: CString -> CInt -> IO CInt
+foreign import ccall unsafe "hssystemfileio_open_nonblocking"
+	c_open_nonblocking :: CString -> CInt -> IO CInt
 
 foreign import ccall unsafe "free"
 	c_free :: Ptr a -> IO ()

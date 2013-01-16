@@ -8,6 +8,7 @@
 
 #include <dirent.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -119,4 +120,11 @@ hssystemfileio_copy_permissions(const char *old_path, const char *new_path)
 	{ return rc; }
 	
 	return chmod(new_path, st.st_mode);
+}
+
+int
+hssystemfileio_open_nonblocking(const char *path, int int_mode)
+{
+	mode_t mode = int_mode | O_NONBLOCK;
+	return open(path, mode);
 }
