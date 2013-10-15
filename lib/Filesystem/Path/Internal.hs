@@ -216,9 +216,13 @@ parseFilename :: Chunk -> (Maybe Basename, [Extension])
 parseFilename filename = parsed where
 	parsed = if null filename
 		then (Nothing, [])
-		else case splitBy (== '.') filename of
-			[] -> (Nothing, [])
-			(name':exts') -> (Just name', exts')
+		else case span (== '.') filename of
+			(leadingDots, baseAndExts) -> case splitBy (== '.') baseAndExts of
+				[] -> (joinDots leadingDots "", [])
+				(name':exts') -> (joinDots leadingDots name', exts')
+	joinDots leadingDots base = case leadingDots ++ base of
+		[] -> Nothing
+		joined -> Just joined
 
 maybeDecodeUtf8 :: B.ByteString -> Maybe T.Text
 maybeDecodeUtf8 = excToMaybe . TE.decodeUtf8 where

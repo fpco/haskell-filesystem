@@ -33,6 +33,8 @@ tests = suite "tests"
 	test_Absolute
 	test_Relative
 	
+	test_LeadingDotSpecialCases
+	
 	-- Basic operations
 	test_Append
 	test_CommonPrefix
@@ -147,13 +149,9 @@ test_Basename = assertions "basename" $ do
 	
 	$expect $ equal (basename_posix "/foo/bar") "bar"
 	$expect $ equal (basename_posix "/foo/bar.txt") "bar"
-	$expect $ equal (basename_posix ".") ""
-	$expect $ equal (basename_posix "..") ""
 	
 	$expect $ equal (basename_windows "c:\\foo\\bar") "bar"
 	$expect $ equal (basename_windows "c:\\foo\\bar.txt") "bar"
-	$expect $ equal (basename_windows ".") ""
-	$expect $ equal (basename_windows "..") ""
 
 test_Absolute :: Test
 test_Absolute = assertions "absolute" $ do
@@ -180,6 +178,36 @@ test_Relative = assertions "relative" $ do
 	$expect $ relative (fromString "")
 	$expect $ relative (fromString "foo\\bar")
 	$expect . not $ relative (fromString "\\foo\\bar")
+
+test_LeadingDotSpecialCases :: Test
+test_LeadingDotSpecialCases = assertions "leading-dot-special-cases" $ do
+	let components_posix x = let p = fromChar8 x in
+		(toChar8 (P.directory p), toChar8 (basename p), P.extensions p)
+	let components_windows x = let p = fromString x in
+		(toString (P.directory p), toString (basename p), P.extensions p)
+	
+	-- The filenames "." and ".." are always considered to be directory
+	-- elements, because they are links to either the current or parent
+	-- directories.
+	--
+	-- On POSIX, filenames starting with '.' are hidden files and have
+	-- a basename starting with '.'.
+	--
+	-- On Windows there is no history of similar naming patterns. The case
+	-- could be made that a filename like ".txt.gz" ought to have a
+	-- basename of "", but different basename behavior in POSIX and Windows
+	-- would greatly complicate the implementation of 'dirname'.
+	$expect $ equal (components_posix ".") ("./", "", [])
+	$expect $ equal (components_posix "..") ("../", "", [])
+	$expect $ equal (components_posix "/foo/.") ("/foo/./", "", [])
+	$expect $ equal (components_posix "/foo/..") ("/foo/../", "", [])
+	$expect $ equal (components_posix "/foo/.foo.txt") ("/foo/", ".foo", ["txt"])
+	
+	$expect $ equal (components_windows ".") (".\\", "", [])
+	$expect $ equal (components_windows "..") ("..\\", "", [])
+	$expect $ equal (components_windows "\\foo\\.") ("\\foo\\.\\", "", [])
+	$expect $ equal (components_windows "\\foo\\..") ("\\foo\\..\\", "", [])
+	$expect $ equal (components_windows "\\foo\\.foo.txt") ("\\foo\\", ".foo", ["txt"])
 
 test_Identity :: String -> Rules a -> Gen FilePath -> Test
 test_Identity name r gen = property name $ forAll gen $ \p -> p == decode r (encode r p)
