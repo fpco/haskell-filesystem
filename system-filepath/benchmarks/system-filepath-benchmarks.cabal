@@ -1,0 +1,17 @@
+name: system-filepath-benchmarks
+version: 0
+build-type: Simple
+cabal-version: >= 1.6
+
+executable system-filepath_benchmarks
+  main-is: Benchmarks.hs
+  ghc-options: -Wall -O2
+
+  build-depends:
+      base > 3 && < 5
+    , bytestring
+    , text
+    , system-filepath
+    , criterion
+    , progression
+    , deepseq
