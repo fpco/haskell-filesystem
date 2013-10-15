@@ -23,12 +23,12 @@ extra-source-files:
   tests/Tests.hs
 
 source-repository head
-  type: bzr
-  location: https://john-millikin.com/branches/system-filepath/0.4/
+  type: git
+  location: https://john-millikin.com/code/haskell-filesystem/
 
 source-repository this
-  type: bzr
-  location: https://john-millikin.com/branches/system-filepath/0.4/
+  type: git
+  location: https://john-millikin.com/code/haskell-filesystem/
   tag: system-filepath_0.4.7
 
 library
