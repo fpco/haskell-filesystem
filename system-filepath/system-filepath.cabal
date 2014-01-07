@@ -6,7 +6,7 @@ license-file: license.txt
 author: John Millikin <jmillikin@gmail.com>
 maintainer: John Millikin <jmillikin@gmail.com>
 copyright: John Millikin 2010-2012
-build-type: Simple
+build-type: Custom
 cabal-version: >= 1.6
 category: System
 stability: experimental

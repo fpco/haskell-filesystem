@@ -41,14 +41,18 @@ import           Filesystem.Path
 import qualified Filesystem.Path as F
 import qualified Filesystem.Path.Rules as R
 
-#if defined(CABAL_OS_WINDOWS) || defined(CABAL_OS_DARWIN)
-#define PLATFORM_PATH_FORMAT T.Text
+#if defined(__HADDOCK__)
+#  define PLATFORM_PATH_FORMAT platformTextFormat
+#elif defined(CABAL_OS_WINDOWS) || defined(CABAL_OS_DARWIN)
+#  define PLATFORM_PATH_FORMAT T.Text
 #else
-#define PLATFORM_PATH_FORMAT B.ByteString
+#  define PLATFORM_PATH_FORMAT B.ByteString
 #endif
 
 currentOS :: R.Rules PLATFORM_PATH_FORMAT
-#if defined(CABAL_OS_WINDOWS)
+#if defined(__HADDOCK__)
+currentOS = undefined
+#elif defined(CABAL_OS_WINDOWS)
 currentOS = R.windows
 #elif defined(CABAL_OS_DARWIN)
 #if __GLASGOW_HASKELL__ >= 702
