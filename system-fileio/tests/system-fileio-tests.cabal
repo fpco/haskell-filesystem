@@ -21,7 +21,7 @@ executable system-fileio_tests
     , chell >= 0.2 && < 0.3
     , system-filepath >= 0.3 && < 0.5
     , temporary >= 1.1 && < 2.0
-    , text >= 0.1 && < 0.12
+    , text >= 0.1
     , time >= 1.0 && < 1.5
     , transformers >= 0.2 && < 0.3
 
