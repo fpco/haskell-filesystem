@@ -29,6 +29,7 @@ module Filesystem.Path.CurrentOS
 	-- * Rule&#x2010;specific path properties
 	, valid
 	, splitSearchPath
+	, splitSearchPathString
 	) where
 
 import           Prelude hiding (FilePath)
@@ -117,6 +118,11 @@ valid = R.valid currentOS
 -- of 'FilePath's.
 splitSearchPath :: PLATFORM_PATH_FORMAT -> [F.FilePath]
 splitSearchPath = R.splitSearchPath currentOS
+
+-- | splitSearchPathString is like 'splitSearchPath', but takes a string
+-- encoded in the format used by @System.IO@.
+splitSearchPathString :: String -> [F.FilePath]
+splitSearchPathString = R.splitSearchPathString currentOS
 
 -- | Convert a 'F.FilePath' to a platform&#x2010;specific format, suitable
 -- for use with external OS functions.

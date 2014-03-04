@@ -63,6 +63,7 @@ tests = suite "tests"
 		:: Suite)
 	
 	test_SplitSearchPath
+	test_SplitSearchPathString
 	test_Parsing
 	test_EncodeString
 	test_DecodeString
@@ -425,13 +426,52 @@ test_Parsing = assertions "parsing" $ do
 
 test_SplitSearchPath :: Test
 test_SplitSearchPath = assertions "splitSearchPath" $ do
-	let p x = map (toChar8) (splitSearchPath posix (B8.pack x))
-	let w x = map (toString) (splitSearchPath windows (T.pack x))
+	let p x = map toChar8 (splitSearchPath posix (B8.pack x))
+	let w x = map toString (splitSearchPath windows (T.pack x))
 	
 	$expect $ equal (p "a:b:c") ["a", "b", "c"]
 	$expect $ equal (p "a::b:c") ["a", "./", "b", "c"]
 	$expect $ equal (w "a;b;c") ["a", "b", "c"]
 	$expect $ equal (w "a;;b;c") ["a", "b", "c"]
+
+test_SplitSearchPathString :: Suite
+test_SplitSearchPathString = suite "splitSearchPathString"
+	test_SplitSearchPathString_Posix
+	test_SplitSearchPathString_Posix_Ghc702
+	test_SplitSearchPathString_Posix_Ghc704
+	test_SplitSearchPathString_Darwin
+	test_SplitSearchPathString_Darwin_Ghc702
+	test_SplitSearchPathString_Win32
+
+test_SplitSearchPathString_Posix :: Test
+test_SplitSearchPathString_Posix = assertions "posix" $ do
+	let split x = map (toText posix) (splitSearchPathString posix x)
+	$expect $ equal (split "a::\xC2\xA1\xC2\xA2:\xA1\xA2") [Right "a", Right "./", Right "\xA1\xA2", Left "\xA1\xA2"]
+
+test_SplitSearchPathString_Posix_Ghc702 :: Test
+test_SplitSearchPathString_Posix_Ghc702 = assertions "posix_ghc702" $ do
+	let split x = map (toText posix) (splitSearchPathString posix_ghc702 x)
+	$expect $ equal (split "a::\xA1\xA2:\xEFA1\xEFA2") [Right "a", Right "./", Right "\xA1\xA2", Left "\xA1\xA2"]
+
+test_SplitSearchPathString_Posix_Ghc704 :: Test
+test_SplitSearchPathString_Posix_Ghc704 = assertions "posix_ghc704" $ do
+	let split x = map (toText posix) (splitSearchPathString posix_ghc704 x)
+	$expect $ equal (split "a::\xA1\xA2:\xDCA1\xDCA2") [Right "a", Right "./", Right "\xA1\xA2", Left "\xA1\xA2"]
+
+test_SplitSearchPathString_Darwin :: Test
+test_SplitSearchPathString_Darwin = assertions "darwin" $ do
+	let split x = map (toText darwin) (splitSearchPathString darwin x)
+	$expect $ equal (split "a::\xC2\xA1\xC2\xA2") [Right "a", Right "./", Right "\xA1\xA2"]
+
+test_SplitSearchPathString_Darwin_Ghc702 :: Test
+test_SplitSearchPathString_Darwin_Ghc702 = assertions "darwin_ghc702" $ do
+	let split x = map (toText darwin) (splitSearchPathString darwin_ghc702 x)
+	$expect $ equal (split "a::\xA1\xA2") [Right "a", Right "./", Right "\xA1\xA2"]
+
+test_SplitSearchPathString_Win32 :: Test
+test_SplitSearchPathString_Win32 = assertions "win32" $ do
+	let split x = map (toText windows) (splitSearchPathString windows x)
+	$expect $ equal (split "a;;\xA1\xA2") [Right "a", Right "\xA1\xA2"]
 
 test_EncodeString :: Suite
 test_EncodeString = suite "encodeString"

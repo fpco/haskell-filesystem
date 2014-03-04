@@ -113,6 +113,10 @@ data Rules platformFormat = Rules
 	-- a list of 'FilePath's.
 	, splitSearchPath :: platformFormat -> [FilePath]
 	
+	-- | splitSearchPathString is like 'splitSearchPath', but takes a string
+	-- encoded in the format used by @System.IO@.
+	, splitSearchPathString :: String -> [FilePath]
+	
 	-- | Attempt to convert a 'FilePath' to human&#x2010;readable text.
 	--
 	-- If the path is decoded successfully, the result is a 'Right'

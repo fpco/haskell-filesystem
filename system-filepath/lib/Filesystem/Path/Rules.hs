@@ -26,6 +26,7 @@ module Filesystem.Path.Rules
 	-- * Rule&#x2010;specific path properties
 	, valid
 	, splitSearchPath
+	, splitSearchPathString
 	) where
 
 import           Prelude hiding (FilePath, null)
@@ -52,6 +53,7 @@ posix = Rules
 	{ rulesName = T.pack "POSIX"
 	, valid = posixValid
 	, splitSearchPath = posixSplitSearch
+	, splitSearchPathString = posixSplitSearch . B8.pack
 	, toText = posixToText
 	, fromText = posixFromText
 	, encode = posixToBytes
@@ -69,6 +71,7 @@ posix = Rules
 posix_ghc702 :: Rules B.ByteString
 posix_ghc702 = posix
 	{ rulesName = T.pack "POSIX (GHC 7.2)"
+	, splitSearchPathString = posixSplitSearchString posixFromGhc702String
 	, encodeString = posixToGhc702String
 	, decodeString = posixFromGhc702String
 	}
@@ -82,6 +85,7 @@ posix_ghc702 = posix
 posix_ghc704 :: Rules B.ByteString
 posix_ghc704 = posix
 	{ rulesName = T.pack "POSIX (GHC 7.4)"
+	, splitSearchPathString = posixSplitSearchString posixFromGhc704String
 	, encodeString = posixToGhc704String
 	, decodeString = posixFromGhc704String
 	}
@@ -184,6 +188,10 @@ posixSplitSearch :: B.ByteString -> [FilePath]
 posixSplitSearch = map (posixFromBytes . normSearch) . B.split 0x3A where
 	normSearch bytes = if B.null bytes then B8.pack "." else bytes
 
+posixSplitSearchString :: (String -> FilePath) -> String -> [FilePath]
+posixSplitSearchString toPath = map (toPath . normSearch) . splitBy (== ':') where
+	normSearch s = if P.null s then "." else s
+
 -------------------------------------------------------------------------------
 -- Darwin
 -------------------------------------------------------------------------------
@@ -199,6 +207,7 @@ darwin = Rules
 	{ rulesName = T.pack "Darwin"
 	, valid = posixValid
 	, splitSearchPath = darwinSplitSearch
+	, splitSearchPathString = darwinSplitSearch . TE.decodeUtf8 . B8.pack
 	, toText = Right . darwinToText
 	, fromText = posixFromText
 	, encode = darwinToText
@@ -216,6 +225,7 @@ darwin = Rules
 darwin_ghc702 :: Rules T.Text
 darwin_ghc702 = darwin
 	{ rulesName = T.pack "Darwin (GHC 7.2)"
+	, splitSearchPathString = darwinSplitSearch . T.pack
 	, encodeString = T.unpack . darwinToText
 	, decodeString = posixFromText . T.pack
 	}
@@ -245,6 +255,7 @@ windows = Rules
 	{ rulesName = T.pack "Windows"
 	, valid = winValid
 	, splitSearchPath = winSplit
+	, splitSearchPathString = winSplit . T.pack
 	, toText = Right . winToText
 	, fromText = winFromText
 	, encode = winToText
