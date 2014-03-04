@@ -97,7 +97,7 @@ test_Directory = assertions "directory" $ do
 	$expect $ equal (directory "../foo") "../"
 	$expect $ equal (directory "../foo/") "../foo/"
 	$expect $ equal (directory "foo") "./"
-	$expect $ equal (directory "foo/bar") "./foo/"
+	$expect $ equal (directory "foo/bar") "foo/"
 
 test_Parent :: Test
 test_Parent = assertions "parent" $ do

@@ -56,9 +56,10 @@ module Filesystem.Path
 	) where
 
 import           Prelude hiding (FilePath, concat, null)
+import qualified Prelude as Prelude
 
 import           Data.List (foldl')
-import           Data.Maybe (isNothing)
+import           Data.Maybe (isJust, isNothing)
 import qualified Data.Monoid as M
 import qualified Data.Text as T
 
@@ -87,9 +88,8 @@ directory :: FilePath -> FilePath
 directory p = empty
 	{ pathRoot = pathRoot p
 	, pathDirectories = let
-		starts = map Just [dot, dots]
-		dot' | safeHead (pathDirectories p) `elem` starts = []
-		     | isNothing (pathRoot p) = [dot]
+		dot' | isJust (pathRoot p) = []
+		     | Prelude.null (pathDirectories p) = [dot]
 		     | otherwise = []
 		in dot' ++ pathDirectories p
 	}
