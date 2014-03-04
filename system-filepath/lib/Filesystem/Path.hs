@@ -220,6 +220,15 @@ commonPrefix ps = foldr1 step ps where
 -- 'stripPrefix' \"\/foo\/\" \"\/bar\/baz.txt\" == Nothing
 -- @
 --
+-- This function operates on logical prefixes, rather than by counting
+-- characters. The prefix @\"\/foo\/bar\/baz\"@ is interpreted the path
+-- @(\"\/foo\/bar\/\", \"baz\")@, and will be stripped accordingly:
+--
+-- @
+-- 'stripPrefix' \"\/foo\/bar\/baz\" \"\/foo\/bar\/baz\/qux\" == Nothing
+-- 'stripPrefix' \"\/foo\/bar\/baz\" \"\/foo\/bar\/baz.txt\" == Just \".txt\"
+-- @
+--
 -- Since: 0.4.1
 stripPrefix :: FilePath -> FilePath -> Maybe FilePath
 stripPrefix x y = if pathRoot x /= pathRoot y
