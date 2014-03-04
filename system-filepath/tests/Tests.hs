@@ -348,6 +348,8 @@ test_Collapse = assertions "collapse" $ do
 	$expect $ equal (collapse "parent/foo/baz/../bar") "parent/foo/bar"
 	$expect $ equal (collapse "parent/foo/baz/../../bar") "parent/bar"
 	$expect $ equal (collapse "parent/foo/..") "parent/"
+	$expect $ equal (collapse "/parent/foo/../../../bar") "/bar"
+	$expect $ equal (collapse "/./parent/foo") "/parent/foo"
 
 test_SplitDirectories :: Test
 test_SplitDirectories = assertions "splitDirectories" $ do

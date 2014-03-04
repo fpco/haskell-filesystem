@@ -251,15 +251,25 @@ strip (x:xs) (y:ys) = if x == y
 	then strip xs ys
 	else Nothing
 
--- | Remove @\".\"@ and @\"..\"@ directories from a path.
+-- | Remove intermediate @\".\"@ and @\"..\"@ directories from a path.
+--
+-- @
+-- 'collapse' \"\/foo\/.\/bar\" == \"\/foo\/bar\"
+-- 'collapse' \"\/foo\/bar\/..\/baz\" == \"\/foo\/baz\"
+-- 'collapse' \"\/foo\/..\/..\/bar\" == \"\/bar\"
+-- 'collapse' \".\/foo\/bar\" == \".\/foo\/baz\"
+-- @
 --
 -- Note that if any of the elements are symbolic links, 'collapse' may change
 -- which file the path resolves to.
 --
 -- Since: 0.2
 collapse :: FilePath -> FilePath
-collapse p = p { pathDirectories = reverse newDirs } where
-	(_, newDirs) = foldl' step (True, []) (pathDirectories p)
+collapse p = p { pathDirectories = newDirs } where
+	newDirs = case pathRoot p of
+		Nothing -> reverse revNewDirs
+		Just _ -> dropWhile (\x -> x == dot || x == dots) (reverse revNewDirs)
+	(_, revNewDirs) = foldl' step (True, []) (pathDirectories p)
 	
 	step (True, acc) c = (False, c:acc)
 	step (_, acc) c | c == dot = (False, acc)
