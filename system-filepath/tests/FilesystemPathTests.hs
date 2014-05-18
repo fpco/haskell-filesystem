@@ -439,6 +439,10 @@ test_Parsing = assertions "parsing" $ do
 	$expect $ equal (w "\\\\?\\unc\\server\\share") "\\\\?\\UNC\\server\\share"
 	$expect $ equal (w "\\\\?\\UNC\\server\\share") "\\\\?\\UNC\\server\\share"
 	$expect $ equal (w "\\\\?\\UNC\\server\\share\\a") "\\\\?\\UNC\\server\\share\\a"
+	
+	-- magical \??\ and \\.\ Windows prefixes
+	$expect $ equal (w "\\??\\Volume{12345}") "\\??\\Volume{12345}"
+	$expect $ equal (w "\\\\.\\PhysicalDrive0") "\\\\.\\PhysicalDrive0"
 
 test_UncValidity :: Test
 test_UncValidity = assertions "unc-validity" $ do
@@ -448,6 +452,8 @@ test_UncValidity = assertions "unc-validity" $ do
 	$expect $ valid windows (fromString "\\\\server\\share")
 	$expect $ valid windows (fromString "\\\\server\\share\\")
 	$expect $ valid windows (fromString "\\\\server\\share\\a")
+	$expect $ valid windows (fromString "\\??\\Volume{12345}")
+	$expect $ valid windows (fromString "\\\\.\\PhysicalDrive0")
 
 test_SplitSearchPath :: Test
 test_SplitSearchPath = assertions "splitSearchPath" $ do
