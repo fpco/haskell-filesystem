@@ -150,8 +150,10 @@ basename p = empty
 absolute :: FilePath -> Bool
 absolute p = case pathRoot p of
 	Just RootPosix -> True
-	Just (RootWindowsVolume _) -> True
-	_ -> False
+	Just RootWindowsVolume{} -> True
+	Just RootWindowsCurrentVolume -> False
+	Just RootWindowsUnc{} -> True
+	Nothing -> False
 
 -- | Test whether a path is relative.
 relative :: FilePath -> Bool
@@ -169,10 +171,11 @@ append :: FilePath -> FilePath -> FilePath
 append x y = cased where
 	cased = case pathRoot y of
 		Just RootPosix -> y
-		Just (RootWindowsVolume _) -> y
+		Just RootWindowsVolume{} -> y
 		Just RootWindowsCurrentVolume -> case pathRoot x of
-			Just (RootWindowsVolume _) -> y { pathRoot = pathRoot x }
+			Just RootWindowsVolume{} -> y { pathRoot = pathRoot x }
 			_ -> y
+		Just RootWindowsUnc{} -> y
 		Nothing -> xy
 	xy = y
 		{ pathRoot = pathRoot x

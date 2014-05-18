@@ -35,7 +35,7 @@ import qualified Prelude as P
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
 import           Data.Char (toUpper, chr, ord)
-import           Data.List (intersperse, intercalate)
+import           Data.List (dropWhileEnd, intersperse, intercalate)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import           System.IO ()
@@ -265,41 +265,99 @@ windows = Rules
 	}
 
 winToText :: FilePath -> T.Text
-winToText p = T.concat (root : chunks) where
+winToText p = case pathRoot p of
+	Just RootWindowsUnc{} -> uncToText p
+	_ -> dosToText p
+
+dosToText :: FilePath -> T.Text
+dosToText p = T.concat (root : chunks) where
 	root = rootText (pathRoot p)
 	chunks = intersperse (T.pack "\\") (map unescape' (directoryChunks p))
+
+uncToText :: FilePath -> T.Text
+uncToText p = T.concat (root : chunks) where
+	root = if all T.null chunks
+		then rootText (pathRoot p)
+		else rootText (pathRoot p) `T.append` T.pack "\\"
+	chunks = intersperse (T.pack "\\") (filter (not . T.null) (map unescape' (directoryChunks p)))
 
 winFromText :: T.Text -> FilePath
 winFromText text = if T.null text then empty else path where
 	path = FilePath root directories basename exts
 	
-	split = textSplitBy (\c -> c == '/' || c == '\\') text
-	
-	(root, pastRoot) = let
-		head' = head split
-		tail' = tail split
-		in if T.null head'
-			then (Just RootWindowsCurrentVolume, tail')
-			else if T.any (== ':') head'
-				then (Just (parseDrive head'), tail')
-				else (Nothing, split)
-	
-	parseDrive = RootWindowsVolume . toUpper . T.head
+	-- Windows has various types of absolute paths:
+	--
+	-- * C:\foo\bar -> DOS-style absolute path
+	-- * \\?\C:\foo\bar -> extended-length absolute path
+	-- * \\host\share\foo\bar -> UNC path
+	-- * \\?\UNC\host\share\foo\bar -> extended-length UNC path
+	--
+	-- \foo\bar looks like an absolute path, but is actually a path
+	-- relative to the current DOS drive.
+	--
+	-- http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx
+	(root, pastRoot) = if T.isPrefixOf (T.pack "\\\\") text
+		then case stripUncasedPrefix (T.pack "\\\\?\\UNC\\") text of
+			Just stripped -> parseUncRoot stripped True
+			Nothing -> case T.stripPrefix (T.pack "\\\\?\\") text of
+				Just stripped -> parseDosRoot stripped True
+				Nothing -> case T.stripPrefix (T.pack "\\\\") text of
+					Just stripped -> parseUncRoot stripped False
+					Nothing -> parseDosRoot text False
+		else parseDosRoot text False
 	
 	(directories, filename)
-		| P.null pastRoot = ([], "")
+		| P.null pastRoot = ([], Nothing)
 		| otherwise = case last pastRoot of
-			fn | fn == T.pack "." -> (goodDirs pastRoot, "")
-			fn | fn == T.pack ".." -> (goodDirs pastRoot, "")
-			fn -> (goodDirs (init pastRoot), escape fn)
+			fn | fn == T.pack "." -> (goodDirs pastRoot, Just "")
+			fn | fn == T.pack ".." -> (goodDirs pastRoot, Just "")
+			fn -> (goodDirs (init pastRoot), Just (escape fn))
 	
 	goodDirs :: [T.Text] -> [Chunk]
 	goodDirs = map escape . filter (not . T.null)
 	
-	(basename, exts) = parseFilename filename
+	(basename, exts) = case filename of
+		Just fn -> parseFilename fn
+		Nothing -> (Nothing, [])
+
+stripUncasedPrefix :: T.Text -> T.Text -> Maybe T.Text
+stripUncasedPrefix prefix text = if T.toCaseFold prefix == T.toCaseFold (T.take (T.length prefix) text)
+	then Just (T.drop (T.length prefix) text)
+	else Nothing
+
+parseDosRoot :: T.Text -> Bool -> (Maybe Root, [T.Text])
+parseDosRoot text extended = parsed where
+	split = textSplitBy (\c -> c == '/' || c == '\\') text
+	
+	head' = head split
+	tail' = tail split
+	parsed = if T.null head'
+		then (Just RootWindowsCurrentVolume, tail')
+		else if T.any (== ':') head'
+			then (Just (parseDrive head'), tail')
+				else (Nothing, split)
+	
+	parseDrive c = RootWindowsVolume (toUpper (T.head c)) extended
+
+parseUncRoot :: T.Text -> Bool -> (Maybe Root, [T.Text])
+parseUncRoot text extended = parsed where
+	(host, pastHost) = T.break (== '\\') text
+	(share, pastShare) = T.break (== '\\') (T.drop 1 pastHost)
+	split = if T.null pastShare
+		then []
+		else textSplitBy (== '\\') pastShare
+	parsed = (Just (RootWindowsUnc (T.unpack host) (T.unpack share) extended), split)
 
 winValid :: FilePath -> Bool
-winValid p = validRoot && noReserved && validCharacters where
+winValid p = case pathRoot p of
+	Nothing -> dosValid p
+	Just RootWindowsCurrentVolume -> dosValid p
+	Just (RootWindowsVolume v _) -> elem v ['A'..'Z'] && dosValid p
+	Just (RootWindowsUnc host share _) -> uncValid p host share
+	Just RootPosix -> False
+
+dosValid :: FilePath -> Bool
+dosValid p = noReserved && validCharacters where
 	reservedChars = map chr [0..0x1F] ++ "/\\?*:|\"<>"
 	reservedNames =
 		[ "AUX", "CLOCK$", "COM1", "COM2", "COM3", "COM4"
@@ -308,18 +366,20 @@ winValid p = validRoot && noReserved && validCharacters where
 		, "LPT7", "LPT8", "LPT9", "NUL", "PRN"
 		]
 	
-	validRoot = case pathRoot p of
-		Nothing -> True
-		Just RootWindowsCurrentVolume -> True
-		Just (RootWindowsVolume v) -> elem v ['A'..'Z']
-		_ -> False
-	
 	noExt = p { pathExtensions = [] }
 	noReserved = flip all (directoryChunks noExt)
 		$ \fn -> notElem (map toUpper fn) reservedNames
 	
 	validCharacters = flip all (directoryChunks p)
 		$ not . any (`elem` reservedChars)
+
+uncValid :: FilePath -> String -> String -> Bool
+uncValid _ "" _ = False
+uncValid _ _ "" = False
+uncValid p host share = ok host && ok share && all ok (dropWhileEnd P.null (directoryChunks p)) where
+	ok ""  = False
+	ok c = not (any invalidChar c)
+	invalidChar c = c == '\x00' || c == '\\'
 
 winSplit :: T.Text -> [FilePath]
 winSplit = map winFromText . filter (not . T.null) . textSplitBy (== ';')

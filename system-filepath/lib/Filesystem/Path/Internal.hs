@@ -38,9 +38,10 @@ type Extension = Chunk
 
 data Root
 	= RootPosix
-	| RootWindowsVolume Char
+	| RootWindowsVolume Char Bool
 	| RootWindowsCurrentVolume
-	deriving (Eq, Ord, Data, Typeable)
+	| RootWindowsUnc String String Bool
+	deriving (Eq, Ord, Data, Typeable, Show)
 
 data FilePath = FilePath
 	{ pathRoot :: Maybe Root
@@ -62,7 +63,8 @@ instance Ord FilePath where
 		))
 
 instance NFData Root where
-	rnf (RootWindowsVolume c) = rnf c
+	rnf (RootWindowsVolume c extended) = rnf c `seq` rnf extended
+	rnf (RootWindowsUnc host share extended) = rnf host `seq` rnf share `seq` rnf extended
 	rnf _ = ()
 
 instance NFData FilePath where
@@ -88,8 +90,11 @@ filenameChunk p = concat (name:exts) where
 rootChunk :: Maybe Root -> Chunk
 rootChunk r = flip (maybe "") r $ \r' -> case r' of
 	RootPosix -> "/"
-	RootWindowsVolume c -> c : ":\\"
+	RootWindowsVolume c False -> c : ":\\"
+	RootWindowsVolume c True -> "\\\\?\\" ++ (c : ":\\")
 	RootWindowsCurrentVolume -> "\\"
+	RootWindowsUnc host share False -> "\\\\" ++ host ++ "\\" ++ share
+	RootWindowsUnc host share True -> "\\\\?\\UNC\\" ++ host ++ "\\" ++ share
 
 rootText :: Maybe Root -> T.Text
 rootText = T.pack . rootChunk

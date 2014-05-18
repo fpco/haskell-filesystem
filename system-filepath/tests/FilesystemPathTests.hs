@@ -13,7 +13,8 @@ import           Test.Chell
 import           Test.Chell.QuickCheck
 import           Test.QuickCheck hiding (property)
 
-import           Filesystem.Path as P
+import qualified Filesystem.Path as P
+import           Filesystem.Path (FilePath, (</>), relative, stripPrefix, absolute, basename, empty)
 import           Filesystem.Path.CurrentOS ()
 import           Filesystem.Path.Rules
 
@@ -65,6 +66,7 @@ tests = suite "tests" $
 	++ suiteTests (suite "validity"
 		[ property "posix" (forAll posixPaths (valid posix))
 		, property "windows" (forAll windowsPaths (valid windows))
+		, test_UncValidity
 		])
 
 test_Empty :: Test
@@ -420,6 +422,32 @@ test_Parsing = assertions "parsing" $ do
 	$expect $ equal (w ".\\") ".\\"
 	$expect $ equal (w "..") "..\\"
 	$expect $ equal (w "..\\") "..\\"
+	
+	-- extended-length
+	$expect $ equal (w "\\\\?\\C:\\") "\\\\?\\C:\\"
+	$expect $ equal (w "\\\\?\\C:\\a") "\\\\?\\C:\\a"
+	
+	-- UNC
+	$expect $ equal (w "\\\\server\\share") "\\\\server\\share"
+	$expect $ equal (w "\\\\server\\share\\") "\\\\server\\share"
+	$expect $ equal (w "\\\\server\\share\\a") "\\\\server\\share\\a"
+	$expect $ equal (w "\\\\server\\share\\.") "\\\\server\\share\\."
+	$expect $ equal (w "\\\\server\\share\\..") "\\\\server\\share\\.."
+	$expect $ equal (w "\\\\server\\share\\a\\") "\\\\server\\share\\a"
+	
+	-- extended-length UNC
+	$expect $ equal (w "\\\\?\\unc\\server\\share") "\\\\?\\UNC\\server\\share"
+	$expect $ equal (w "\\\\?\\UNC\\server\\share") "\\\\?\\UNC\\server\\share"
+	$expect $ equal (w "\\\\?\\UNC\\server\\share\\a") "\\\\?\\UNC\\server\\share\\a"
+
+test_UncValidity :: Test
+test_UncValidity = assertions "unc-validity" $ do
+	let invalid rules = not . valid rules
+	$expect $ invalid windows (fromString "\\\\server")
+	$expect $ invalid windows (fromString "\\\\server\\")
+	$expect $ valid windows (fromString "\\\\server\\share")
+	$expect $ valid windows (fromString "\\\\server\\share\\")
+	$expect $ valid windows (fromString "\\\\server\\share\\a")
 
 test_SplitSearchPath :: Test
 test_SplitSearchPath = assertions "splitSearchPath" $ do
@@ -600,7 +628,10 @@ posixPaths = sized $ fmap merge . genComponents where
 		frequency [(1, return cs), (9, return ([""] ++ cs))]
 
 windowsPaths :: Gen FilePath
-windowsPaths = sized $ \n -> genComponents n >>= merge where
+windowsPaths = oneof [dosPaths, uncPaths]
+
+dosPaths :: Gen FilePath
+dosPaths = sized $ \n -> genComponents n >>= merge where
 	merge cs = do
 		root <- genRoot
 		let path = intercalate "\\" cs
@@ -616,11 +647,9 @@ windowsPaths = sized $ \n -> genComponents n >>= merge where
 	validChar c = not (elem c reserved)
 	validComponent c = not (elem (map toUpper c) reservedNames)
 	component = do
-		size <- choose (0, 10)
+		size <- choose (1, 10)
 		vectorOf size $ arbitrary `suchThat` validChar
-	genComponents n = do
-		cs <- vectorOf n (component `suchThat` validComponent)
-		frequency [(1, return cs), (9, return ([""] ++ cs))]
+	genComponents n = vectorOf n (component `suchThat` validComponent)
 	
 	genRoot = do
 		let upperChar = elements ['A'..'Z']
@@ -628,6 +657,25 @@ windowsPaths = sized $ \n -> genComponents n >>= merge where
 		return $ case label of
 			Just c -> [c, ':', '\\']
 			Nothing -> "\\"
+
+uncPaths :: Gen FilePath
+uncPaths = sized $ \n -> genComponents n >>= merge where
+	merge cs = do
+		root <- genRoot
+		let path = intercalate "\\" cs
+		return $ case cs of
+			[] -> fromString (root ++ path)
+			_ -> fromString (root ++ "\\" ++ path)
+	validChar c = c /= '\x00' && c /= '\\'
+	component = do
+		size <- choose (1, 10)
+		vectorOf size (arbitrary `suchThat` validChar)
+	genComponents n = vectorOf n component
+	
+	genRoot = do
+		host <- component
+		share <- component
+		return ("\\\\" ++ host ++ "\\" ++ share)
 
 toChar8 :: FilePath -> String
 toChar8 = B8.unpack . encode posix
