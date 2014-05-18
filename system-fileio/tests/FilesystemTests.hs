@@ -14,9 +14,9 @@ module Main
 import           Test.Chell
 
 #ifdef CABAL_OS_WINDOWS
-import           FilesystemTests.Windows (test_Windows)
+import           FilesystemTests.Windows (suite_Windows)
 #else
-import           FilesystemTests.Posix (test_Posix)
+import           FilesystemTests.Posix (suite_Posix)
 #endif
 
 main :: IO ()
@@ -24,7 +24,7 @@ main = Test.Chell.defaultMain tests
 
 tests :: [Suite]
 #ifdef CABAL_OS_WINDOWS
-tests = [test_Windows]
+tests = [suite_Windows]
 #else
-tests = [test_Posix]
+tests = [suite_Posix]
 #endif

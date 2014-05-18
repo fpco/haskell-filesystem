@@ -5,7 +5,7 @@ license-file: license.txt
 author: John Millikin <jmillikin@gmail.com>
 maintainer: John Millikin <jmillikin@gmail.com>
 build-type: Simple
-cabal-version: >= 1.6
+cabal-version: >= 1.8
 category: System
 stability: experimental
 homepage: https://john-millikin.com/software/haskell-filesystem/
@@ -70,3 +70,36 @@ library
 
   exposed-modules:
     Filesystem
+
+test-suite filesystem_tests
+  type: exitcode-stdio-1.0
+  main-is: FilesystemTests.hs
+
+  ghc-options: -Wall -O2
+  cc-options: -Wall
+  hs-source-dirs: tests
+
+  build-depends:
+      base >= 4.0 && < 5.0
+    , bytestring >= 0.9
+    , chell >= 0.4 && < 0.5
+    , system-fileio
+    , system-filepath
+    , temporary >= 1.1 && < 2.0
+    , text
+    , time >= 1.0 && < 1.5
+    , transformers >= 0.2
+
+  if os(windows)
+    cpp-options: -DCABAL_OS_WINDOWS
+  else
+    build-depends:
+        unix >= 2.3
+
+  if os(darwin)
+    cpp-options: -DCABAL_OS_DARWIN
+
+  other-modules:
+    FilesystemTests.Posix
+    FilesystemTests.Util
+    FilesystemTests.Windows

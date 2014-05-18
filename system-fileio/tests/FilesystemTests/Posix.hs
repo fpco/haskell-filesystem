@@ -7,7 +7,7 @@
 --
 -- See license.txt for details
 module FilesystemTests.Posix
-	( test_Posix
+	( suite_Posix
 	) where
 
 import           Prelude hiding (FilePath)
@@ -40,212 +40,256 @@ import qualified Filesystem.Path.CurrentOS as CurrentOS
 
 import           FilesystemTests.Util (assertionsWithTemp, todo)
 
-test_Posix :: Suite
-test_Posix = suite "posix"
-	[ suite "isFile"
-		[ test_IsFile "ascii"
-			(decode "test.txt")
-		, test_IsFile "utf8"
-			(fromText "\xA1\xA2.txt")
-		, test_IsFile "iso8859"
-			(decode "\xA1\xA2\xA3.txt")
-		, suite "pipe"
-			[ test_PipeIsFile "ascii"
-				(decode "test.txt")
-			, test_PipeIsFile "utf8"
-				(fromText "\xA1\xA2.txt")
-			, test_PipeIsFile "iso8859"
-				(decode "\xA1\xA2\xA3.txt")
-			]
-		]
-	, suite "isDirectory"
-		[ test_IsDirectory "ascii"
-			(decode "test.d")
-		, test_IsDirectory "utf8"
-			(fromText "\xA1\xA2.d")
-		, test_IsDirectory "iso8859"
-			(decode "\xA1\xA2\xA3.d")
-		]
-	, suite "rename"
-		[ test_Rename "ascii"
-			(decode "old_test.txt")
-			(decode "new_test.txt")
-		, test_Rename "utf8"
-			(fromText "old_\xA1\xA2.txt")
-			(fromText "new_\xA1\xA2.txt")
-		, test_Rename "iso8859"
-			(decode "old_\xA1\xA2\xA3.txt")
-			(decode "new_\xA1\xA2\xA3.txt")
-		]
-	, suite "canonicalizePath"
-		[ test_CanonicalizePath "ascii"
-			(decode "test-a.txt")
-			(decode "test-b.txt")
-		, test_CanonicalizePath "utf8"
-			(fromText "\xA1\xA2-a.txt")
-			(fromText "\xA1\xA2-b.txt")
-		, test_CanonicalizePath "iso8859"
-			(decode "\xA1\xA2\xA3-a.txt")
-#ifdef CABAL_OS_DARWIN
-			(decode "%A1%A2%A3-b.txt")
-#else
-			(decode "\xA1\xA2\xA3-b.txt")
-#endif
-		, test_CanonicalizePath_TrailingSlash
-		]
-	, suite "createDirectory"
-		[ test_CreateDirectory "ascii"
-			(decode "test.d")
-		, test_CreateDirectory "utf8"
-			(fromText "\xA1\xA2.d")
-		, test_CreateDirectory "iso8859"
-			(decode "\xA1\xA2\xA3.d")
-		, test_CreateDirectory_FailExists
-		, test_CreateDirectory_SucceedExists
-		, test_CreateDirectory_FailFileExists
-		]
-	, suite "createTree"
-		[ test_CreateTree "ascii"
-			(decode "test.d")
-		, test_CreateTree "ascii-slash"
-			(decode "test.d/")
-		, test_CreateTree "utf8"
-			(fromText "\xA1\xA2.d")
-		, test_CreateTree "utf8-slash"
-			(fromText "\xA1\xA2.d/")
-		, test_CreateTree "iso8859"
-			(decode "\xA1\xA2\xA3.d")
-		, test_CreateTree "iso8859-slash"
-			(decode "\xA1\xA2\xA3.d/")
-		]
-	, test_ListDirectory
-	, suite "removeFile"
-		[ test_RemoveFile "ascii"
-			(decode "test.txt")
-		, test_RemoveFile "utf8"
-			(fromText "\xA1\xA2.txt")
-		, test_RemoveFile "iso8859"
-			(decode "\xA1\xA2\xA3.txt")
-		]
-	, suite "removeDirectory"
-		[ test_RemoveDirectory "ascii"
-			(decode "test.d")
-		, test_RemoveDirectory "utf8"
-			(fromText "\xA1\xA2.d")
-		, test_RemoveDirectory "iso8859"
-			(decode "\xA1\xA2\xA3.d")
-		]
-	, suite "removeTree"
-		[ test_RemoveTree "ascii"
-			(decode "test.d")
-		, test_RemoveTree "utf8"
-			(fromText "\xA1\xA2.d")
-		, test_RemoveTree "iso8859"
-			(decode "\xA1\xA2\xA3.d")
-		]
-	, suite "getWorkingDirectory"
-		[ test_GetWorkingDirectory "ascii"
-			(decode "test.d")
-		, test_GetWorkingDirectory "utf8"
-			(fromText "\xA1\xA2.d")
-		, test_GetWorkingDirectory "iso8859"
-			(decode "\xA1\xA2\xA3.d")
-		]
-	, suite "setWorkingDirectory"
-		[ test_SetWorkingDirectory "ascii"
-			(decode "test.d")
-		, test_SetWorkingDirectory "utf8"
-			(fromText "\xA1\xA2.d")
-		, test_SetWorkingDirectory "iso8859"
-			(decode "\xA1\xA2\xA3.d")
-		]
-	, suite "getHomeDirectory"
-		[ test_GetHomeDirectory "ascii"
-			(decode "/home/test.d")
-		, test_GetHomeDirectory "utf8"
-			(decode "/home/\xA1\xA2.d")
-		, test_GetHomeDirectory "iso8859"
-			(decode "/home/\xA1\xA2\xA3.d")
-		]
-	, suite "getDesktopDirectory"
-		[ test_GetDesktopDirectory "ascii"
-			(decode "/desktop/test.d")
-		, test_GetDesktopDirectory "utf8"
-			(decode "/desktop/\xA1\xA2.d")
-		, test_GetDesktopDirectory "iso8859"
-			(decode "/desktop/\xA1\xA2\xA3.d")
-		]
+suite_Posix :: Suite
+suite_Posix = suite "posix" $
+	(concatMap suiteTests
+		[ suite_IsFile
+		, suite_IsDirectory
+		, suite_Rename
+		, suite_CanonicalizePath
+		, suite_CreateDirectory
+		, suite_CreateTree
+		, suite_RemoveFile
+		, suite_RemoveDirectory
+		, suite_RemoveTree
+		, suite_GetWorkingDirectory
+		, suite_SetWorkingDirectory
+		, suite_GetHomeDirectory
+		, suite_GetDesktopDirectory
+		, suite_GetModified
+		, suite_GetSize
+		, suite_CopyFile
+		, suite_WithFile
+		, suite_WithTextFile
+		, suite_RegressionTests
+		]) ++
+	[ test_ListDirectory
 	, todo "getDocumentsDirectory"
 	, todo "getAppDataDirectory"
 	, todo "getAppCacheDirectory"
 	, todo "getAppConfigDirectory"
-	, suite "getModified"
-		[ test_GetModified "ascii"
-			(decode "test.txt")
-		, test_GetModified "utf8"
-			(fromText "\xA1\xA2.txt")
-		, test_GetModified "iso8859"
-			(decode "\xA1\xA2\xA3.txt")
-		]
-	, suite "getSize"
-		[ test_GetSize "ascii"
-			(decode "test.txt")
-		, test_GetSize "utf8"
-			(fromText "\xA1\xA2.txt")
-		, test_GetSize "iso8859"
-			(decode "\xA1\xA2\xA3.txt")
-		]
-	, suite "copyFile"
-		[ test_CopyFile "ascii"
-			(decode "old_test.txt")
-			(decode "new_test.txt")
-		, test_CopyFile "utf8"
-			(fromText "old_\xA1\xA2.txt")
-			(fromText "new_\xA1\xA2.txt")
-		, test_CopyFile "iso8859"
-			(decode "old_\xA1\xA2\xA3.txt")
-			(decode "new_\xA1\xA2\xA3.txt")
-		]
 	, todo "openFile"
-	, suite "withFile"
-		[ suite "read"
-			[ test_WithFile_Read "ascii"
-				(decode "test.txt")
-			, test_WithFile_Read "utf8"
-				(fromText "\xA1\xA2.txt")
-			, test_WithFile_Read "iso8859"
-				(decode "\xA1\xA2\xA3.txt")
-			]
-		, suite "write"
-			[ test_WithFile_Write "ascii"
-				(decode "test.txt")
-			, test_WithFile_Write "utf8"
-				(fromText "\xA1\xA2.txt")
-			, test_WithFile_Write "iso8859"
-				(decode "\xA1\xA2\xA3.txt")
-			]
-		]
 	, todo "readFile"
 	, todo "writeFile"
 	, todo "appendFile"
 	, todo "openTextFile"
-	, suite "withTextFile"
-		[ test_WithTextFile "ascii"
-			(decode "test.txt")
-		, test_WithTextFile "utf8"
-			(fromText "\xA1\xA2.txt")
-		, test_WithTextFile "iso8859"
-			(decode "\xA1\xA2\xA3.txt")
-		]
 	, todo "readTextFile"
 	, todo "writeTextFile"
 	, todo "appendTextFile"
-	, suite "regression-tests"
-		[ test_ListDirectoryLeaksFds
-		]
 	]
 
-test_IsFile :: Text -> FilePath -> Suite
+suite_IsFile :: Suite
+suite_IsFile = suite "isFile"
+	[ test_IsFile "ascii" (decode "test.txt")
+	, test_IsFile "utf8" (fromText "\xA1\xA2.txt")
+	, test_IsFile "iso8859" (decode "\xA1\xA2\xA3.txt")
+	, test_PipeIsFile "pipe.ascii" (decode "test.txt")
+	, test_PipeIsFile "pipe.utf8" (fromText "\xA1\xA2.txt")
+	, test_PipeIsFile "pipe.iso8859" (decode "\xA1\xA2\xA3.txt")
+	]
+
+suite_IsDirectory :: Suite
+suite_IsDirectory = suite "isDirectory"
+	[ test_IsDirectory "ascii" (decode "test.d")
+	, test_IsDirectory "utf8" (fromText "\xA1\xA2.d")
+	, test_IsDirectory "iso8859" (decode "\xA1\xA2\xA3.d")
+	]
+
+suite_Rename :: Suite
+suite_Rename = suite "rename"
+	[ test_Rename "ascii"
+		(decode "old_test.txt")
+		(decode "new_test.txt")
+	, test_Rename "utf8"
+		(fromText "old_\xA1\xA2.txt")
+		(fromText "new_\xA1\xA2.txt")
+	, test_Rename "iso8859"
+		(decode "old_\xA1\xA2\xA3.txt")
+		(decode "new_\xA1\xA2\xA3.txt")
+	]
+
+suite_CanonicalizePath :: Suite
+suite_CanonicalizePath = suite "canonicalizePath"
+	[ test_CanonicalizePath "ascii"
+		(decode "test-a.txt")
+		(decode "test-b.txt")
+	, test_CanonicalizePath "utf8"
+		(fromText "\xA1\xA2-a.txt")
+		(fromText "\xA1\xA2-b.txt")
+	, test_CanonicalizePath "iso8859"
+		(decode "\xA1\xA2\xA3-a.txt")
+#ifdef CABAL_OS_DARWIN
+		(decode "%A1%A2%A3-b.txt")
+#else
+		(decode "\xA1\xA2\xA3-b.txt")
+#endif
+	, test_CanonicalizePath_TrailingSlash
+	]
+
+suite_CreateDirectory :: Suite
+suite_CreateDirectory = suite "createDirectory"
+	[ test_CreateDirectory "ascii"
+		(decode "test.d")
+	, test_CreateDirectory "utf8"
+		(fromText "\xA1\xA2.d")
+	, test_CreateDirectory "iso8859"
+		(decode "\xA1\xA2\xA3.d")
+	, test_CreateDirectory_FailExists
+	, test_CreateDirectory_SucceedExists
+	, test_CreateDirectory_FailFileExists
+	]
+
+suite_CreateTree :: Suite
+suite_CreateTree = suite "createTree"
+	[ test_CreateTree "ascii"
+		(decode "test.d")
+	, test_CreateTree "ascii-slash"
+		(decode "test.d/")
+	, test_CreateTree "utf8"
+		(fromText "\xA1\xA2.d")
+	, test_CreateTree "utf8-slash"
+		(fromText "\xA1\xA2.d/")
+	, test_CreateTree "iso8859"
+		(decode "\xA1\xA2\xA3.d")
+	, test_CreateTree "iso8859-slash"
+		(decode "\xA1\xA2\xA3.d/")
+	]
+
+suite_RemoveFile :: Suite
+suite_RemoveFile = suite "removeFile"
+	[ test_RemoveFile "ascii"
+		(decode "test.txt")
+	, test_RemoveFile "utf8"
+		(fromText "\xA1\xA2.txt")
+	, test_RemoveFile "iso8859"
+		(decode "\xA1\xA2\xA3.txt")
+	]
+
+suite_RemoveDirectory :: Suite
+suite_RemoveDirectory = suite "removeDirectory"
+	[ test_RemoveDirectory "ascii"
+		(decode "test.d")
+	, test_RemoveDirectory "utf8"
+		(fromText "\xA1\xA2.d")
+	, test_RemoveDirectory "iso8859"
+		(decode "\xA1\xA2\xA3.d")
+	]
+
+suite_RemoveTree :: Suite
+suite_RemoveTree = suite "removeTree"
+	[ test_RemoveTree "ascii"
+		(decode "test.d")
+	, test_RemoveTree "utf8"
+		(fromText "\xA1\xA2.d")
+	, test_RemoveTree "iso8859"
+		(decode "\xA1\xA2\xA3.d")
+	]
+
+suite_GetWorkingDirectory :: Suite
+suite_GetWorkingDirectory = suite "getWorkingDirectory"
+	[ test_GetWorkingDirectory "ascii"
+		(decode "test.d")
+	, test_GetWorkingDirectory "utf8"
+		(fromText "\xA1\xA2.d")
+	, test_GetWorkingDirectory "iso8859"
+		(decode "\xA1\xA2\xA3.d")
+	]
+
+suite_SetWorkingDirectory :: Suite
+suite_SetWorkingDirectory = suite "setWorkingDirectory"
+	[ test_SetWorkingDirectory "ascii"
+		(decode "test.d")
+	, test_SetWorkingDirectory "utf8"
+		(fromText "\xA1\xA2.d")
+	, test_SetWorkingDirectory "iso8859"
+		(decode "\xA1\xA2\xA3.d")
+	]
+
+suite_GetHomeDirectory :: Suite
+suite_GetHomeDirectory = suite "getHomeDirectory"
+	[ test_GetHomeDirectory "ascii"
+		(decode "/home/test.d")
+	, test_GetHomeDirectory "utf8"
+		(decode "/home/\xA1\xA2.d")
+	, test_GetHomeDirectory "iso8859"
+		(decode "/home/\xA1\xA2\xA3.d")
+	]
+
+suite_GetDesktopDirectory :: Suite
+suite_GetDesktopDirectory = suite "getDesktopDirectory"
+	[ test_GetDesktopDirectory "ascii"
+		(decode "/desktop/test.d")
+	, test_GetDesktopDirectory "utf8"
+		(decode "/desktop/\xA1\xA2.d")
+	, test_GetDesktopDirectory "iso8859"
+		(decode "/desktop/\xA1\xA2\xA3.d")
+	]
+
+suite_GetModified :: Suite
+suite_GetModified = suite "getModified"
+	[ test_GetModified "ascii"
+		(decode "test.txt")
+	, test_GetModified "utf8"
+		(fromText "\xA1\xA2.txt")
+	, test_GetModified "iso8859"
+		(decode "\xA1\xA2\xA3.txt")
+	]
+
+suite_GetSize :: Suite
+suite_GetSize = suite "getSize"
+	[ test_GetSize "ascii"
+		(decode "test.txt")
+	, test_GetSize "utf8"
+		(fromText "\xA1\xA2.txt")
+	, test_GetSize "iso8859"
+		(decode "\xA1\xA2\xA3.txt")
+	]
+
+suite_CopyFile :: Suite
+suite_CopyFile = suite "copyFile"
+	[ test_CopyFile "ascii"
+		(decode "old_test.txt")
+		(decode "new_test.txt")
+	, test_CopyFile "utf8"
+		(fromText "old_\xA1\xA2.txt")
+		(fromText "new_\xA1\xA2.txt")
+	, test_CopyFile "iso8859"
+		(decode "old_\xA1\xA2\xA3.txt")
+		(decode "new_\xA1\xA2\xA3.txt")
+	]
+
+suite_WithFile :: Suite
+suite_WithFile = suite "withFile"
+	[ test_WithFile_Read "read.ascii"
+		(decode "test.txt")
+	, test_WithFile_Read "read.utf8"
+		(fromText "\xA1\xA2.txt")
+	, test_WithFile_Read "read.iso8859"
+		(decode "\xA1\xA2\xA3.txt")
+	, test_WithFile_Write "write.ascii"
+		(decode "test.txt")
+	, test_WithFile_Write "write.utf8"
+		(fromText "\xA1\xA2.txt")
+	, test_WithFile_Write "write.iso8859"
+		(decode "\xA1\xA2\xA3.txt")
+	]
+
+suite_WithTextFile :: Suite
+suite_WithTextFile = suite "withTextFile"
+	[ test_WithTextFile "ascii"
+		(decode "test.txt")
+	, test_WithTextFile "utf8"
+		(fromText "\xA1\xA2.txt")
+	, test_WithTextFile "iso8859"
+		(decode "\xA1\xA2\xA3.txt")
+	]
+
+suite_RegressionTests :: Suite
+suite_RegressionTests = suite "regression-tests"
+	[ test_ListDirectoryLeaksFds
+	]
+
+test_IsFile :: String -> FilePath -> Test
 test_IsFile test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	let path = tmp </> file_name
 	
@@ -257,7 +301,7 @@ test_IsFile test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	after <- liftIO $ Filesystem.isFile path
 	$expect after
 
-test_PipeIsFile :: Text -> FilePath -> Suite
+test_PipeIsFile :: String -> FilePath -> Test
 test_PipeIsFile test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	let path = tmp </> file_name
 	
@@ -269,7 +313,7 @@ test_PipeIsFile test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	after <- liftIO $ Filesystem.isFile path
 	$expect after
 
-test_IsDirectory :: Text -> FilePath -> Suite
+test_IsDirectory :: String -> FilePath -> Test
 test_IsDirectory test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
 	let path = tmp </> dir_name
 	
@@ -281,7 +325,7 @@ test_IsDirectory test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
 	after <- liftIO $ Filesystem.isDirectory path
 	$expect after
 
-test_Rename :: Text -> FilePath -> FilePath -> Suite
+test_Rename :: String -> FilePath -> FilePath -> Test
 test_Rename test_name old_name new_name = assertionsWithTemp test_name $ \tmp -> do
 	let old_path = tmp </> old_name
 	let new_path = tmp </> new_name
@@ -300,7 +344,7 @@ test_Rename test_name old_name new_name = assertionsWithTemp test_name $ \tmp ->
 	$expect (not old_after)
 	$expect new_after
 
-test_CopyFile :: Text -> FilePath -> FilePath -> Suite
+test_CopyFile :: String -> FilePath -> FilePath -> Test
 test_CopyFile test_name old_name new_name = assertionsWithTemp test_name $ \tmp -> do
 	let old_path = tmp </> old_name
 	let new_path = tmp </> new_name
@@ -326,7 +370,7 @@ test_CopyFile test_name old_name new_name = assertionsWithTemp test_name $ \tmp 
 		Data.Text.IO.hGetContents
 	$expect (equalLines old_contents new_contents)
 
-test_CanonicalizePath :: Text -> FilePath -> FilePath -> Suite
+test_CanonicalizePath :: String -> FilePath -> FilePath -> Test
 test_CanonicalizePath test_name src_name dst_name = assertionsWithTemp test_name $ \tmp -> do
 	let src_path = tmp </> src_name
 	let subdir = tmp </> "subdir"
@@ -344,7 +388,7 @@ test_CanonicalizePath test_name src_name dst_name = assertionsWithTemp test_name
 	canonicalized <- liftIO $ Filesystem.canonicalizePath src_path
 	$expect $ equal canonicalized dst_path
 
-test_CanonicalizePath_TrailingSlash :: Suite
+test_CanonicalizePath_TrailingSlash :: Test
 test_CanonicalizePath_TrailingSlash = assertionsWithTemp "trailing-slash" $ \tmp -> do
 	let src_path = tmp </> "src"
 	let subdir = tmp </> "subdir"
@@ -362,7 +406,7 @@ test_CanonicalizePath_TrailingSlash = assertionsWithTemp "trailing-slash" $ \tmp
 	canonicalized <- liftIO (Filesystem.canonicalizePath (src_path </> empty))
 	$expect (equal canonicalized (dst_path </> empty))
 
-test_CreateDirectory :: Text -> FilePath -> Suite
+test_CreateDirectory :: String -> FilePath -> Test
 test_CreateDirectory test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
 	let dir_path = tmp </> dir_name
 	
@@ -374,7 +418,7 @@ test_CreateDirectory test_name dir_name = assertionsWithTemp test_name $ \tmp ->
 	
 	$expect exists_after
 
-test_CreateDirectory_FailExists :: Suite
+test_CreateDirectory_FailExists :: Test
 test_CreateDirectory_FailExists = assertionsWithTemp "fail-if-exists" $ \tmp -> do
 	let dir_path = tmp </> "subdir"
 	mkdir_ffi dir_path
@@ -383,14 +427,14 @@ test_CreateDirectory_FailExists = assertionsWithTemp "fail-if-exists" $ \tmp -> 
 		(mkAlreadyExists "createDirectory" dir_path)
 		(Filesystem.createDirectory False dir_path)
 
-test_CreateDirectory_SucceedExists :: Suite
+test_CreateDirectory_SucceedExists :: Test
 test_CreateDirectory_SucceedExists = assertionsWithTemp "succeed-if-exists" $ \tmp -> do
 	let dir_path = tmp </> "subdir"
 	mkdir_ffi dir_path
 	
 	liftIO $ Filesystem.createDirectory True dir_path
 
-test_CreateDirectory_FailFileExists :: Suite
+test_CreateDirectory_FailFileExists :: Test
 test_CreateDirectory_FailFileExists = assertionsWithTemp "fail-if-file-exists" $ \tmp -> do
 	let dir_path = tmp </> "subdir"
 	touch_ffi dir_path ""
@@ -409,7 +453,7 @@ mkAlreadyExists loc path = GHC.IOError Nothing GHC.AlreadyExists loc "File exist
 #endif
 	(Just (CurrentOS.encodeString path))
 
-test_CreateTree :: Text -> FilePath -> Suite
+test_CreateTree :: String -> FilePath -> Test
 test_CreateTree test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
 	let dir_path = tmp </> dir_name
 	let subdir = dir_path </> "subdir"
@@ -426,7 +470,7 @@ test_CreateTree test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
 	$expect dir_exists_after
 	$expect subdir_exists_after
 
-test_ListDirectory :: Suite
+test_ListDirectory :: Test
 test_ListDirectory = assertionsWithTemp "listDirectory" $ \tmp -> do
 	-- OSX replaces non-UTF8 filenames with http-style %XX escapes
 	let paths =
@@ -446,7 +490,7 @@ test_ListDirectory = assertionsWithTemp "listDirectory" $ \tmp -> do
 	names <- liftIO $ Filesystem.listDirectory tmp
 	$expect $ sameItems paths names
 
-test_RemoveFile :: Text -> FilePath -> Suite
+test_RemoveFile :: String -> FilePath -> Test
 test_RemoveFile test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	let file_path = tmp </> file_name
 	
@@ -460,7 +504,7 @@ test_RemoveFile test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	after <- liftIO $ Filesystem.isFile file_path
 	$expect (not after)
 
-test_RemoveDirectory :: Text -> FilePath -> Suite
+test_RemoveDirectory :: String -> FilePath -> Test
 test_RemoveDirectory test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
 	let dir_path = tmp </> dir_name
 	
@@ -474,7 +518,7 @@ test_RemoveDirectory test_name dir_name = assertionsWithTemp test_name $ \tmp ->
 	after <- liftIO $ Filesystem.isDirectory dir_path
 	$expect (not after)
 
-test_RemoveTree :: Text -> FilePath -> Suite
+test_RemoveTree :: String -> FilePath -> Test
 test_RemoveTree test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
 	let dir_path = tmp </> dir_name
 	let subdir = dir_path </> "subdir"
@@ -494,7 +538,7 @@ test_RemoveTree test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
 	$expect (not dir_after)
 	$expect (not subdir_after)
 
-test_GetWorkingDirectory :: Text -> FilePath -> Suite
+test_GetWorkingDirectory :: String -> FilePath -> Test
 test_GetWorkingDirectory test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
 	-- canonicalize to avoid issues with symlinked temp dirs
 	canon_tmp <- liftIO (Filesystem.canonicalizePath tmp)
@@ -506,7 +550,7 @@ test_GetWorkingDirectory test_name dir_name = assertionsWithTemp test_name $ \tm
 	cwd <- liftIO $ Filesystem.getWorkingDirectory
 	$expect (equal cwd dir_path)
 
-test_SetWorkingDirectory :: Text -> FilePath -> Suite
+test_SetWorkingDirectory :: String -> FilePath -> Test
 test_SetWorkingDirectory test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
 	-- canonicalize to avoid issues with symlinked temp dirs
 	canon_tmp <- liftIO (Filesystem.canonicalizePath tmp)
@@ -518,12 +562,12 @@ test_SetWorkingDirectory test_name dir_name = assertionsWithTemp test_name $ \tm
 	cwd <- getcwd_ffi
 	$expect (equal cwd dir_path)
 
-test_GetHomeDirectory :: Text -> FilePath -> Suite
+test_GetHomeDirectory :: String -> FilePath -> Test
 test_GetHomeDirectory test_name dir_name = assertions test_name $ do
 	path <- liftIO $ withEnv "HOME" (Just dir_name) Filesystem.getHomeDirectory
 	$expect (equal path dir_name)
 
-test_GetDesktopDirectory :: Text -> FilePath -> Suite
+test_GetDesktopDirectory :: String -> FilePath -> Test
 test_GetDesktopDirectory test_name dir_name = assertions test_name $ do
 	path <- liftIO $
 		withEnv "XDG_DESKTOP_DIR" (Just dir_name) $
@@ -536,7 +580,7 @@ test_GetDesktopDirectory test_name dir_name = assertions test_name $ do
 		Filesystem.getDesktopDirectory
 	$expect (equal fallback (dir_name </> "Desktop"))
 
-test_GetModified :: Text -> FilePath -> Suite
+test_GetModified :: String -> FilePath -> Test
 test_GetModified test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	let file_path = tmp </> file_name
 	
@@ -546,7 +590,7 @@ test_GetModified test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	mtime <- liftIO $ Filesystem.getModified file_path
 	$expect (equalWithin (diffUTCTime mtime now) 0 2)
 
-test_GetSize :: Text -> FilePath -> Suite
+test_GetSize :: String -> FilePath -> Test
 test_GetSize test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	let file_path = tmp </> file_name
 	let contents = "contents\n"
@@ -556,7 +600,7 @@ test_GetSize test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	size <- liftIO $ Filesystem.getSize file_path
 	$expect (equal size (toInteger (Data.ByteString.length contents)))
 
-test_WithFile_Read :: Text -> FilePath -> Suite
+test_WithFile_Read :: String -> FilePath -> Test
 test_WithFile_Read test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	let file_path = tmp </> file_name
 	let contents = "contents\n"
@@ -568,7 +612,7 @@ test_WithFile_Read test_name file_name = assertionsWithTemp test_name $ \tmp -> 
 		Data.ByteString.hGetContents
 	$expect (equalLines contents read_contents)
 
-test_WithFile_Write :: Text -> FilePath -> Suite
+test_WithFile_Write :: String -> FilePath -> Test
 test_WithFile_Write test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	let file_path = tmp </> file_name
 	let contents = "contents\n"
@@ -582,7 +626,7 @@ test_WithFile_Write test_name file_name = assertionsWithTemp test_name $ \tmp ->
 		Data.ByteString.hGetContents
 	$expect (equalLines contents read_contents)
 
-test_WithTextFile :: Text -> FilePath -> Suite
+test_WithTextFile :: String -> FilePath -> Test
 test_WithTextFile test_name file_name = assertionsWithTemp test_name $ \tmp -> do
 	let file_path = tmp </> file_name
 	let contents = "contents\n"
@@ -594,7 +638,7 @@ test_WithTextFile test_name file_name = assertionsWithTemp test_name $ \tmp -> d
 		Data.Text.IO.hGetContents
 	$expect (equalLines (Data.Text.pack contents) read_contents)
 
-test_ListDirectoryLeaksFds :: Suite
+test_ListDirectoryLeaksFds :: Test
 test_ListDirectoryLeaksFds = assertionsWithTemp "listDirectory-leaks-fds" $ \tmp -> do
 	-- Test that listDirectory doesn't leak file descriptors.
 	let dir_path = tmp </> "subdir"

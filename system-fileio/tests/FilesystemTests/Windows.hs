@@ -5,7 +5,7 @@
 --
 -- See license.txt for details
 module FilesystemTests.Windows
-	( test_Windows
+	( suite_Windows
 	) where
 
 import           Control.Monad
@@ -17,8 +17,8 @@ import           Filesystem.Path.CurrentOS
 
 import           FilesystemTests.Util (assertionsWithTemp, todo)
 
-test_Windows :: Suite
-test_Windows = suite "windows"
+suite_Windows :: Suite
+suite_Windows = suite "windows"
 	[ todo "isFile"
 	, todo "isDirectory"
 	, todo "rename"
@@ -52,7 +52,7 @@ test_Windows = suite "windows"
 	, todo "appendTextFile"
 	]
 
-test_ListDirectory :: Suite
+test_ListDirectory :: Test
 test_ListDirectory = assertionsWithTemp "listDirectory" $ \dir -> do
 	let paths =
 		[ dir </> decode "test.txt"
