@@ -35,7 +35,7 @@ import qualified Prelude as P
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as B8
 import           Data.Char (toUpper, chr, ord)
-import           Data.List (dropWhileEnd, intersperse, intercalate)
+import           Data.List (intersperse, intercalate)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import           System.IO ()
@@ -380,6 +380,9 @@ uncValid p host share = ok host && ok share && all ok (dropWhileEnd P.null (dire
 	ok ""  = False
 	ok c = not (any invalidChar c)
 	invalidChar c = c == '\x00' || c == '\\'
+
+dropWhileEnd :: (a -> Bool) -> [a] -> [a]
+dropWhileEnd p = foldr (\x xs -> if p x && P.null xs then [] else x : xs) []
 
 winSplit :: T.Text -> [FilePath]
 winSplit = map winFromText . filter (not . T.null) . textSplitBy (== ';')
