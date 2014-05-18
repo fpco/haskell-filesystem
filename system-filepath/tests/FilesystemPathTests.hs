@@ -21,54 +21,51 @@ main :: IO ()
 main = Test.Chell.defaultMain [tests]
 
 tests :: Suite
-tests = suite "tests"
+tests = suite "tests" $
 	-- Basic properties
-	test_Empty
-	test_Root
-	test_Directory
-	test_Parent
-	test_Filename
-	test_Dirname
-	test_Basename
-	test_Absolute
-	test_Relative
+	[ test_Empty
+	, test_Root
+	, test_Directory
+	, test_Parent
+	, test_Filename
+	, test_Dirname
+	, test_Basename
+	, test_Absolute
+	, test_Relative
 	
-	test_LeadingDotSpecialCases
+	, test_LeadingDotSpecialCases
 	
 	-- Basic operations
-	test_Append
-	test_CommonPrefix
-	test_StripPrefix
-	(property "stripPrefix" prop_StripPrefix)
-	test_SplitExtension
-	test_Collapse
-	test_SplitDirectories
-	test_InvalidUtf8InDirectoryComponent
-	test_Utf8CharInGhcEscapeArea
+	, test_Append
+	, test_CommonPrefix
+	, test_StripPrefix
+	, property "stripPrefix" prop_StripPrefix
+	, test_SplitExtension
+	, test_Collapse
+	, test_SplitDirectories
+	, test_InvalidUtf8InDirectoryComponent
+	, test_Utf8CharInGhcEscapeArea
 	
-	(suite "to-from-bytes"
-		(test_Identity "posix" posix posixPaths)
-		(test_Identity "windows" windows windowsPaths)
-		test_MixedValidityToBytes
-		:: Suite)
-	
-	(suite "to-from-text"
-		test_ToText
-		test_FromText
-		:: Suite)
-	
-	(suite "validity"
-		(property "posix" (forAll posixPaths (valid posix)))
-		(property "windows" (forAll windowsPaths (valid windows)))
-		:: Suite)
-	
-	test_SplitSearchPath
-	test_SplitSearchPathString
-	test_Parsing
-	test_EncodeString
-	test_DecodeString
-	test_EqualsIgnoresPosixEncoding
-	test_ShowRules
+	, test_SplitSearchPath
+	, test_Parsing
+	, test_EqualsIgnoresPosixEncoding
+	, test_ShowRules
+	] ++ suiteTests suite_EncodeString
+	++ suiteTests suite_DecodeString
+	++ suiteTests suite_SplitSearchPathString
+	++ suiteTests (suite "to-from-bytes"
+		[ test_Identity "posix" posix posixPaths
+		, test_Identity "windows" windows windowsPaths
+		, test_MixedValidityToBytes
+		])
+	++ suiteTests (suite "to-from-text"
+		[ test_ToText
+		, test_FromText
+		])
+	++ suiteTests (suite "validity"
+		[ property "posix" (forAll posixPaths (valid posix))
+		, property "windows" (forAll windowsPaths (valid windows))
+		])
 
 test_Empty :: Test
 test_Empty = assertions "empty" $ do
@@ -434,14 +431,15 @@ test_SplitSearchPath = assertions "splitSearchPath" $ do
 	$expect $ equal (w "a;b;c") ["a", "b", "c"]
 	$expect $ equal (w "a;;b;c") ["a", "b", "c"]
 
-test_SplitSearchPathString :: Suite
-test_SplitSearchPathString = suite "splitSearchPathString"
-	test_SplitSearchPathString_Posix
-	test_SplitSearchPathString_Posix_Ghc702
-	test_SplitSearchPathString_Posix_Ghc704
-	test_SplitSearchPathString_Darwin
-	test_SplitSearchPathString_Darwin_Ghc702
-	test_SplitSearchPathString_Win32
+suite_SplitSearchPathString :: Suite
+suite_SplitSearchPathString = suite "splitSearchPathString"
+	[ test_SplitSearchPathString_Posix
+	, test_SplitSearchPathString_Posix_Ghc702
+	, test_SplitSearchPathString_Posix_Ghc704
+	, test_SplitSearchPathString_Darwin
+	, test_SplitSearchPathString_Darwin_Ghc702
+	, test_SplitSearchPathString_Win32
+	]
 
 test_SplitSearchPathString_Posix :: Test
 test_SplitSearchPathString_Posix = assertions "posix" $ do
@@ -473,12 +471,13 @@ test_SplitSearchPathString_Win32 = assertions "win32" $ do
 	let split x = map (toText windows) (splitSearchPathString windows x)
 	$expect $ equal (split "a;;\xA1\xA2") [Right "a", Right "\xA1\xA2"]
 
-test_EncodeString :: Suite
-test_EncodeString = suite "encodeString"
-	test_EncodeString_Posix
-	test_EncodeString_Posix_Ghc702
-	test_EncodeString_Posix_Ghc704
-	test_EncodeString_Win32
+suite_EncodeString :: Suite
+suite_EncodeString = suite "encodeString"
+	[ test_EncodeString_Posix
+	, test_EncodeString_Posix_Ghc702
+	, test_EncodeString_Posix_Ghc704
+	, test_EncodeString_Win32
+	]
 
 test_EncodeString_Posix :: Test
 test_EncodeString_Posix = assertions "posix" $ do
@@ -512,14 +511,15 @@ test_EncodeString_Win32 = assertions "windows" $ do
 	$expect $ equal (enc (fromString "test\xA1\xA2")) "test\xA1\xA2"
 	$expect $ equal (enc (fromText windows "test\xA1\xA2")) "test\xA1\xA2"
 
-test_DecodeString :: Suite
-test_DecodeString = suite "decodeString"
-	test_DecodeString_Posix
-	test_DecodeString_Posix_Ghc702
-	test_DecodeString_Posix_Ghc704
-	test_DecodeString_Darwin
-	test_DecodeString_Darwin_Ghc702
-	test_DecodeString_Win32
+suite_DecodeString :: Suite
+suite_DecodeString = suite "decodeString"
+	[ test_DecodeString_Posix
+	, test_DecodeString_Posix_Ghc702
+	, test_DecodeString_Posix_Ghc704
+	, test_DecodeString_Darwin
+	, test_DecodeString_Darwin_Ghc702
+	, test_DecodeString_Win32
+	]
 
 test_DecodeString_Posix :: Test
 test_DecodeString_Posix = assertions "posix" $ do

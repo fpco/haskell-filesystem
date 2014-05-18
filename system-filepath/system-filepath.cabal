@@ -7,20 +7,11 @@ author: John Millikin <jmillikin@gmail.com>
 maintainer: John Millikin <jmillikin@gmail.com>
 copyright: John Millikin 2010-2012
 build-type: Custom
-cabal-version: >= 1.6
+cabal-version: >= 1.8
 category: System
 stability: experimental
 homepage: https://john-millikin.com/software/haskell-filesystem/
 bug-reports: mailto:jmillikin@gmail.com
-
-extra-source-files:
-  scripts/common.bash
-  scripts/run-benchmarks
-  scripts/run-coverage
-  scripts/run-tests
-  --
-  tests/system-filepath-tests.cabal
-  tests/Tests.hs
 
 source-repository head
   type: git
@@ -54,3 +45,20 @@ library
 
   other-modules:
     Filesystem.Path.Internal
+
+test-suite filesystem_path_tests
+  type: exitcode-stdio-1.0
+  main-is: FilesystemPathTests.hs
+
+  ghc-options: -Wall -O2
+  cc-options: -Wall
+  hs-source-dirs: tests
+
+  build-depends:
+      base > 4.0 && < 5.0
+    , bytestring
+    , chell >= 0.4 && < 0.5
+    , chell-quickcheck >= 0.2 && < 0.3
+    , QuickCheck
+    , system-filepath
+    , text
