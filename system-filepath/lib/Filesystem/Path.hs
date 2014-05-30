@@ -153,6 +153,7 @@ absolute p = case pathRoot p of
 	Just RootWindowsVolume{} -> True
 	Just RootWindowsCurrentVolume -> False
 	Just RootWindowsUnc{} -> True
+	Just RootWindowsDoubleQMark -> True
 	Nothing -> False
 
 -- | Test whether a path is relative.
@@ -176,6 +177,7 @@ append x y = cased where
 			Just RootWindowsVolume{} -> y { pathRoot = pathRoot x }
 			_ -> y
 		Just RootWindowsUnc{} -> y
+		Just RootWindowsDoubleQMark -> y
 		Nothing -> xy
 	xy = y
 		{ pathRoot = pathRoot x

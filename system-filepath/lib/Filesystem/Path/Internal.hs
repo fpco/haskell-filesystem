@@ -41,6 +41,7 @@ data Root
 	| RootWindowsVolume Char Bool
 	| RootWindowsCurrentVolume
 	| RootWindowsUnc String String Bool
+	| RootWindowsDoubleQMark
 	deriving (Eq, Ord, Data, Typeable, Show)
 
 data FilePath = FilePath
@@ -95,6 +96,7 @@ rootChunk r = flip (maybe "") r $ \r' -> case r' of
 	RootWindowsCurrentVolume -> "\\"
 	RootWindowsUnc host share False -> "\\\\" ++ host ++ "\\" ++ share
 	RootWindowsUnc host share True -> "\\\\?\\UNC\\" ++ host ++ "\\" ++ share
+	RootWindowsDoubleQMark -> "\\??\\"
 
 rootText :: Maybe Root -> T.Text
 rootText = T.pack . rootChunk

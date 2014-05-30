@@ -304,7 +304,9 @@ winFromText text = if T.null text then empty else path where
 				Nothing -> case T.stripPrefix (T.pack "\\\\") text of
 					Just stripped -> parseUncRoot stripped False
 					Nothing -> parseDosRoot text False
-		else parseDosRoot text False
+		else case T.stripPrefix (T.pack "\\??\\") text of
+			Just stripped -> parseDoubleQmark stripped
+			Nothing -> parseDosRoot text False
 	
 	(directories, filename)
 		| P.null pastRoot = ([], Nothing)
@@ -339,6 +341,10 @@ parseDosRoot text extended = parsed where
 	
 	parseDrive c = RootWindowsVolume (toUpper (T.head c)) extended
 
+parseDoubleQmark :: T.Text -> (Maybe Root, [T.Text])
+parseDoubleQmark text = (Just RootWindowsDoubleQMark, components) where
+	components = textSplitBy (\c -> c == '/' || c == '\\') text
+
 parseUncRoot :: T.Text -> Bool -> (Maybe Root, [T.Text])
 parseUncRoot text extended = parsed where
 	(host, pastHost) = T.break (== '\\') text
@@ -354,6 +360,8 @@ winValid p = case pathRoot p of
 	Just RootWindowsCurrentVolume -> dosValid p
 	Just (RootWindowsVolume v _) -> elem v ['A'..'Z'] && dosValid p
 	Just (RootWindowsUnc host share _) -> uncValid p host share
+	-- don't even try to validate \??\ paths
+	Just RootWindowsDoubleQMark -> True
 	Just RootPosix -> False
 
 dosValid :: FilePath -> Bool
