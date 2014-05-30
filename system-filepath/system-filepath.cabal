@@ -1,5 +1,5 @@
 name: system-filepath
-version: 0.4.11
+version: 0.4.12
 synopsis: High-level, byte-based file and directory path manipulations
 license: MIT
 license-file: license.txt
@@ -20,7 +20,7 @@ source-repository head
 source-repository this
   type: git
   location: https://john-millikin.com/code/haskell-filesystem/
-  tag: system-filepath_0.4.11
+  tag: system-filepath_0.4.12
 
 library
   ghc-options: -Wall -O2
