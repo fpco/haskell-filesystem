@@ -25,10 +25,6 @@ extra-source-files:
   lib/hssystemfileio-unix.h
   lib/hssystemfileio-win32.h
   --
-  scripts/common.bash
-  scripts/run-coverage
-  scripts/run-tests
-  --
   tests/system-fileio-tests.cabal
   tests/FilesystemTests.hs
   tests/FilesystemTests/Posix.hs
