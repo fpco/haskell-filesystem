@@ -25,7 +25,6 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import           Data.Text.Encoding.Error (UnicodeException)
 import           Data.Typeable (Typeable)
-import           System.IO.Unsafe (unsafePerformIO)
 
 -------------------------------------------------------------------------------
 -- File Paths
@@ -236,11 +235,6 @@ parseFilename filename = parsed where
 		joined -> Just joined
 
 maybeDecodeUtf8 :: B.ByteString -> Maybe T.Text
-maybeDecodeUtf8 = excToMaybe . TE.decodeUtf8 where
-	excToMaybe :: a -> Maybe a
-	excToMaybe x = unsafePerformIO $ Exc.catch
-		(fmap Just (Exc.evaluate x))
-		unicodeError
-	
-	unicodeError :: UnicodeException -> IO (Maybe a)
-	unicodeError _ = return Nothing
+maybeDecodeUtf8 bytes = case TE.decodeUtf8' bytes of
+	Left _ -> Nothing
+	Right text -> Just text
