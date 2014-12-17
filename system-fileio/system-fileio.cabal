@@ -13,7 +13,6 @@ bug-reports: https://github.com/fpco/haskell-filesystem/issues
 
 synopsis: Consistent filesystem interaction across GHC versions
 description: Hackage documentation generation is not reliable. For up to date documentation, please see: <http://www.stackage.org/package/system-fileio>.
-description:
 
 extra-source-files:
   README.md
