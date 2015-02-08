@@ -301,18 +301,11 @@ splitDirectories :: FilePath -> [FilePath]
 splitDirectories p = rootName ++ dirNames ++ fileName where
 	rootName = case pathRoot p of
 		Nothing -> []
-		r -> [asFile (rootChunk r)]
-	dirNames = map asFile (pathDirectories p)
+		r -> [empty { pathRoot = r }]
+	dirNames = map (\d -> empty { pathDirectories = [d] }) (pathDirectories p)
 	fileName = case (pathBasename p, pathExtensions p) of
 		(Nothing, []) -> []
 		_ -> [filename p]
-	
-	asFile :: Chunk -> FilePath
-	asFile c = case parseFilename c of
-		(base, exts) -> empty
-			{ pathBasename = base
-			, pathExtensions = exts
-			}
 
 -------------------------------------------------------------------------------
 -- Extensions

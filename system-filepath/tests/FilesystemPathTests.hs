@@ -353,18 +353,19 @@ test_Collapse = assertions "collapse" $ do
 
 test_SplitDirectories :: Test
 test_SplitDirectories = assertions "splitDirectories" $ do
-	let splitDirectories x = map toChar8 (P.splitDirectories (fromChar8 x))
-	
-	$expect $ equal (splitDirectories "") []
-	$expect $ equal (splitDirectories "/") ["/"]
-	$expect $ equal (splitDirectories "/a") ["/", "a"]
-	$expect $ equal (splitDirectories "/ab/cd") ["/", "ab", "cd"]
-	$expect $ equal (splitDirectories "/ab/cd/") ["/", "ab", "cd"]
-	$expect $ equal (splitDirectories "ab/cd") ["ab", "cd"]
-	$expect $ equal (splitDirectories "ab/cd/") ["ab", "cd"]
-	$expect $ equal (splitDirectories "ab/cd.txt") ["ab", "cd.txt"]
-	$expect $ equal (splitDirectories "ab/cd/.txt") ["ab", "cd", ".txt"]
-	$expect $ equal (splitDirectories "ab/./cd") ["ab", ".", "cd"]
+	let splitDirectories x = P.splitDirectories (fromChar8 x)
+	    fromChar8' = map fromChar8
+
+	$expect $ equal (splitDirectories "") (fromChar8' [])
+	$expect $ equal (splitDirectories "/") (fromChar8' ["/"])
+	$expect $ equal (splitDirectories "/a") (fromChar8' ["/", "a"])
+	$expect $ equal (splitDirectories "/ab/cd") (fromChar8' ["/", "ab/", "cd"])
+	$expect $ equal (splitDirectories "/ab/cd/") (fromChar8' ["/", "ab/", "cd/"])
+	$expect $ equal (splitDirectories "ab/cd") (fromChar8' ["ab/", "cd"])
+	$expect $ equal (splitDirectories "ab/cd/") (fromChar8' ["ab/", "cd/"])
+	$expect $ equal (splitDirectories "ab/cd.txt") (fromChar8' ["ab/", "cd.txt"])
+	$expect $ equal (splitDirectories "ab/cd/.txt") (fromChar8' ["ab/", "cd/", ".txt"])
+	$expect $ equal (splitDirectories "ab/./cd") (fromChar8' ["ab/", ".", "cd"])
 
 test_InvalidUtf8InDirectoryComponent :: Test
 test_InvalidUtf8InDirectoryComponent = assertions "invalid-utf8-in-directory-component" $ do
