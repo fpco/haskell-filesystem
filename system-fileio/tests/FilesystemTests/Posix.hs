@@ -254,8 +254,16 @@ suite_CopyFile = suite "copyFile"
 		(fromText "old_\xA1\xA2.txt")
 		(fromText "new_\xA1\xA2.txt")
 	, test_CopyFile "iso8859"
+#ifdef CABAL_OS_DARWIN
+		(decode "old_%A1%A2%A3.txt")
+#else
 		(decode "old_\xA1\xA2\xA3.txt")
+#endif
+#ifdef CABAL_OS_DARWIN
+		(decode "new_%A1%A2%A3.txt")
+#else
 		(decode "new_\xA1\xA2\xA3.txt")
+#endif
 	]
 
 suite_WithFile :: Suite
@@ -265,7 +273,11 @@ suite_WithFile = suite "withFile"
 	, test_WithFile_Read "read.utf8"
 		(fromText "\xA1\xA2.txt")
 	, test_WithFile_Read "read.iso8859"
+#ifdef CABAL_OS_DARWIN
+		(decode "%A1%A2%A3.txt")
+#else
 		(decode "\xA1\xA2\xA3.txt")
+#endif
 	, test_WithFile_Write "write.ascii"
 		(decode "test.txt")
 	, test_WithFile_Write "write.utf8"
@@ -281,7 +293,11 @@ suite_WithTextFile = suite "withTextFile"
 	, test_WithTextFile "utf8"
 		(fromText "\xA1\xA2.txt")
 	, test_WithTextFile "iso8859"
+#ifdef CABAL_OS_DARWIN
+		(decode "%A1%A2%A3.txt")
+#else
 		(decode "\xA1\xA2\xA3.txt")
+#endif
 	]
 
 suite_RegressionTests :: Suite
