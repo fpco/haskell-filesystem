@@ -898,15 +898,17 @@ iomodeFlags mode = cased .|. commonFlags where
 
 #ifdef CABAL_OS_WINDOWS
 
+-- Only for accessing file or directory metadata.
+-- See issue #8.
 withHANDLE :: FilePath -> (Win32.HANDLE -> IO a) -> IO a
 withHANDLE path = Exc.bracket open close where
 	open = Win32.createFile
 		(encodeString path)
-		Win32.gENERIC_READ
+		0
 		(Win32.fILE_SHARE_READ .|. Win32.fILE_SHARE_WRITE)
 		Nothing
 		Win32.oPEN_EXISTING
-		0
+		Win32.fILE_FLAG_BACKUP_SEMANTICS
 		Nothing
 	close = Win32.closeHandle
 
