@@ -107,6 +107,16 @@ directoryChunks path = pathDirectories path ++ [filenameChunk path]
 -- Rules
 -------------------------------------------------------------------------------
 
+-- | The type of @platformFormat@ for 'Rules' is conditionally selected at 
+-- compilation time. As such it is only intended for direct use with external OS
+-- functions and code that expects @platformFormat@ to be stable across platforms
+-- may fail to subsequently compile on a differing platform.
+--
+-- For example: on Windows or OSX @platformFormat@ will be 'T.Text',
+-- and on Linux it will be 'B.ByteString'.
+--
+-- If portability is a concern, restrict usage to functions which do not expose
+-- @platformFormat@ directly.
 data Rules platformFormat = Rules
 	{ rulesName :: T.Text
 	
@@ -117,6 +127,10 @@ data Rules platformFormat = Rules
 	
 	-- | Split a search path, such as @$PATH@ or @$PYTHONPATH@, into
 	-- a list of 'FilePath's.
+	--
+	-- Note: The type of @platformTextFormat@ can change depending upon the
+	-- underlying compilation platform. Consider using 'splitSearchPathString'
+	-- instead. See 'Rules' for more information.
 	, splitSearchPath :: platformFormat -> [FilePath]
 	
 	-- | splitSearchPathString is like 'splitSearchPath', but takes a string
@@ -156,12 +170,20 @@ data Rules platformFormat = Rules
 	-- | Convert a 'FilePath' to a platform&#x2010;specific format,
 	-- suitable for use with external OS functions.
 	--
+	-- Note: The type of @platformTextFormat@ can change depending upon the
+	-- underlying compilation platform. Consider using 'toText' or
+	-- 'encodeString' instead. See 'Rules' for more information.
+        --
 	-- Since: 0.3
 	, encode :: FilePath -> platformFormat
 	
 	-- | Convert a 'FilePath' from a platform&#x2010;specific format,
 	-- suitable for use with external OS functions.
 	--
+	-- Note: The type of @platformTextFormat@ can change depending upon the
+	-- underlying compilation platform. Consider using 'fromText' or
+	-- 'decodeString' instead. See 'Rules' for more information.
+        --
 	-- Since: 0.3
 	, decode :: platformFormat -> FilePath
 	

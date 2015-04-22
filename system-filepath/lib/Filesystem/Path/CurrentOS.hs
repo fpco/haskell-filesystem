@@ -127,12 +127,20 @@ splitSearchPathString = R.splitSearchPathString currentOS
 -- | Convert a 'F.FilePath' to a platform&#x2010;specific format, suitable
 -- for use with external OS functions.
 --
+-- Note: The type @platformTextFormat@ can change depending upon the underlying
+-- compilation platform. Consider using 'toText' or 'encodeString' instead.
+-- See 'Filesystem.Path.Rules.Rules' for more information.
+--
 -- Since: 0.3
 encode :: F.FilePath -> PLATFORM_PATH_FORMAT
 encode = R.encode currentOS
 
 -- | Convert a 'F.FilePath' from a platform&#x2010;specific format, suitable
 -- for use with external OS functions.
+--
+-- Note: The type @platformTextFormat@ can change depending upon the underlying
+-- compilation platform. Consider using 'fromText' or 'decodeString' instead.
+-- See 'Filesystem.Path.Rules.Rules' for more information.
 --
 -- Since: 0.3
 decode :: PLATFORM_PATH_FORMAT -> F.FilePath
