@@ -43,7 +43,7 @@ library
   other-modules:
     Filesystem.Path.Internal
 
-test-suite filesystem_path_tests
+test-suite suite
   type: exitcode-stdio-1.0
   main-is: FilesystemPathTests.hs
 
