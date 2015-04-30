@@ -11,17 +11,45 @@
 --
 module Filesystem.Path.Internal where
 
-import           Control.DeepSeq (NFData, rnf)
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Char8 as B8
-import           Data.Char (chr, ord)
-import           Data.Data (Data)
-import           Data.List (intersperse)
-import           Data.Ord (comparing)
+import Control.DeepSeq ( NFData, rnf )
+import qualified Data.ByteString as B ( ByteString )
+import qualified Data.ByteString.Char8 as B8 ( concat, singleton )
+import Data.Char ( chr, ord )
+import Data.Data ( Data )
+import Data.List ( intersperse )
+import Data.Ord ( comparing )
 import qualified Data.Text as T
+    ( split, unpack, Text, singleton, pack )
 import qualified Data.Text.Encoding as TE
-import           Data.Typeable (Typeable)
-import           Prelude hiding (FilePath)
+    ( encodeUtf8, decodeUtf8' )
+import Data.Typeable ( Typeable )
+import Prelude
+    ( (++),
+      seq,
+      concat,
+      fst,
+      map,
+      Eq((==)),
+      Functor(fmap),
+      Num((-)),
+      Ord((<=), (>=), compare),
+      Show,
+      Bool(..),
+      Char,
+      Ordering(EQ),
+      Either(Left, Right),
+      String,
+      any,
+      Maybe(..),
+      id,
+      (&&),
+      tail,
+      span,
+      null,
+      break,
+      flip,
+      (.),
+      maybe )
 
 -------------------------------------------------------------------------------
 -- File Paths

@@ -30,15 +30,82 @@ module Filesystem.Path.Rules
        ) where
 
 import qualified Data.ByteString as B
-import qualified Data.ByteString.Char8 as B8
-import           Data.Char (toUpper, chr, ord)
-import           Data.List (intersperse, intercalate)
+    ( ByteString, split, null, concat )
+import qualified Data.ByteString.Char8 as B8 ( unpack, pack )
+import Data.Char ( toUpper, chr, ord )
+import Data.List ( intersperse, intercalate )
 import qualified Data.Text as T
+    ( unpack,
+      Text,
+      toCaseFold,
+      take,
+      stripPrefix,
+      pack,
+      null,
+      length,
+      isPrefixOf,
+      head,
+      drop,
+      concat,
+      break,
+      append,
+      any )
 import qualified Data.Text.Encoding as TE
-import           Filesystem.Path.Internal
-import qualified Prelude as P
-import           Prelude hiding (FilePath, null)
-import           System.IO ()
+    ( encodeUtf8, decodeUtf8 )
+import Filesystem.Path.Internal
+    ( Root(..),
+      FilePath(FilePath, pathExtensions, pathRoot),
+      Chunk,
+      unescapeBytes',
+      unescape',
+      unescape,
+      textSplitBy,
+      splitBy,
+      rootText,
+      rootChunk,
+      parseFilename,
+      maybeDecodeUtf8,
+      escape,
+      empty,
+      dots,
+      dot,
+      directoryChunks )
+import qualified Prelude as P ( concat, null )
+import Prelude
+    ( (++),
+      foldr,
+      filter,
+      fst,
+      snd,
+      otherwise,
+      map,
+      ($),
+      Eq((==)),
+      Num((+), (-)),
+      Ord((<=), (>), (>=)),
+      Show(showsPrec),
+      Bool(..),
+      Either(..),
+      String,
+      any,
+      not,
+      Maybe(..),
+      (&&),
+      (||),
+      tail,
+      notElem,
+      last,
+      init,
+      head,
+      elem,
+      and,
+      all,
+      shows,
+      showString,
+      showParen,
+      flip,
+      (.) )
+import System.IO ()
 
 -------------------------------------------------------------------------------
 -- Rules

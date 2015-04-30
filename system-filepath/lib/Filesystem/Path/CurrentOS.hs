@@ -70,19 +70,53 @@ module Filesystem.Path.CurrentOS
        , splitExtensions
        ) where
 
-import qualified Data.ByteString as B
-import           Data.List (foldl')
-import           Data.Maybe (isJust, isNothing)
-import qualified Data.Monoid as M
-import qualified Data.String as S
-import qualified Data.Text as T
-import           Filesystem.Path.Internal
-  hiding (toText, fromText, encode, decode, encodeString,
-          decodeString, valid, splitSearchPath, splitSearchPathString)
-import qualified Filesystem.Path.Internal as F
+import qualified Data.ByteString as B ( ByteString )
+import Data.List ( foldl' )
+import Data.Maybe ( isJust, isNothing )
+import qualified Data.Monoid as M ( Monoid(..) )
+import qualified Data.String as S ( IsString(..) )
+import qualified Data.Text as T ( Text, pack )
+import Filesystem.Path.Internal
+    ( Root(RootPosix, RootWindowsCurrentVolume, RootWindowsDoubleQMark,
+           RootWindowsUnc, RootWindowsVolume),
+      FilePath(..),
+      unescape',
+      parseFilename,
+      filenameChunk,
+      escape,
+      empty,
+      dots,
+      dot )
+import qualified Filesystem.Path.Internal as F ( FilePath )
 import qualified Filesystem.Path.Rules as R
-import qualified Prelude as Prelude
-import           Prelude hiding (FilePath, concat, null)
+    ( posix_ghc704, Rules(..) )
+import qualified Prelude as Prelude ( null )
+import Prelude
+    ( (++),
+      otherwise,
+      map,
+      ($),
+      Eq(..),
+      Monad(return),
+      Ord((>)),
+      Show(showsPrec),
+      Bool(..),
+      Either,
+      String,
+      Maybe(..),
+      id,
+      (||),
+      reverse,
+      last,
+      init,
+      foldr1,
+      elem,
+      dropWhile,
+      shows,
+      showString,
+      showParen,
+      (.),
+      either )
 
 #if defined(__HADDOCK__)
 #  define PLATFORM_PATH_FORMAT platformTextFormat
