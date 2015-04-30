@@ -14,9 +14,7 @@ import           Test.Chell.QuickCheck
 import           Test.QuickCheck hiding (property)
 
 import qualified Filesystem.Path as P
-import           Filesystem.Path (FilePath, (</>), relative, absolute, basename, empty)
-import           Filesystem.Path.CurrentOS ()
-import           Filesystem.Path.Rules
+import           Filesystem.Path
 
 main :: IO ()
 main = Test.Chell.defaultMain [tests]
@@ -60,8 +58,8 @@ tests =
   suiteTests (suite "to-from-text" [test_ToText,test_FromText]) ++
   suiteTests
     (suite "validity"
-           [property "posix" (forAll posixPaths (valid posix))
-           ,property "windows" (forAll windowsPaths (valid windows))
+           [property "posix" (forAll posixPaths (validOn posix))
+           ,property "windows" (forAll windowsPaths (validOn windows))
            ,test_UncValidity])
 
 test_Empty :: Test
@@ -305,56 +303,63 @@ test_LeadingDotSpecialCases =
              ("\\foo\\",".foo",["txt"])
 
 test_Identity :: String -> Rules a -> Gen FilePath -> Test
-test_Identity name r gen = property name $ forAll gen $ \p -> p == decode r (encode r p)
+test_Identity name r gen =
+  property name $
+  forAll gen $
+  \p ->
+    p ==
+    decodeOn r (encodeOn r p)
 
 test_MixedValidityToBytes :: Test
 test_MixedValidityToBytes =
   assertions "mixed-validity-to-bytes" $
   do let p = fromChar8
      $expect $
-       equal (encode posix (p "\xB1.\xDD\xAA"))
+       equal (encodeOn posix (p "\xB1.\xDD\xAA"))
              (B8.pack "\xB1.\xDD\xAA")
      $expect $
-       equal (encode posix
-                     (p "\xB1.\xDD\xAA" </>
-                      p "foo"))
+       equal (encodeOn posix
+                       (p "\xB1.\xDD\xAA" </>
+                        p "foo"))
              (B8.pack "\xB1.\xDD\xAA/foo")
 
 test_ToText :: Test
 test_ToText =
-  assertions "toText" $
+  assertions "toTextOn" $
   do let p = fromChar8
      $expect $
-       equal (toText posix (p ""))
+       equal (toTextOn posix (p ""))
              (Right (T.pack ""))
      $expect $
-       equal (toText posix (p "ascii"))
+       equal (toTextOn posix (p "ascii"))
              (Right (T.pack "ascii"))
      $expect $
-       equal (toText posix (p "\xF0\x9D\x84\x9E"))
+       equal (toTextOn posix (p "\xF0\x9D\x84\x9E"))
              (Right (T.pack "\x1D11E"))
      $expect $
-       equal (toText posix (p "\xED\xA0\x80"))
+       equal (toTextOn posix (p "\xED\xA0\x80"))
              (Left (T.pack "\xED\xA0\x80"))
      $expect $
-       equal (toText posix (p "\xF0\x9D\x84\x9E/\xED\xA0\x80"))
+       equal (toTextOn posix (p "\xF0\x9D\x84\x9E/\xED\xA0\x80"))
              (Left (T.pack "\x1D11E/\xED\xA0\x80"))
      $expect $
-       equal (toText posix (p "\xED.\xF0\x9D\x84\x9E.\xA0\x80"))
+       equal (toTextOn posix (p "\xED.\xF0\x9D\x84\x9E.\xA0\x80"))
              (Left (T.pack "\xED.\x1D11E.\xA0\x80"))
      $expect $
-       equal (toText posix (p "\xB1.\xDD\xAA"))
+       equal (toTextOn posix (p "\xB1.\xDD\xAA"))
              (Left (T.pack "\xB1.\x76A"))
      $expect $
-       equal (toText posix
-                     (p "\xB1.\xDD\xAA" </>
-                      p "foo"))
+       equal (toTextOn posix
+                       (p "\xB1.\xDD\xAA" </>
+                        p "foo"))
              (Left (T.pack "\xB1.\x76A/foo"))
 
 test_FromText :: Test
 test_FromText =
-  assertions "fromText" $
-  do let pt x = fromText posix (T.pack x)
+  assertions "fromTextOn" $
+  do let pt x =
+           fromTextOn posix
+                      (T.pack x)
      let p = fromChar8
      $expect $
        equal (pt "")
@@ -602,22 +607,22 @@ test_InvalidUtf8InDirectoryComponent :: Test
 test_InvalidUtf8InDirectoryComponent =
   assertions "invalid-utf8-in-directory-component" $
   do $expect $
-       equal (toText posix (fromChar8 "/\218\130.\137\141"))
+       equal (toTextOn posix (fromChar8 "/\218\130.\137\141"))
              (Left (T.pack "/\1666.\137\141"))
      $expect $
-       equal (encode posix (fromChar8 "/\218\130.\137\141"))
+       equal (encodeOn posix (fromChar8 "/\218\130.\137\141"))
              (B8.pack "/\218\130.\137\141")
      $expect $
-       equal (toText posix (fromChar8 "/\218\130.\137\141/"))
+       equal (toTextOn posix (fromChar8 "/\218\130.\137\141/"))
              (Left (T.pack "/\1666.\137\141/"))
      $expect $
-       equal (encode posix (fromChar8 "/\218\130.\137\141/"))
+       equal (encodeOn posix (fromChar8 "/\218\130.\137\141/"))
              (B8.pack "/\218\130.\137\141/")
      $expect $
-       equal (toText posix (fromChar8 "/\218\130.\137\141//baz"))
+       equal (toTextOn posix (fromChar8 "/\218\130.\137\141//baz"))
              (Left (T.pack "/\1666.\137\141/baz"))
      $expect $
-       equal (encode posix (fromChar8 "/\218\130.\137\141//baz"))
+       equal (encodeOn posix (fromChar8 "/\218\130.\137\141//baz"))
              (B8.pack "/\218\130.\137\141/baz")
 
 test_Utf8CharInGhcEscapeArea :: Test
@@ -626,12 +631,12 @@ test_Utf8CharInGhcEscapeArea =
   do let chars = "/a/\238\189\178/b"
      let path = fromChar8 chars
      $expect (equal (toChar8 path) chars)
-     $expect (equal (toText posix path)
+     $expect (equal (toTextOn posix path)
                     (Right (T.pack "/a/\61298/b")))
      let chars' = "/a/\xEE\xBC\x80/b"
      let path' = fromChar8 chars'
      $expect (equal (toChar8 path') chars')
-     $expect (equal (toText posix path')
+     $expect (equal (toTextOn posix path')
                     (Right (T.pack "/a/\61184/b")))
 
 test_Parsing :: Test
@@ -727,33 +732,33 @@ test_Parsing =
 test_UncValidity :: Test
 test_UncValidity =
   assertions "unc-validity" $
-  do let invalid rules = not . valid rules
+  do let invalid rules = not . validOn rules
      $expect $
        invalid windows (fromString "\\\\server")
      $expect $
        invalid windows (fromString "\\\\server\\")
      $expect $
-       valid windows (fromString "\\\\server\\share")
+       validOn windows (fromString "\\\\server\\share")
      $expect $
-       valid windows (fromString "\\\\server\\share\\")
+       validOn windows (fromString "\\\\server\\share\\")
      $expect $
-       valid windows (fromString "\\\\server\\share\\a")
+       validOn windows (fromString "\\\\server\\share\\a")
      $expect $
-       valid windows (fromString "\\??\\Volume{12345}")
+       validOn windows (fromString "\\??\\Volume{12345}")
      $expect $
-       valid windows (fromString "\\\\.\\PhysicalDrive0")
+       validOn windows (fromString "\\\\.\\PhysicalDrive0")
 
 test_SplitSearchPath :: Test
 test_SplitSearchPath =
   assertions "splitSearchPath" $
   do let p x =
            map toChar8
-               (splitSearchPath posix
-                                (B8.pack x))
+               (splitSearchPathOn posix
+                                  (B8.pack x))
      let w x =
            map toString
-               (splitSearchPath windows
-                                (T.pack x))
+               (splitSearchPathOn windows
+                                  (T.pack x))
      $expect $
        equal (p "a:b:c")
              ["a","b","c"]
@@ -781,8 +786,8 @@ test_SplitSearchPathString_Posix :: Test
 test_SplitSearchPathString_Posix =
   assertions "posix" $
   do let split x =
-           map (toText posix)
-               (splitSearchPathString posix x)
+           map (toTextOn posix)
+               (splitSearchPathStringOn posix x)
      $expect $
        equal (split "a::\xC2\xA1\xC2\xA2:\xA1\xA2")
              [Right "a",Right "./",Right "\xA1\xA2",Left "\xA1\xA2"]
@@ -791,8 +796,8 @@ test_SplitSearchPathString_Posix_Ghc702 :: Test
 test_SplitSearchPathString_Posix_Ghc702 =
   assertions "posix_ghc702" $
   do let split x =
-           map (toText posix)
-               (splitSearchPathString posix_ghc702 x)
+           map (toTextOn posix)
+               (splitSearchPathStringOn posix_ghc702 x)
      $expect $
        equal (split "a::\xA1\xA2:\xEFA1\xEFA2")
              [Right "a",Right "./",Right "\xA1\xA2",Left "\xA1\xA2"]
@@ -801,8 +806,8 @@ test_SplitSearchPathString_Posix_Ghc704 :: Test
 test_SplitSearchPathString_Posix_Ghc704 =
   assertions "posix_ghc704" $
   do let split x =
-           map (toText posix)
-               (splitSearchPathString posix_ghc704 x)
+           map (toTextOn posix)
+               (splitSearchPathStringOn posix_ghc704 x)
      $expect $
        equal (split "a::\xA1\xA2:\xDCA1\xDCA2")
              [Right "a",Right "./",Right "\xA1\xA2",Left "\xA1\xA2"]
@@ -811,8 +816,8 @@ test_SplitSearchPathString_Darwin :: Test
 test_SplitSearchPathString_Darwin =
   assertions "darwin" $
   do let split x =
-           map (toText darwin)
-               (splitSearchPathString darwin x)
+           map (toTextOn darwin)
+               (splitSearchPathStringOn darwin x)
      $expect $
        equal (split "a::\xC2\xA1\xC2\xA2")
              [Right "a",Right "./",Right "\xA1\xA2"]
@@ -821,8 +826,8 @@ test_SplitSearchPathString_Darwin_Ghc702 :: Test
 test_SplitSearchPathString_Darwin_Ghc702 =
   assertions "darwin_ghc702" $
   do let split x =
-           map (toText darwin)
-               (splitSearchPathString darwin_ghc702 x)
+           map (toTextOn darwin)
+               (splitSearchPathStringOn darwin_ghc702 x)
      $expect $
        equal (split "a::\xA1\xA2")
              [Right "a",Right "./",Right "\xA1\xA2"]
@@ -831,8 +836,8 @@ test_SplitSearchPathString_Win32 :: Test
 test_SplitSearchPathString_Win32 =
   assertions "win32" $
   do let split x =
-           map (toText windows)
-               (splitSearchPathString windows x)
+           map (toTextOn windows)
+               (splitSearchPathStringOn windows x)
      $expect $
        equal (split "a;;\xA1\xA2")
              [Right "a",Right "\xA1\xA2"]
@@ -848,7 +853,7 @@ suite_EncodeString =
 test_EncodeString_Posix :: Test
 test_EncodeString_Posix =
   assertions "posix" $
-  do let enc = encodeString posix
+  do let enc = encodeStringOn posix
      $expect $
        equal (enc (fromChar8 "test")) "test"
      $expect $
@@ -858,12 +863,12 @@ test_EncodeString_Posix =
      $expect $
        equal (enc (fromChar8 "\xC2\xA1\xC2\xA2/test\xA1\xA2")) "\xC2\xA1\xC2\xA2/test\xA1\xA2"
      $expect $
-       equal (enc (fromText posix "test\xA1\xA2")) "test\xC2\xA1\xC2\xA2"
+       equal (enc (fromTextOn posix "test\xA1\xA2")) "test\xC2\xA1\xC2\xA2"
 
 test_EncodeString_Posix_Ghc702 :: Test
 test_EncodeString_Posix_Ghc702 =
   assertions "posix_ghc702" $
-  do let enc = encodeString posix_ghc702
+  do let enc = encodeStringOn posix_ghc702
      $expect $
        equal (enc (fromChar8 "test")) "test"
      $expect $
@@ -871,12 +876,12 @@ test_EncodeString_Posix_Ghc702 =
      $expect $
        equal (enc (fromChar8 "\xC2\xA1\xC2\xA2/test\xA1\xA2")) "\xA1\xA2/test\xEFA1\xEFA2"
      $expect $
-       equal (enc (fromText posix_ghc702 "test\xA1\xA2")) "test\xA1\xA2"
+       equal (enc (fromTextOn posix_ghc702 "test\xA1\xA2")) "test\xA1\xA2"
 
 test_EncodeString_Posix_Ghc704 :: Test
 test_EncodeString_Posix_Ghc704 =
   assertions "posix_ghc704" $
-  do let enc = encodeString posix_ghc704
+  do let enc = encodeStringOn posix_ghc704
      $expect $
        equal (enc (fromChar8 "test")) "test"
      $expect $
@@ -884,18 +889,18 @@ test_EncodeString_Posix_Ghc704 =
      $expect $
        equal (enc (fromChar8 "\xC2\xA1\xC2\xA2/test\xA1\xA2")) "\xA1\xA2/test\xDCA1\xDCA2"
      $expect $
-       equal (enc (fromText posix_ghc704 "test\xA1\xA2")) "test\xA1\xA2"
+       equal (enc (fromTextOn posix_ghc704 "test\xA1\xA2")) "test\xA1\xA2"
 
 test_EncodeString_Win32 :: Test
 test_EncodeString_Win32 =
   assertions "windows" $
-  do let enc = encodeString windows
+  do let enc = encodeStringOn windows
      $expect $
        equal (enc (fromString "test")) "test"
      $expect $
        equal (enc (fromString "test\xA1\xA2")) "test\xA1\xA2"
      $expect $
-       equal (enc (fromText windows "test\xA1\xA2")) "test\xA1\xA2"
+       equal (enc (fromTextOn windows "test\xA1\xA2")) "test\xA1\xA2"
 
 suite_DecodeString :: Suite
 suite_DecodeString =
@@ -911,100 +916,101 @@ test_DecodeString_Posix :: Test
 test_DecodeString_Posix =
   assertions "posix" $
   do let r = posix
-     let dec = decodeString
+     let dec = decodeStringOn
      $expect $
        equal (dec r "test")
-             (fromText r "test")
+             (fromTextOn r "test")
      $expect $
        equal (dec r "test\xC2\xA1\xC2\xA2")
-             (fromText r "test\xA1\xA2")
+             (fromTextOn r "test\xA1\xA2")
      $expect $
        equal (dec r "test\xA1\xA2")
-             (fromText r "test\xA1\xA2")
+             (fromTextOn r "test\xA1\xA2")
 
 test_DecodeString_Posix_Ghc702 :: Test
 test_DecodeString_Posix_Ghc702 =
   assertions "posix_ghc702" $
   do let r = posix_ghc702
-     let dec = decodeString
+     let dec = decodeStringOn
      $expect $
        equal (dec r "test")
-             (fromText r "test")
+             (fromTextOn r "test")
      $expect $
        equal (dec r "test\xC2\xA1\xC2\xA2")
-             (fromText r "test\xC2\xA1\xC2\xA2")
+             (fromTextOn r "test\xC2\xA1\xC2\xA2")
      $expect $
        equal (dec r "test\xA1\xA2")
-             (fromText r "test\xA1\xA2")
+             (fromTextOn r "test\xA1\xA2")
      $expect $
        equal (dec r "test\xEFA1\xEFA2")
              (fromChar8 "test\xA1\xA2")
      $expect $
-       equal (toText r (dec r "test\xEFA1\xEFA2"))
+       equal (toTextOn r (dec r "test\xEFA1\xEFA2"))
              (Left "test\xA1\xA2")
 
 test_DecodeString_Posix_Ghc704 :: Test
 test_DecodeString_Posix_Ghc704 =
   assertions "posix_ghc704" $
   do let r = posix_ghc704
-     let dec = decodeString
+     let dec = decodeStringOn
      $expect $
        equal (dec r "test")
-             (fromText r "test")
+             (fromTextOn r "test")
      $expect $
        equal (dec r "test\xC2\xA1\xC2\xA2")
-             (fromText r "test\xC2\xA1\xC2\xA2")
+             (fromTextOn r "test\xC2\xA1\xC2\xA2")
      $expect $
        equal (dec r "test\xA1\xA2")
-             (fromText r "test\xA1\xA2")
+             (fromTextOn r "test\xA1\xA2")
      $expect $
        equal (dec r "test\xDCA1\xDCA2")
              (fromChar8 "test\xA1\xA2")
      $expect $
-       equal (toText r (dec r "test\xDCA1\xDCA2"))
+       equal (toTextOn r (dec r "test\xDCA1\xDCA2"))
              (Left "test\xA1\xA2")
 
 test_DecodeString_Darwin :: Test
 test_DecodeString_Darwin =
   assertions "darwin" $
   do let r = darwin
-     let dec = decodeString
+     let dec = decodeStringOn
      $expect $
        equal (dec r "test\xC2\xA1\xC2\xA2")
-             (fromText r "test\xA1\xA2")
+             (fromTextOn r "test\xA1\xA2")
 
 test_DecodeString_Darwin_Ghc702 :: Test
 test_DecodeString_Darwin_Ghc702 =
   assertions "darwin_ghc702" $
   do let r = darwin_ghc702
-     let dec = decodeString
+     let dec = decodeStringOn
      $expect $
        equal (dec r "test\xC2\xA1\xC2\xA2")
-             (fromText r "test\xC2\xA1\xC2\xA2")
+             (fromTextOn r "test\xC2\xA1\xC2\xA2")
      $expect $
        equal (dec r "test\xA1\xA2")
-             (fromText r "test\xA1\xA2")
+             (fromTextOn r "test\xA1\xA2")
 
 test_DecodeString_Win32 :: Test
 test_DecodeString_Win32 =
   assertions "windows" $
   do let r = windows
-     let dec = decodeString
+     let dec = decodeStringOn
      $expect $
        equal (dec r "test")
-             (fromText r "test")
+             (fromTextOn r "test")
      $expect $
        equal (dec r "test\xC2\xA1\xC2\xA2")
-             (fromText r "test\xC2\xA1\xC2\xA2")
+             (fromTextOn r "test\xC2\xA1\xC2\xA2")
      $expect $
        equal (dec r "test\xA1\xA2")
-             (fromText r "test\xA1\xA2")
+             (fromTextOn r "test\xA1\xA2")
 
 test_EqualsIgnoresPosixEncoding :: Test
-test_EqualsIgnoresPosixEncoding = assertions "equals-ignores-posix-encoding" $ do
-        $expect $ equal
-                (fromChar8 "test\xA1\xA2")
-                (fromText posix "test\xA1\xA2")
+test_EqualsIgnoresPosixEncoding =
+  assertions "equals-ignores-posix-encoding" $
+  do $expect $
+       equal (fromChar8 "test\xA1\xA2")
+             (fromTextOn posix "test\xA1\xA2")
 
 test_ShowRules :: Test
 test_ShowRules =
@@ -1039,7 +1045,7 @@ posixPaths = sized $ fmap merge . genComponents
                                  cs))]
 
 windowsPaths :: Gen FilePath
-windowsPaths = oneof [dosPaths, uncPaths]
+windowsPaths = oneof [dosPaths,uncPaths]
 
 dosPaths :: Gen FilePath
 dosPaths = sized $ \n -> genComponents n >>= merge
@@ -1113,13 +1119,13 @@ uncPaths = sized $ \n -> genComponents n >>= merge
              return ("\\\\" ++ host ++ "\\" ++ share)
 
 toChar8 :: FilePath -> String
-toChar8 = B8.unpack . encode posix
+toChar8 = B8.unpack . encodeOn posix
 
 fromChar8 :: String -> FilePath
-fromChar8 = decode posix . B8.pack
+fromChar8 = decodeOn posix . B8.pack
 
 toString :: FilePath -> String
-toString = T.unpack . encode windows
+toString = T.unpack . encodeOn windows
 
 fromString :: String -> FilePath
-fromString = decode windows . T.pack
+fromString = decodeOn windows . T.pack

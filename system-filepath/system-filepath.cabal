@@ -37,11 +37,6 @@ library
 
   exposed-modules:
     Filesystem.Path
-    Filesystem.Path.CurrentOS
-    Filesystem.Path.Rules
-
-  other-modules:
-    Filesystem.Path.Internal
 
 test-suite suite
   type: exitcode-stdio-1.0
