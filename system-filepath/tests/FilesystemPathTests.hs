@@ -630,7 +630,7 @@ test_Utf8CharInGhcEscapeArea =
                     (Right (T.pack "/a/\61298/b")))
      let chars' = "/a/\xEE\xBC\x80/b"
      let path' = fromChar8 chars'
-     $expect (equal (toChar8 path) chars')
+     $expect (equal (toChar8 path') chars')
      $expect (equal (toText posix path')
                     (Right (T.pack "/a/\61184/b")))
 
