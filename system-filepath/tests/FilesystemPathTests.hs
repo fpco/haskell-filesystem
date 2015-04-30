@@ -32,9 +32,7 @@ tests =
   ,test_Absolute
   ,test_Relative
   ,test_LeadingDotSpecialCases
-  ,
-   -- Basic operations
-   test_Append
+  ,test_Append
   ,test_CommonPrefix
   ,test_StripPrefix
   ,property "stripPrefix" prop_StripPrefix
