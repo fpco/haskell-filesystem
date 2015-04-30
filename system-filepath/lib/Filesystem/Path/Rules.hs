@@ -41,6 +41,105 @@ import           Prelude hiding (FilePath, null)
 import           System.IO ()
 
 -------------------------------------------------------------------------------
+-- Rules
+-------------------------------------------------------------------------------
+
+-- | The type of @platformFormat@ for 'Rules' is conditionally selected at
+-- compilation time. As such it is only intended for direct use with external OS
+-- functions and code that expects @platformFormat@ to be stable across platforms
+-- may fail to subsequently compile on a differing platform.
+--
+-- For example: on Windows or OSX @platformFormat@ will be 'T.Text',
+-- and on Linux it will be 'B.ByteString'.
+--
+-- If portability is a concern, restrict usage to functions which do not expose
+-- @platformFormat@ directly.
+data Rules platformFormat =
+  Rules {rulesName :: T.Text
+         -- | Check if a 'FilePath' is valid; it must not contain any illegal
+         -- characters, and must have a root appropriate to the current
+         -- 'Rules'.
+        ,valid :: FilePath -> Bool
+         -- | Split a search path, such as @$PATH@ or @$PYTHONPATH@, into
+         -- a list of 'FilePath's.
+         --
+         -- Note: The type of @platformTextFormat@ can change depending upon the
+         -- underlying compilation platform. Consider using 'splitSearchPathString'
+         -- instead. See 'Rules' for more information.
+        ,splitSearchPath :: platformFormat -> [FilePath]
+         -- | splitSearchPathString is like 'splitSearchPath', but takes a string
+         -- encoded in the format used by @System.IO@.
+        ,splitSearchPathString :: String -> [FilePath]
+         -- | Attempt to convert a 'FilePath' to human&#x2010;readable text.
+         --
+         -- If the path is decoded successfully, the result is a 'Right'
+         -- containing the decoded text. Successfully decoded text can be
+         -- converted back to the original path using 'fromText'.
+         --
+         -- If the path cannot be decoded, the result is a 'Left' containing an
+         -- approximation of the original path. If displayed to the user, this
+         -- value should be accompanied by some warning that the path has an
+         -- invalid encoding. Approximated text cannot be converted back to the
+         -- original path.
+         --
+         -- This function ignores the user&#x2019;s locale, and assumes all
+         -- file paths are encoded in UTF8. If you need to display file paths
+         -- with an unusual or obscure encoding, use 'encode' and then decode
+         -- them manually.
+         --
+         -- Since: 0.2
+        ,toText :: FilePath -> Either T.Text T.Text
+         -- | Convert human&#x2010;readable text into a 'FilePath'.
+         --
+         -- This function ignores the user&#x2019;s locale, and assumes all
+         -- file paths are encoded in UTF8. If you need to create file paths
+         -- with an unusual or obscure encoding, encode them manually and then
+         -- use 'decode'.
+         --
+         -- Since: 0.2
+        ,fromText :: T.Text -> FilePath
+         -- | Convert a 'FilePath' to a platform&#x2010;specific format,
+         -- suitable for use with external OS functions.
+         --
+         -- Note: The type of @platformTextFormat@ can change depending upon the
+         -- underlying compilation platform. Consider using 'toText' or
+         -- 'encodeString' instead. See 'Rules' for more information.
+         --
+         -- Since: 0.3
+        ,encode :: FilePath -> platformFormat
+         -- | Convert a 'FilePath' from a platform&#x2010;specific format,
+         -- suitable for use with external OS functions.
+         --
+         -- Note: The type of @platformTextFormat@ can change depending upon the
+         -- underlying compilation platform. Consider using 'fromText' or
+         -- 'decodeString' instead. See 'Rules' for more information.
+         --
+         -- Since: 0.3
+        ,decode :: platformFormat -> FilePath
+         -- | Attempt to convert a 'FilePath' to a string suitable for use with
+         -- functions in @System.IO@. The contents of this string are
+         -- platform&#x2010;dependent, and are not guaranteed to be
+         -- human&#x2010;readable. For converting 'FilePath's to a
+         -- human&#x2010;readable format, use 'toText'.
+         --
+         -- Since: 0.3.1
+        ,encodeString :: FilePath -> String
+         -- | Attempt to parse a 'FilePath' from a string suitable for use
+         -- with functions in @System.IO@. Do not use this function for parsing
+         -- human&#x2010;readable paths, as the character set decoding is
+         -- platform&#x2010;dependent. For converting human&#x2010;readable
+         -- text to a 'FilePath', use 'fromText'.
+         --
+         -- Since: 0.3.1
+        ,decodeString :: String -> FilePath}
+
+instance Show (Rules a) where
+  showsPrec d r =
+    showParen (d > 10)
+              (showString "Rules " .
+               shows (rulesName r))
+
+-------------------------------------------------------------------------------
 -- POSIX
 -------------------------------------------------------------------------------
 
