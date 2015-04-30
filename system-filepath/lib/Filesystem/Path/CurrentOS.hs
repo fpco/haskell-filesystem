@@ -2,11 +2,11 @@
 
 -- |
 -- Module: Filesystem.Path.CurrentOS
--- Copyright: 2010 John Millikin
+-- Copyright: 2010 John Millikin, 2015 FPComplete
 -- License: MIT
 --
--- Maintainer:  jmillikin@gmail.com
--- Portability:  portable
+-- Maintainer: dev@fpcomplete.com
+-- Portability: portable
 --
 -- Re&#x2010;exports contents of "Filesystem.Path.Rules", defaulting to the
 -- current OS&#x2019;s rules when needed.

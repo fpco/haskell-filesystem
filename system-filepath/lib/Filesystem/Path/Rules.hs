@@ -1,10 +1,10 @@
 -- |
 -- Module: Filesystem.Path.Rules
--- Copyright: 2010 John Millikin
+-- Copyright: 2010 John Millikin, 2015 FPComplete
 -- License: MIT
 --
--- Maintainer:  jmillikin@gmail.com
--- Portability:  portable
+-- Maintainer: dev@fpcomplete.com
+-- Portability: portable
 --
 module Filesystem.Path.Rules
        ( Rules
