@@ -11,7 +11,7 @@
 -- Re&#x2010;exports contents of "Filesystem.Path.Rules", defaulting to the
 -- current OS&#x2019;s rules when needed.
 --
--- Also enables 'Show' and 'S.IsString' instances for 'F.FilePath'.
+-- Also enables 'Show' and 'IsString' instances for 'FilePath'.
 --
 module Filesystem.Path.CurrentOS
        ( currentOS
@@ -73,8 +73,8 @@ module Filesystem.Path.CurrentOS
 import qualified Data.ByteString as B ( ByteString )
 import Data.List ( foldl' )
 import Data.Maybe ( isJust, isNothing )
-import qualified Data.Monoid as M ( Monoid(..) )
-import qualified Data.String as S ( IsString(..) )
+import Data.Monoid ( Monoid(..) )
+import Data.String ( IsString(..) )
 import qualified Data.Text as T ( Text, pack )
 import Filesystem.Path.Internal
     ( Root(RootPosix, RootWindowsCurrentVolume, RootWindowsDoubleQMark,
@@ -87,7 +87,6 @@ import Filesystem.Path.Internal
       empty,
       dots,
       dot )
-import qualified Filesystem.Path.Internal as F ( FilePath )
 import qualified Filesystem.Path.Rules as R
     ( posix_ghc704, Rules(..) )
 import qualified Prelude as Prelude ( null )
@@ -147,10 +146,10 @@ currentOS = R.posix
 #endif
 #endif
 
-instance S.IsString F.FilePath where
+instance IsString FilePath where
   fromString = R.fromText currentOS . T.pack
 
-instance Show F.FilePath where
+instance Show FilePath where
   showsPrec d path =
     showParen (d > 10)
               (ss "FilePath " .
@@ -159,7 +158,7 @@ instance Show F.FilePath where
           ss = showString
           txt = either id id (toText path)
 
--- | Attempt to convert a 'F.FilePath' to human&#x2010;readable text.
+-- | Attempt to convert a 'FilePath' to human&#x2010;readable text.
 --
 -- If the path is decoded successfully, the result is a 'Right' containing
 -- the decoded text. Successfully decoded text can be converted back to the
@@ -175,7 +174,7 @@ instance Show F.FilePath where
 -- obscure encoding, use 'encode' and then decode them manually.
 --
 -- Since: 0.2
-toText :: F.FilePath -> Either T.Text T.Text
+toText :: FilePath -> Either T.Text T.Text
 toText = R.toText currentOS
 
 -- | Convert human&#x2010;readable text into a 'FilePath'.
@@ -185,25 +184,25 @@ toText = R.toText currentOS
 -- obscure encoding, encode them manually and then use 'decode'.
 --
 -- Since: 0.2
-fromText :: T.Text -> F.FilePath
+fromText :: T.Text -> FilePath
 fromText = R.fromText currentOS
 
 -- | Check if a 'FilePath' is valid; it must not contain any illegal
 -- characters, and must have a root appropriate to the current 'R.Rules'.
-valid :: F.FilePath -> Bool
+valid :: FilePath -> Bool
 valid = R.valid currentOS
 
 -- | Split a search path, such as @$PATH@ or @$PYTHONPATH@, into a list
 -- of 'FilePath's.
-splitSearchPath :: PLATFORM_PATH_FORMAT -> [F.FilePath]
+splitSearchPath :: PLATFORM_PATH_FORMAT -> [FilePath]
 splitSearchPath = R.splitSearchPath currentOS
 
 -- | splitSearchPathString is like 'splitSearchPath', but takes a string
 -- encoded in the format used by @System.IO@.
-splitSearchPathString :: String -> [F.FilePath]
+splitSearchPathString :: String -> [FilePath]
 splitSearchPathString = R.splitSearchPathString currentOS
 
--- | Convert a 'F.FilePath' to a platform&#x2010;specific format, suitable
+-- | Convert a 'FilePath' to a platform&#x2010;specific format, suitable
 -- for use with external OS functions.
 --
 -- Note: The type @platformTextFormat@ can change depending upon the underlying
@@ -211,10 +210,10 @@ splitSearchPathString = R.splitSearchPathString currentOS
 -- See 'Filesystem.Path.Rules.Rules' for more information.
 --
 -- Since: 0.3
-encode :: F.FilePath -> PLATFORM_PATH_FORMAT
+encode :: FilePath -> PLATFORM_PATH_FORMAT
 encode = R.encode currentOS
 
--- | Convert a 'F.FilePath' from a platform&#x2010;specific format, suitable
+-- | Convert a 'FilePath' from a platform&#x2010;specific format, suitable
 -- for use with external OS functions.
 --
 -- Note: The type @platformTextFormat@ can change depending upon the underlying
@@ -222,30 +221,30 @@ encode = R.encode currentOS
 -- See 'Filesystem.Path.Rules.Rules' for more information.
 --
 -- Since: 0.3
-decode :: PLATFORM_PATH_FORMAT -> F.FilePath
+decode :: PLATFORM_PATH_FORMAT -> FilePath
 decode = R.decode currentOS
 
--- | Attempt to convert a 'F.FilePath' to a string suitable for use with
+-- | Attempt to convert a 'FilePath' to a string suitable for use with
 -- functions in @System.IO@. The contents of this string are
 -- platform&#x2010;dependent, and are not guaranteed to be
--- human&#x2010;readable. For converting 'F.FilePath's to a
+-- human&#x2010;readable. For converting 'FilePath's to a
 -- human&#x2010;readable format, use 'toText'.
 --
 -- Since: 0.3.1
-encodeString :: F.FilePath -> String
+encodeString :: FilePath -> String
 encodeString = R.encodeString currentOS
 
--- | Attempt to parse a 'F.FilePath' from a string suitable for use with
+-- | Attempt to parse a 'FilePath' from a string suitable for use with
 -- functions in @System.IO@. Do not use this function for parsing
 -- human&#x2010;readable paths, as the character set decoding is
 -- platform&#x2010;dependent. For converting human&#x2010;readable text to a
--- 'F.FilePath', use 'fromText'.
+-- 'FilePath', use 'fromText'.
 --
 -- Since: 0.3.1
-decodeString :: String -> F.FilePath
+decodeString :: String -> FilePath
 decodeString = R.decodeString currentOS
 
-instance M.Monoid FilePath where
+instance Monoid FilePath where
   mempty = empty
   mappend = append
   mconcat = concat
