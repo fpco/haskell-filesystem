@@ -75,101 +75,101 @@ test_Empty =
 test_Root :: Test
 test_Root =
   assertions "root" $
-  do let root x = toChar8 (P.root (fromChar8 x))
+  do let root' x = toChar8 (P.root (fromChar8 x))
      $expect $
-       equal (root "") ""
+       equal (root' "") ""
      $expect $
-       equal (root "/") "/"
+       equal (root' "/") "/"
      $expect $
-       equal (root "foo") ""
+       equal (root' "foo") ""
      $expect $
-       equal (root "/foo") "/"
+       equal (root' "/foo") "/"
 
 test_Directory :: Test
 test_Directory =
   assertions "directory" $
-  do let directory x =
+  do let directory' x =
            toChar8 (P.directory (fromChar8 x))
      $expect $
-       equal (directory "") "./"
+       equal (directory' "") "./"
      $expect $
-       equal (directory "/") "/"
+       equal (directory' "/") "/"
      $expect $
-       equal (directory "/foo/bar") "/foo/"
+       equal (directory' "/foo/bar") "/foo/"
      $expect $
-       equal (directory "/foo/bar/") "/foo/bar/"
+       equal (directory' "/foo/bar/") "/foo/bar/"
      $expect $
-       equal (directory ".") "./"
+       equal (directory' ".") "./"
      $expect $
-       equal (directory "..") "../"
+       equal (directory' "..") "../"
      $expect $
-       equal (directory "../foo") "../"
+       equal (directory' "../foo") "../"
      $expect $
-       equal (directory "../foo/") "../foo/"
+       equal (directory' "../foo/") "../foo/"
      $expect $
-       equal (directory "foo") "./"
+       equal (directory' "foo") "./"
      $expect $
-       equal (directory "foo/bar") "foo/"
+       equal (directory' "foo/bar") "foo/"
 
 test_Parent :: Test
 test_Parent =
   assertions "parent" $
-  do let parent x =
+  do let parent' x =
            toChar8 (P.parent (fromChar8 x))
      $expect $
-       equal (parent "") "./"
+       equal (parent' "") "./"
      $expect $
-       equal (parent "/") "/"
+       equal (parent' "/") "/"
      $expect $
-       equal (parent "/foo/bar") "/foo/"
+       equal (parent' "/foo/bar") "/foo/"
      $expect $
-       equal (parent "/foo/bar/") "/foo/"
+       equal (parent' "/foo/bar/") "/foo/"
      $expect $
-       equal (parent ".") "./"
+       equal (parent' ".") "./"
      $expect $
-       equal (parent "..") "./"
+       equal (parent' "..") "./"
      $expect $
-       equal (parent "../foo/bar") "../foo/"
+       equal (parent' "../foo/bar") "../foo/"
      $expect $
-       equal (parent "../foo/bar") "../foo/"
+       equal (parent' "../foo/bar") "../foo/"
      $expect $
-       equal (parent "foo") "./"
+       equal (parent' "foo") "./"
      $expect $
-       equal (parent "foo/bar") "./foo/"
+       equal (parent' "foo/bar") "./foo/"
 
 test_Filename :: Test
 test_Filename =
   assertions "filename" $
-  do let filename x =
+  do let filename' x =
            toChar8 (P.filename (fromChar8 x))
      $expect $
-       equal (filename "") ""
+       equal (filename' "") ""
      $expect $
-       equal (filename "/") ""
+       equal (filename' "/") ""
      $expect $
-       equal (filename "/foo/") ""
+       equal (filename' "/foo/") ""
      $expect $
-       equal (filename "/foo/bar") "bar"
+       equal (filename' "/foo/bar") "bar"
      $expect $
-       equal (filename "/foo/bar.txt") "bar.txt"
+       equal (filename' "/foo/bar.txt") "bar.txt"
 
 test_Dirname :: Test
 test_Dirname =
   assertions "dirname" $
-  do let dirname x =
+  do let dirname' x =
            toChar8 (P.dirname (fromChar8 x))
      $expect $
-       equal (dirname "") ""
+       equal (dirname' "") ""
      $expect $
-       equal (dirname "/") ""
+       equal (dirname' "/") ""
      $expect $
-       equal (dirname "foo") ""
+       equal (dirname' "foo") ""
      $expect $
-       equal (dirname "foo/bar") "foo"
+       equal (dirname' "foo/bar") "foo"
      $expect $
-       equal (dirname "foo/bar/") "bar"
+       equal (dirname' "foo/bar/") "bar"
      $expect $
-       equal (dirname "foo/bar/baz.txt") "bar"
+       equal (dirname' "foo/bar/baz.txt") "bar"
      -- the directory name will be re-parsed to a file name.
      let dirnameExts x =
            P.extensions (P.dirname (fromChar8 x))
@@ -431,68 +431,68 @@ test_Append =
 test_CommonPrefix :: Test
 test_CommonPrefix =
   assertions "commonPrefix" $
-  do let commonPrefix xs =
+  do let commonPrefix' xs =
            toChar8 (P.commonPrefix (map (fromChar8) xs))
      $expect $
-       equal (commonPrefix ["",""]) ""
+       equal (commonPrefix' ["",""]) ""
      $expect $
-       equal (commonPrefix ["/",""]) ""
+       equal (commonPrefix' ["/",""]) ""
      $expect $
-       equal (commonPrefix ["/","/"]) "/"
+       equal (commonPrefix' ["/","/"]) "/"
      $expect $
-       equal (commonPrefix ["foo/","/foo/"]) ""
+       equal (commonPrefix' ["foo/","/foo/"]) ""
      $expect $
-       equal (commonPrefix ["/foo","/foo/"]) "/"
+       equal (commonPrefix' ["/foo","/foo/"]) "/"
      $expect $
-       equal (commonPrefix ["/foo/","/foo/"]) "/foo/"
+       equal (commonPrefix' ["/foo/","/foo/"]) "/foo/"
      $expect $
-       equal (commonPrefix ["/foo/bar/baz.txt.gz","/foo/bar/baz.txt.gz.bar"]) "/foo/bar/baz.txt.gz"
+       equal (commonPrefix' ["/foo/bar/baz.txt.gz","/foo/bar/baz.txt.gz.bar"]) "/foo/bar/baz.txt.gz"
 
 test_StripPrefix :: Test
 test_StripPrefix =
   assertions "stripPrefix" $
-  do let stripPrefix x y =
+  do let stripPrefix' x y =
            fmap (toChar8)
                 (P.stripPrefix (fromChar8 x)
                                (fromChar8 y))
      $expect $
-       equal (stripPrefix "" "")
+       equal (stripPrefix' "" "")
              (Just "")
      $expect $
-       equal (stripPrefix "" "/")
+       equal (stripPrefix' "" "/")
              (Just "/")
      $expect $
-       equal (stripPrefix "/" "/")
+       equal (stripPrefix' "/" "/")
              (Just "")
      $expect $
-       equal (stripPrefix "/" "/foo")
+       equal (stripPrefix' "/" "/foo")
              (Just "foo")
      $expect $
-       equal (stripPrefix "/" "/foo/bar")
+       equal (stripPrefix' "/" "/foo/bar")
              (Just "foo/bar")
      $expect $
-       equal (stripPrefix "/foo/" "/foo/bar")
+       equal (stripPrefix' "/foo/" "/foo/bar")
              (Just "bar")
      $expect $
-       equal (stripPrefix "/foo/" "/foo/bar/baz")
+       equal (stripPrefix' "/foo/" "/foo/bar/baz")
              (Just "bar/baz")
      $expect $
-       equal (stripPrefix "/foo/bar" "/foo/bar.txt")
+       equal (stripPrefix' "/foo/bar" "/foo/bar.txt")
              (Just ".txt")
      $expect $
-       equal (stripPrefix "/foo/bar.txt" "/foo/bar.txt.gz")
+       equal (stripPrefix' "/foo/bar.txt" "/foo/bar.txt.gz")
              (Just ".gz")
      -- Test ignoring non-matching prefixes
      $expect $
-       equal (stripPrefix "/foo" "/foo/bar") Nothing
+       equal (stripPrefix' "/foo" "/foo/bar") Nothing
      $expect $
-       equal (stripPrefix "/foo/bar/baz" "/foo") Nothing
+       equal (stripPrefix' "/foo/bar/baz" "/foo") Nothing
      $expect $
-       equal (stripPrefix "/foo/baz/" "/foo/bar/qux") Nothing
+       equal (stripPrefix' "/foo/baz/" "/foo/bar/qux") Nothing
      $expect $
-       equal (stripPrefix "/foo/bar/baz" "/foo/bar/qux") Nothing
+       equal (stripPrefix' "/foo/bar/baz" "/foo/bar/qux") Nothing
      $expect $
-       equal (stripPrefix "/foo/bar/baz" "/foo/bar/qux") Nothing
+       equal (stripPrefix' "/foo/bar/baz" "/foo/bar/qux") Nothing
 
 prop_StripPrefix :: Property
 prop_StripPrefix =
@@ -510,97 +510,97 @@ prop_StripPrefix =
 test_SplitExtension :: Test
 test_SplitExtension =
   assertions "splitExtension" $
-  do let splitExtension x = (toChar8 base,ext)
+  do let splitExtension' x = (toChar8 base,ext)
            where (base,ext) =
                    P.splitExtension (fromChar8 x)
      $expect $
-       equal (splitExtension "")
+       equal (splitExtension' "")
              ("",Nothing)
      $expect $
-       equal (splitExtension "foo")
+       equal (splitExtension' "foo")
              ("foo",Nothing)
      $expect $
-       equal (splitExtension "foo.")
+       equal (splitExtension' "foo.")
              ("foo",Just (T.pack ""))
      $expect $
-       equal (splitExtension "foo.a")
+       equal (splitExtension' "foo.a")
              ("foo",Just (T.pack "a"))
      $expect $
-       equal (splitExtension "foo.a/")
+       equal (splitExtension' "foo.a/")
              ("foo.a/",Nothing)
      $expect $
-       equal (splitExtension "foo.a/bar")
+       equal (splitExtension' "foo.a/bar")
              ("foo.a/bar",Nothing)
      $expect $
-       equal (splitExtension "foo.a/bar.b")
+       equal (splitExtension' "foo.a/bar.b")
              ("foo.a/bar",Just (T.pack "b"))
      $expect $
-       equal (splitExtension "foo.a/bar.b.c")
+       equal (splitExtension' "foo.a/bar.b.c")
              ("foo.a/bar.b",Just (T.pack "c"))
 
 test_Collapse :: Test
 test_Collapse =
   assertions "collapse" $
-  do let collapse x =
+  do let collapse' x =
            toChar8 (P.collapse (fromChar8 x))
      $expect $
-       equal (collapse "./") "./"
+       equal (collapse' "./") "./"
      $expect $
-       equal (collapse "././") "./"
+       equal (collapse' "././") "./"
      $expect $
-       equal (collapse "../") "../"
+       equal (collapse' "../") "../"
      $expect $
-       equal (collapse ".././") "../"
+       equal (collapse' ".././") "../"
      $expect $
-       equal (collapse "./../") "../"
+       equal (collapse' "./../") "../"
      $expect $
-       equal (collapse "../../") "../../"
+       equal (collapse' "../../") "../../"
      $expect $
-       equal (collapse "parent/foo/baz/../bar") "parent/foo/bar"
+       equal (collapse' "parent/foo/baz/../bar") "parent/foo/bar"
      $expect $
-       equal (collapse "parent/foo/baz/../../bar") "parent/bar"
+       equal (collapse' "parent/foo/baz/../../bar") "parent/bar"
      $expect $
-       equal (collapse "parent/foo/..") "parent/"
+       equal (collapse' "parent/foo/..") "parent/"
      $expect $
-       equal (collapse "/parent/foo/../../../bar") "/bar"
+       equal (collapse' "/parent/foo/../../../bar") "/bar"
      $expect $
-       equal (collapse "/./parent/foo") "/parent/foo"
+       equal (collapse' "/./parent/foo") "/parent/foo"
 
 test_SplitDirectories :: Test
 test_SplitDirectories =
   assertions "splitDirectories" $
-  do let splitDirectories x =
+  do let splitDirectories' x =
            P.splitDirectories (fromChar8 x)
          fromChar8' = map fromChar8
      $expect $
-       equal (splitDirectories "")
+       equal (splitDirectories' "")
              (fromChar8' [])
      $expect $
-       equal (splitDirectories "/")
+       equal (splitDirectories' "/")
              (fromChar8' ["/"])
      $expect $
-       equal (splitDirectories "/a")
+       equal (splitDirectories' "/a")
              (fromChar8' ["/","a"])
      $expect $
-       equal (splitDirectories "/ab/cd")
+       equal (splitDirectories' "/ab/cd")
              (fromChar8' ["/","ab/","cd"])
      $expect $
-       equal (splitDirectories "/ab/cd/")
+       equal (splitDirectories' "/ab/cd/")
              (fromChar8' ["/","ab/","cd/"])
      $expect $
-       equal (splitDirectories "ab/cd")
+       equal (splitDirectories' "ab/cd")
              (fromChar8' ["ab/","cd"])
      $expect $
-       equal (splitDirectories "ab/cd/")
+       equal (splitDirectories' "ab/cd/")
              (fromChar8' ["ab/","cd/"])
      $expect $
-       equal (splitDirectories "ab/cd.txt")
+       equal (splitDirectories' "ab/cd.txt")
              (fromChar8' ["ab/","cd.txt"])
      $expect $
-       equal (splitDirectories "ab/cd/.txt")
+       equal (splitDirectories' "ab/cd/.txt")
              (fromChar8' ["ab/","cd/",".txt"])
      $expect $
-       equal (splitDirectories "ab/./cd")
+       equal (splitDirectories' "ab/./cd")
              (fromChar8' ["ab/",".","cd"])
 
 test_InvalidUtf8InDirectoryComponent :: Test
@@ -1050,9 +1050,9 @@ windowsPaths = oneof [dosPaths,uncPaths]
 dosPaths :: Gen FilePath
 dosPaths = sized $ \n -> genComponents n >>= merge
   where merge cs =
-          do root <- genRoot
+          do root' <- genRoot
              let path = intercalate "\\" cs
-             return $ fromString $ root ++ path
+             return $ fromString $ root' ++ path
         reserved =
           ['\x00' .. '\x1F'] ++
           ['/','\\','?','*',':','|','"','<','>']
@@ -1101,13 +1101,13 @@ dosPaths = sized $ \n -> genComponents n >>= merge
 uncPaths :: Gen FilePath
 uncPaths = sized $ \n -> genComponents n >>= merge
   where merge cs =
-          do root <- genRoot
+          do root' <- genRoot
              let path = intercalate "\\" cs
              return $
                case cs of
-                 [] -> fromString (root ++ path)
+                 [] -> fromString (root' ++ path)
                  _ ->
-                   fromString (root ++ "\\" ++ path)
+                   fromString (root' ++ "\\" ++ path)
         validChar c = c /= '\x00' && c /= '\\'
         component =
           do size <- choose (1,10)

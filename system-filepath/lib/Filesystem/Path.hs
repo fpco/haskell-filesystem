@@ -734,21 +734,21 @@ posixToText p =
      else Left text
   where good = and (map snd chunks)
         text =
-          T.concat (root :
+          T.concat (root' :
                     map fst chunks)
-        root = rootText (pathRoot p)
+        root' = rootText (pathRoot p)
         chunks =
           intersperse (T.pack "/",True)
                       (map unescape (directoryChunks p))
 
 posixFromChunks :: [Chunk] -> FilePath
 posixFromChunks chunks =
-  FilePath root directories basename exts
-  where (root,pastRoot) =
+  FilePath root' directories basename' exts
+  where (root',pastRoot) =
           if P.null (head chunks)
              then (Just RootPosix,tail chunks)
              else (Nothing,chunks)
-        (directories,filename)
+        (directories,filename')
           | P.null pastRoot = ([],"")
           | otherwise =
             case last pastRoot of
@@ -760,7 +760,7 @@ posixFromChunks chunks =
                   (goodDirs pastRoot,"")
               fn -> (goodDirs (init pastRoot),fn)
         goodDirs = filter (not . P.null)
-        (basename,exts) = parseFilename filename
+        (basename',exts) = parseFilename filename'
 
 posixFromText :: T.Text -> FilePath
 posixFromText text =
@@ -769,8 +769,8 @@ posixFromText text =
      else posixFromChunks (map escape (textSplitBy (== '/') text))
 
 posixToBytes :: FilePath -> B.ByteString
-posixToBytes p = B.concat (root : chunks)
-  where root = B8.pack (rootChunk (pathRoot p))
+posixToBytes p = B.concat (root' : chunks)
+  where root' = B8.pack (rootChunk (pathRoot p))
         chunks =
           intersperse (B8.pack "/")
                       (map chunkBytes (directoryChunks p))
@@ -803,8 +803,8 @@ processInvalidUtf8 bytes =
                   (B8.unpack b)
 
 posixToGhc702String :: FilePath -> String
-posixToGhc702String p = P.concat (root : chunks)
-  where root = rootChunk (pathRoot p)
+posixToGhc702String p = P.concat (root' : chunks)
+  where root' = rootChunk (pathRoot p)
         chunks =
           intersperse "/"
                       (map escapeToGhc702 (directoryChunks p))
@@ -833,8 +833,8 @@ escapeFromGhc702 =
             else c)
 
 posixToGhc704String :: FilePath -> String
-posixToGhc704String p = P.concat (root : chunks)
-  where root = rootChunk (pathRoot p)
+posixToGhc704String p = P.concat (root' : chunks)
+  where root' = rootChunk (pathRoot p)
         chunks =
           intersperse "/"
                       (directoryChunks p)
@@ -912,8 +912,8 @@ darwin_ghc702 =
          ,decodeStringOn = posixFromText . T.pack}
 
 darwinToText :: FilePath -> T.Text
-darwinToText p = T.concat (root : chunks)
-  where root = rootText (pathRoot p)
+darwinToText p = T.concat (root' : chunks)
+  where root' = rootText (pathRoot p)
         chunks =
           intersperse (T.pack "/")
                       (map unescape' (directoryChunks p))
@@ -958,15 +958,15 @@ winToText p =
     _ -> dosToText p
 
 dosToText :: FilePath -> T.Text
-dosToText p = T.concat (root : chunks)
-  where root = rootText (pathRoot p)
+dosToText p = T.concat (root' : chunks)
+  where root' = rootText (pathRoot p)
         chunks =
           intersperse (T.pack "\\")
                       (map unescape' (directoryChunks p))
 
 uncToText :: FilePath -> T.Text
-uncToText p = T.concat (root : chunks)
-  where root =
+uncToText p = T.concat (root' : chunks)
+  where root' =
           if all T.null chunks
              then rootText (pathRoot p)
              else rootText (pathRoot p) `T.append`
@@ -983,7 +983,7 @@ winFromText text =
      then empty
      else path
   where path =
-          FilePath root directories basename exts
+          FilePath root' directories basename' exts
         -- Windows has various types of absolute paths:
         --
         -- * C:\foo\bar -> DOS-style absolute path
@@ -995,7 +995,7 @@ winFromText text =
         -- relative to the current DOS drive.
         --
         -- http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247(v=vs.85).aspx
-        (root,pastRoot) =
+        (root',pastRoot) =
           if T.isPrefixOf (T.pack "\\\\")
                           text
              then case stripUncasedPrefix (T.pack "\\\\?\\UNC\\")
@@ -1019,7 +1019,7 @@ winFromText text =
                     Just stripped -> parseDoubleQmark stripped
                     Nothing ->
                       parseDosRoot text False
-        (directories,filename)
+        (directories,filename')
           | P.null pastRoot = ([],Nothing)
           | otherwise =
             case last pastRoot of
@@ -1037,8 +1037,8 @@ winFromText text =
         goodDirs =
           map escape .
           filter (not . T.null)
-        (basename,exts) =
-          case filename of
+        (basename',exts) =
+          case filename' of
             Just fn -> parseFilename fn
             Nothing -> (Nothing,[])
 
@@ -1327,11 +1327,11 @@ textSplitBy = T.splitBy
 #endif
 
 parseFilename :: Chunk -> (Maybe Basename, [Extension])
-parseFilename filename = parsed
+parseFilename p = parsed
   where parsed =
-          if P.null filename
+          if P.null p
              then (Nothing,[])
-             else case span (== '.') filename of
+             else case span (== '.') p of
                     (leadingDots,baseAndExts) ->
                       case splitBy (== '.') baseAndExts of
                         [] ->
