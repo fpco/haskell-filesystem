@@ -13,8 +13,8 @@ import           Test.Chell
 import           Test.Chell.QuickCheck
 import           Test.QuickCheck hiding (property)
 
-import qualified Filesystem.Path as P
-import           Filesystem.Path
+import qualified Filesystem.Path.Internal as FP
+import           Filesystem.Path.Internal
 
 main :: IO ()
 main = Test.Chell.defaultMain [tests]
@@ -64,7 +64,7 @@ test_Empty :: Test
 test_Empty =
   assertions "empty" $
   do $expect $
-       P.null empty
+       FP.null empty
      $expect $
        equal (toChar8 empty) ""
      $expect $
@@ -73,7 +73,7 @@ test_Empty =
 test_Root :: Test
 test_Root =
   assertions "root" $
-  do let root' x = toChar8 (P.root (fromChar8 x))
+  do let root' x = toChar8 (FP.root (fromChar8 x))
      $expect $
        equal (root' "") ""
      $expect $
@@ -87,7 +87,7 @@ test_Directory :: Test
 test_Directory =
   assertions "directory" $
   do let directory' x =
-           toChar8 (P.directory (fromChar8 x))
+           toChar8 (FP.directory (fromChar8 x))
      $expect $
        equal (directory' "") "./"
      $expect $
@@ -113,7 +113,7 @@ test_Parent :: Test
 test_Parent =
   assertions "parent" $
   do let parent' x =
-           toChar8 (P.parent (fromChar8 x))
+           toChar8 (FP.parent (fromChar8 x))
      $expect $
        equal (parent' "") "./"
      $expect $
@@ -139,7 +139,7 @@ test_Filename :: Test
 test_Filename =
   assertions "filename" $
   do let filename' x =
-           toChar8 (P.filename (fromChar8 x))
+           toChar8 (FP.filename (fromChar8 x))
      $expect $
        equal (filename' "") ""
      $expect $
@@ -155,7 +155,7 @@ test_Dirname :: Test
 test_Dirname =
   assertions "dirname" $
   do let dirname' x =
-           toChar8 (P.dirname (fromChar8 x))
+           toChar8 (FP.dirname (fromChar8 x))
      $expect $
        equal (dirname' "") ""
      $expect $
@@ -170,7 +170,7 @@ test_Dirname =
        equal (dirname' "foo/bar/baz.txt") "bar"
      -- the directory name will be re-parsed to a file name.
      let dirnameExts x =
-           P.extensions (P.dirname (fromChar8 x))
+           FP.extensions (FP.dirname (fromChar8 x))
      $expect $
        equal (dirnameExts "foo.d/bar")
              ["d"]
@@ -254,10 +254,10 @@ test_LeadingDotSpecialCases =
   assertions "leading-dot-special-cases" $
   do let components_posix x =
            let p = fromChar8 x
-           in (toChar8 (P.directory p),toChar8 (basename p),P.extensions p)
+           in (toChar8 (FP.directory p),toChar8 (basename p),FP.extensions p)
      let components_windows x =
            let p = fromString x
-           in (toString (P.directory p),toString (basename p),P.extensions p)
+           in (toString (FP.directory p),toString (basename p),FP.extensions p)
      -- The filenames "." and ".." are always considered to be directory
      -- elements, because they are links to either the current or parent
      -- directories.
@@ -373,11 +373,11 @@ test_Append :: Test
 test_Append =
   assertions "append" $
   do let appendP x y =
-           toChar8 (P.append (fromChar8 x)
-                             (fromChar8 y))
+           toChar8 (FP.append (fromChar8 x)
+                              (fromChar8 y))
      let appendW x y =
-           toString (P.append (fromString x)
-                              (fromString y))
+           toString (FP.append (fromString x)
+                               (fromString y))
      $expect $
        equal (appendP "" "") ""
      $expect $
@@ -430,7 +430,7 @@ test_CommonPrefix :: Test
 test_CommonPrefix =
   assertions "commonPrefix" $
   do let commonPrefix' xs =
-           toChar8 (P.commonPrefix (map (fromChar8) xs))
+           toChar8 (FP.commonPrefix (map (fromChar8) xs))
      $expect $
        equal (commonPrefix' ["",""]) ""
      $expect $
@@ -451,8 +451,8 @@ test_StripPrefix =
   assertions "stripPrefix" $
   do let stripPrefix' x y =
            fmap (toChar8)
-                (P.stripPrefix (fromChar8 x)
-                               (fromChar8 y))
+                (FP.stripPrefix (fromChar8 x)
+                                (fromChar8 y))
      $expect $
        equal (stripPrefix' "" "")
              (Just "")
@@ -501,7 +501,7 @@ prop_StripPrefix =
       let prefix = x </> ""
       in let full =
                fromChar8 (toChar8 prefix ++ toChar8 suffix)
-         in case P.stripPrefix prefix full of
+         in case FP.stripPrefix prefix full of
               Nothing -> False
               Just stripped -> prefix </> stripped == full
 
@@ -510,7 +510,7 @@ test_SplitExtension =
   assertions "splitExtension" $
   do let splitExtension' x = (toChar8 base,ext)
            where (base,ext) =
-                   P.splitExtension (fromChar8 x)
+                   FP.splitExtension (fromChar8 x)
      $expect $
        equal (splitExtension' "")
              ("",Nothing)
@@ -540,7 +540,7 @@ test_Collapse :: Test
 test_Collapse =
   assertions "collapse" $
   do let collapse' x =
-           toChar8 (P.collapse (fromChar8 x))
+           toChar8 (FP.collapse (fromChar8 x))
      $expect $
        equal (collapse' "./") "./"
      $expect $
@@ -568,7 +568,7 @@ test_SplitDirectories :: Test
 test_SplitDirectories =
   assertions "splitDirectories" $
   do let splitDirectories' x =
-           P.splitDirectories (fromChar8 x)
+           FP.splitDirectories (fromChar8 x)
          fromChar8' = map fromChar8
      $expect $
        equal (splitDirectories' "")

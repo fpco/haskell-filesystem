@@ -35,8 +35,8 @@ library
   if os(darwin)
     cpp-options: -DCABAL_OS_DARWIN
 
-  exposed-modules:
-    Filesystem.Path
+  other-modules:
+    Filesystem.Path.Internal
 
 test-suite suite
   type: exitcode-stdio-1.0
@@ -45,12 +45,12 @@ test-suite suite
   ghc-options: -Wall -O2
   cc-options: -Wall
   hs-source-dirs: tests
-
+                  lib
   build-depends:
-      base > 4.0 && < 5.0
+      QuickCheck
+    , base > 4.0 && < 5.0
     , bytestring
     , chell >= 0.4 && < 0.5
     , chell-quickcheck >= 0.2 && < 0.3
-    , QuickCheck
-    , system-filepath
+    , deepseq >= 1.1 && < 1.5
     , text
