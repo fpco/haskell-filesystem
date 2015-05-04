@@ -57,7 +57,7 @@ library
   exposed-modules:
     Filesystem
 
-test-suite filesystem_tests
+test-suite suite
   type: exitcode-stdio-1.0
   main-is: FilesystemTests.hs
 
