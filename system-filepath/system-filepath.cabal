@@ -35,6 +35,9 @@ library
   if os(darwin)
     cpp-options: -DCABAL_OS_DARWIN
 
+  exposed-modules:
+    Filesystem.Path
+
   other-modules:
     Filesystem.Path.Internal
 
