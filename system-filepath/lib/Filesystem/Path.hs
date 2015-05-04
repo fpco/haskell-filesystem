@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 -- |
 -- Copyright: 2015 FP Complete
 -- License: MIT
@@ -7,6 +9,15 @@
 --
 module Filesystem.Path
        ( FilePath
+       , toText
+       , fromText
+       , valid
+       , splitSearchPath
+       , splitSearchPathString
+       , decode
+       , decodeString
+       , encode
+       , encodeString
        , (<.>)
        , (</>)
        , absolute
@@ -46,6 +57,14 @@ import qualified Data.ByteString.Char8 as BC
 import qualified Filesystem.Path.Internal as I
 import           Prelude hiding (FilePath, null, concat)
 
+#if defined(__HADDOCK__)
+#  define PLATFORM_PATH_FORMAT platformTextFormat
+#elif defined(CABAL_OS_WINDOWS) || defined(CABAL_OS_DARWIN)
+#  define PLATFORM_PATH_FORMAT T.Text
+#else
+#  define PLATFORM_PATH_FORMAT B.ByteString
+#endif
+
 newtype FilePath = FilePath { unFilePath :: B.ByteString }
 
 instance IsString FilePath where
@@ -58,6 +77,33 @@ instance Monoid FilePath where
   mempty = empty
   mappend = append
   mconcat = concat
+
+toText :: FilePath -> Either T.Text T.Text
+toText = I.toTextOn I.currentOS . toIFP
+
+fromText :: T.Text -> FilePath
+fromText = fromIFP . I.fromTextOn I.currentOS
+
+valid :: FilePath -> Bool
+valid = I.validOn I.currentOS . toIFP
+
+splitSearchPath :: PLATFORM_PATH_FORMAT -> [FilePath]
+splitSearchPath = map fromIFP . (I.splitSearchPathOn I.currentOS)
+
+splitSearchPathString :: String -> [FilePath]
+splitSearchPathString = map fromIFP . (I.splitSearchPathStringOn I.currentOS)
+
+encode :: FilePath -> PLATFORM_PATH_FORMAT
+encode = I.encodeOn I.currentOS . toIFP
+
+decode :: PLATFORM_PATH_FORMAT -> FilePath
+decode = fromIFP . I.decodeOn I.currentOS
+
+encodeString :: FilePath -> String
+encodeString = I.encodeStringOn I.currentOS . toIFP
+
+decodeString :: String -> FilePath
+decodeString = fromIFP . I.decodeStringOn I.currentOS
 
 empty :: FilePath
 empty = FilePath BC.empty
