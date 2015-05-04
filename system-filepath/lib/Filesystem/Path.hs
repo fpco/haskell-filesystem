@@ -152,7 +152,7 @@ stripPrefix x y = fmap fromIFP (I.stripPrefix (toIFP x) (toIFP y))
 
 collapse :: FilePath -> FilePath
 collapse = fromIFP . I.collapse . toIFP
-  
+
 splitDirectories :: FilePath -> [FilePath]
 splitDirectories = map fromIFP . I.splitDirectories . toIFP
 
