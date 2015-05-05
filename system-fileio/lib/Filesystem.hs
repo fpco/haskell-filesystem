@@ -86,10 +86,8 @@ import           Foreign.C (CInt(..), CString, withCAString)
 import qualified Foreign.C.Error as CError
 import qualified System.Environment as SE
 
-import           Filesystem.Path (FilePath, append)
 import qualified Filesystem.Path as Path
-import           Filesystem.Path.CurrentOS (currentOS, encodeString, decodeString)
-import qualified Filesystem.Path.Rules as R
+import           Filesystem.Path
 
 import qualified System.IO as IO
 import           System.IO.Error (IOError)
@@ -135,7 +133,7 @@ import qualified System.Posix.Internals
 -- This computation does not throw exceptions.
 isFile :: FilePath -> IO Bool
 #ifdef CABAL_OS_WINDOWS
-isFile path = SD.doesFileExist (encodeString path)
+isFile path = SD.doesFileExist (encodeString windows path)
 #else
 isFile path = Exc.catch
         (do
@@ -151,7 +149,7 @@ isFile path = Exc.catch
 -- This computation does not throw exceptions.
 isDirectory :: FilePath -> IO Bool
 #ifdef CABAL_OS_WINDOWS
-isDirectory path = SD.doesDirectoryExist (encodeString path)
+isDirectory path = SD.doesDirectoryExist (encodeString windows path)
 #else
 isDirectory path = Exc.catch
         (do
@@ -168,8 +166,8 @@ isDirectory path = Exc.catch
 rename :: FilePath -> FilePath -> IO ()
 rename old new =
 #ifdef CABAL_OS_WINDOWS
-        let old' = encodeString old in
-        let new' = encodeString new in
+        let old' = encodeString windows old in
+        let new' = encodeString windows new in
         Win32.moveFileEx old' new' Win32.mOVEFILE_REPLACE_EXISTING
 #else
         withFilePath old $ \old' ->
@@ -211,7 +209,7 @@ canonicalizePath path =
                 cOut <- Posix.throwErrnoPathIfNull "canonicalizePath" path' (c_realpath cPath nullPtr)
                 bytes <- B.packCString cOut
                 c_free cOut
-                return (R.decode R.posix bytes)
+                return (decode bytes)
 #endif
 
 preserveFinalSlash :: FilePath -> FilePath -> FilePath
@@ -318,7 +316,7 @@ listDirectory root = Exc.bracket alloc free list where
                                 Nothing -> return []
                                 Just bytes | ignore bytes -> loop
                                 Just bytes -> do
-                                        let name = append root (R.decode R.posix bytes)
+                                        let name = append root (decode bytes)
                                         names <- loop
                                         return (name:names)
 
@@ -461,7 +459,7 @@ getWorkingDirectory = do
         buf <- CError.throwErrnoIfNull "getWorkingDirectory" c_getcwd
         bytes <- B.packCString buf
         c_free buf
-        return (R.decode R.posix bytes)
+        return (decode bytes)
 
 foreign import ccall unsafe "hssystemfileio_getcwd"
         c_getcwd :: IO CString
@@ -612,7 +610,7 @@ getenv key = withCAString key $ \cKey -> do
                 then return Nothing
                 else do
                         bytes <- B.packCString ret
-                        return (Just (R.decode R.posix bytes))
+                        return (Just (decode bytes))
 
 foreign import ccall unsafe "getenv"
         c_getenv :: CString -> IO CString
@@ -626,7 +624,7 @@ xdg envkey label fallback = do
                 Just var -> return var
                 Nothing -> fallback
         return $ case label of
-                Just text -> append dir (R.fromText currentOS text)
+                Just text -> append dir (fromText text)
                 Nothing -> dir
 
 -- | Copy the content of a file to a new entry in the filesystem. If a
@@ -918,7 +916,7 @@ withFilePath path = withCWString (encodeString path)
 #else
 
 withFilePath :: FilePath -> (CString -> IO a) -> IO a
-withFilePath path = B.useAsCString (R.encode R.posix path)
+withFilePath path = B.useAsCString (encode path)
 
 throwErrnoPathIfMinus1 :: String -> FilePath -> IO CInt -> IO CInt
 throwErrnoPathIfMinus1 loc path = CError.throwErrnoPathIfMinus1 loc (encodeString path)
@@ -954,7 +952,7 @@ throwErrnoPathIfRetry_ failed loc path io = do
 
 posixStat :: String -> FilePath -> IO Posix.FileStatus
 #if MIN_VERSION_unix(2,5,1)
-posixStat _ path = System.Posix.Files.ByteString.getFileStatus (R.encode R.posix path)
+posixStat _ path = System.Posix.Files.ByteString.getFileStatus (encode path)
 #else
 posixStat loc path = withFd loc path Posix.getFdStatus
 

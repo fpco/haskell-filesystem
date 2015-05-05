@@ -16,7 +16,7 @@ import           System.IO.Temp (withSystemTempDirectory)
 import           Test.Chell
 
 import           Filesystem (removeTree)
-import           Filesystem.Path.CurrentOS (FilePath, decodeString)
+import           Filesystem.Path (FilePath, decodeString)
 
 assertionsWithTemp :: String -> (FilePath -> Assertions a) -> Test
 assertionsWithTemp name io = test name impl where

@@ -34,9 +34,8 @@ import qualified GHC.IOBase as GHC
 import qualified System.Posix.IO as PosixIO
 
 import           Filesystem
-import           Filesystem.Path
-import qualified Filesystem.Path.Rules as Rules
-import qualified Filesystem.Path.CurrentOS as CurrentOS
+import           Filesystem.Path (FilePath, (</>), empty, posix)
+import qualified Filesystem.Path as Path
 
 import           FilesystemTests.Util (assertionsWithTemp, todo)
 
@@ -467,7 +466,7 @@ mkAlreadyExists loc path = GHC.IOError Nothing GHC.AlreadyExists loc "File exist
 #if MIN_VERSION_base(4,2,0)
         (Just (errnoCInt eEXIST))
 #endif
-        (Just (CurrentOS.encodeString path))
+        (Just (Path.encodeString path))
 
 test_CreateTree :: String -> FilePath -> Test
 test_CreateTree test_name dir_name = assertionsWithTemp test_name $ \tmp -> do
@@ -674,13 +673,13 @@ withPathCString :: FilePath -> (CString -> IO a) -> IO a
 withPathCString p = Data.ByteString.useAsCString (encode p)
 
 decode :: ByteString -> FilePath
-decode = Rules.decode Rules.posix
+decode = Path.decodeOn Path.posix
 
 encode :: FilePath -> ByteString
-encode = Rules.encode Rules.posix
+encode = Path.encodeOn Path.posix
 
 fromText :: Text -> FilePath
-fromText = Rules.fromText Rules.posix
+fromText = Path.fromTextOn Path.posix
 
 -- | Create a file using the raw POSIX API, via FFI
 touch_ffi :: FilePath -> Data.ByteString.ByteString -> Assertions ()
