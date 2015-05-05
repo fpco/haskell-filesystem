@@ -1,3 +1,6 @@
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE RankNTypes #-}
+
 -- |
 -- Copyright: 2015 FP Complete
 -- License: MIT
@@ -7,8 +10,33 @@
 --
 module Filesystem.Path
        ( FilePath
+       , Platform
        , (<.>)
        , (</>)
+       , posix
+       , posix_ghc702
+       , posix_ghc704
+       , darwin
+       , darwin_ghc702
+       , windows
+       , toText
+       , fromText
+       , valid
+       , splitSearchPath
+       , splitSearchPathString
+       , encode
+       , decode
+       , encodeString
+       , decodeString
+       , validOn
+       , splitSearchPathOn
+       , splitSearchPathStringOn
+       , toTextOn
+       , fromTextOn
+       , encodeOn
+       , decodeOn
+       , encodeStringOn
+       , decodeStringOn
        , absolute
        , addExtension
        , addExtensions
@@ -46,18 +74,118 @@ import qualified Data.ByteString.Char8 as BC
 import qualified Filesystem.Path.Internal as I
 import           Prelude hiding (FilePath, null, concat)
 
-newtype FilePath = FilePath { unFilePath :: B.ByteString }
+newtype FilePath =
+  FilePath {unFilePath :: B.ByteString}
+
+instance Eq FilePath where
+  (==) a b = toIFP a == toIFP b
 
 instance IsString FilePath where
   fromString = FilePath . BC.pack
-
-instance Show FilePath where
-  show = BC.unpack . unFilePath
 
 instance Monoid FilePath where
   mempty = empty
   mappend = append
   mconcat = concat
+
+instance Ord FilePath where
+  compare a b =
+    compare (toIFP a)
+            (toIFP b)
+
+instance Show FilePath where
+  show = BC.unpack . unFilePath
+
+newtype Platform a = Platform {unPlatform :: I.Rules a}
+  deriving (Show)
+
+#if defined(__HADDOCK__)
+#  define PLATFORM_PATH_FORMAT platformTextFormat
+#elif defined(CABAL_OS_WINDOWS) || defined(CABAL_OS_DARWIN)
+#  define PLATFORM_PATH_FORMAT T.Text
+#else
+#  define PLATFORM_PATH_FORMAT B.ByteString
+#endif
+
+windows :: Platform T.Text
+windows = Platform I.windows
+
+darwin :: Platform T.Text
+darwin = Platform I.darwin
+
+darwin_ghc702 :: Platform T.Text
+darwin_ghc702 = Platform I.darwin_ghc702
+
+posix :: Platform B.ByteString
+posix = Platform I.posix
+
+posix_ghc702 :: Platform B.ByteString
+posix_ghc702 = Platform I.posix_ghc702
+
+posix_ghc704 :: Platform B.ByteString
+posix_ghc704 = Platform I.posix_ghc704
+
+toText :: FilePath -> Either T.Text T.Text
+toText = I.toText . toIFP
+
+fromText :: T.Text -> FilePath
+fromText = fromIFP . I.fromText
+
+valid :: FilePath -> Bool
+valid = I.valid . toIFP
+
+splitSearchPath :: PLATFORM_PATH_FORMAT -> [FilePath]
+splitSearchPath = map fromIFP . I.splitSearchPath
+
+splitSearchPathString :: String -> [FilePath]
+splitSearchPathString = map fromIFP . I.splitSearchPathString
+
+encode :: FilePath -> PLATFORM_PATH_FORMAT
+encode = I.encode . toIFP
+
+decode :: PLATFORM_PATH_FORMAT -> FilePath
+decode = fromIFP . I.decode
+
+encodeString :: FilePath -> String
+encodeString = I.encodeString . toIFP
+
+decodeString :: String -> FilePath
+decodeString = fromIFP . I.decodeString
+
+validOn :: forall a.
+           Platform a -> I.FilePath -> Bool
+validOn = I.validOn . unPlatform
+
+splitSearchPathOn :: forall a.
+                     Platform a -> a -> [FilePath]
+splitSearchPathOn p = map fromIFP . I.splitSearchPathOn (unPlatform p)
+
+splitSearchPathStringOn :: forall a.
+                           Platform a -> String -> [FilePath]
+splitSearchPathStringOn p = map fromIFP . I.splitSearchPathStringOn (unPlatform p)
+
+toTextOn :: forall a.
+            Platform a -> FilePath -> Either T.Text T.Text
+toTextOn p = I.toTextOn (unPlatform p) . toIFP
+
+fromTextOn :: forall a.
+              Platform a -> T.Text -> FilePath
+fromTextOn p = fromIFP . I.fromTextOn (unPlatform p)
+
+encodeOn :: forall a.
+            Platform a -> FilePath -> a
+encodeOn p = I.encodeOn (unPlatform p) . toIFP
+
+decodeOn :: forall a. Platform a -> a -> FilePath
+decodeOn p = fromIFP . I.decodeOn (unPlatform p)
+
+encodeStringOn :: forall a.
+                  Platform a -> I.FilePath -> String
+encodeStringOn = I.encodeStringOn . unPlatform
+
+decodeStringOn :: forall a.
+                  Platform a -> String -> FilePath
+decodeStringOn p = fromIFP . I.decodeStringOn (unPlatform p)
 
 empty :: FilePath
 empty = FilePath BC.empty
@@ -106,7 +234,7 @@ stripPrefix x y = fmap fromIFP (I.stripPrefix (toIFP x) (toIFP y))
 
 collapse :: FilePath -> FilePath
 collapse = fromIFP . I.collapse . toIFP
-  
+
 splitDirectories :: FilePath -> [FilePath]
 splitDirectories = map fromIFP . I.splitDirectories . toIFP
 
