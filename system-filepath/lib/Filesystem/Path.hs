@@ -72,7 +72,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
-import qualified Filesystem.Path.Internal as I
+import qualified Filesystem.Path.Internal as FPI
 import           Prelude hiding (FilePath, null, concat)
 
 newtype FilePath =
@@ -97,7 +97,7 @@ instance Ord FilePath where
 instance Show FilePath where
   show = unFilePath
 
-newtype Platform a = Platform {unPlatform :: I.Rules a}
+newtype Platform a = Platform {unPlatform :: FPI.Rules a}
   deriving (Show)
 
 #if defined(__HADDOCK__)
@@ -109,182 +109,182 @@ newtype Platform a = Platform {unPlatform :: I.Rules a}
 #endif
 
 windows :: Platform T.Text
-windows = Platform I.windows
+windows = Platform FPI.windows
 
 darwin :: Platform T.Text
-darwin = Platform I.darwin
+darwin = Platform FPI.darwin
 
 darwin_ghc702 :: Platform T.Text
-darwin_ghc702 = Platform I.darwin_ghc702
+darwin_ghc702 = Platform FPI.darwin_ghc702
 
 posix :: Platform B.ByteString
-posix = Platform I.posix
+posix = Platform FPI.posix
 
 posix_ghc702 :: Platform B.ByteString
-posix_ghc702 = Platform I.posix_ghc702
+posix_ghc702 = Platform FPI.posix_ghc702
 
 posix_ghc704 :: Platform B.ByteString
-posix_ghc704 = Platform I.posix_ghc704
+posix_ghc704 = Platform FPI.posix_ghc704
 
 toText :: FilePath -> Either T.Text T.Text
-toText = I.toText . toIFP
+toText = FPI.toText . toIFP
 
 fromText :: T.Text -> FilePath
-fromText = fromIFP . I.fromText
+fromText = fromIFP . FPI.fromText
 
 valid :: FilePath -> Bool
-valid = I.valid . toIFP
+valid = FPI.valid . toIFP
 
 splitSearchPath :: PLATFORM_PATH_FORMAT -> [FilePath]
-splitSearchPath = map fromIFP . I.splitSearchPath
+splitSearchPath = map fromIFP . FPI.splitSearchPath
 
 splitSearchPathString :: String -> [FilePath]
-splitSearchPathString = map fromIFP . I.splitSearchPathString
+splitSearchPathString = map fromIFP . FPI.splitSearchPathString
 
 encode :: FilePath -> PLATFORM_PATH_FORMAT
-encode = I.encode . toIFP
+encode = FPI.encode . toIFP
 
 decode :: PLATFORM_PATH_FORMAT -> FilePath
-decode = fromIFP . I.decode
+decode = fromIFP . FPI.decode
 
 encodeString :: FilePath -> String
-encodeString = I.encodeString . toIFP
+encodeString = FPI.encodeString . toIFP
 
 decodeString :: String -> FilePath
-decodeString = fromIFP . I.decodeString
+decodeString = fromIFP . FPI.decodeString
 
 validOn :: forall a.
            Platform a -> FilePath -> Bool
-validOn p = I.validOn (unPlatform p) . toIFP
+validOn p = FPI.validOn (unPlatform p) . toIFP
 
 splitSearchPathOn :: forall a.
                      Platform a -> a -> [FilePath]
-splitSearchPathOn p = map fromIFP . I.splitSearchPathOn (unPlatform p)
+splitSearchPathOn p = map fromIFP . FPI.splitSearchPathOn (unPlatform p)
 
 splitSearchPathStringOn :: forall a.
                            Platform a -> String -> [FilePath]
-splitSearchPathStringOn p = map fromIFP . I.splitSearchPathStringOn (unPlatform p)
+splitSearchPathStringOn p = map fromIFP . FPI.splitSearchPathStringOn (unPlatform p)
 
 toTextOn :: forall a.
             Platform a -> FilePath -> Either T.Text T.Text
-toTextOn p = I.toTextOn (unPlatform p) . toIFP
+toTextOn p = FPI.toTextOn (unPlatform p) . toIFP
 
 fromTextOn :: forall a.
               Platform a -> T.Text -> FilePath
-fromTextOn p = fromIFP . I.fromTextOn (unPlatform p)
+fromTextOn p = fromIFP . FPI.fromTextOn (unPlatform p)
 
 encodeOn :: forall a.
             Platform a -> FilePath -> a
-encodeOn p = I.encodeOn (unPlatform p) . toIFP
+encodeOn p = FPI.encodeOn (unPlatform p) . toIFP
 
 decodeOn :: forall a. Platform a -> a -> FilePath
-decodeOn p = fromIFP . I.decodeOn (unPlatform p)
+decodeOn p = fromIFP . FPI.decodeOn (unPlatform p)
 
 encodeStringOn :: forall a.
                   Platform a -> FilePath -> String
-encodeStringOn p = I.encodeStringOn (unPlatform p) . toIFP
+encodeStringOn p = FPI.encodeStringOn (unPlatform p) . toIFP
 
 decodeStringOn :: forall a.
                   Platform a -> String -> FilePath
-decodeStringOn p = fromIFP . I.decodeStringOn (unPlatform p)
+decodeStringOn p = fromIFP . FPI.decodeStringOn (unPlatform p)
 
 empty :: FilePath
 empty = FilePath []
 
 null :: FilePath -> Bool
-null = I.null . toIFP
+null = FPI.null . toIFP
 
 root :: FilePath -> FilePath
-root = fromIFP . I.root . toIFP
+root = fromIFP . FPI.root . toIFP
 
 directory :: FilePath -> FilePath
-directory = fromIFP . I.directory . toIFP
+directory = fromIFP . FPI.directory . toIFP
 
 parent :: FilePath -> FilePath
-parent = fromIFP . I.parent . toIFP
+parent = fromIFP . FPI.parent . toIFP
 
 filename :: FilePath -> FilePath
-filename = fromIFP . I.filename . toIFP
+filename = fromIFP . FPI.filename . toIFP
 
 dirname :: FilePath -> FilePath
-dirname = fromIFP . I.dirname . toIFP
+dirname = fromIFP . FPI.dirname . toIFP
 
 basename :: FilePath -> FilePath
-basename = fromIFP . I.basename . toIFP
+basename = fromIFP . FPI.basename . toIFP
 
 absolute :: FilePath -> Bool
-absolute = I.absolute . toIFP
+absolute = FPI.absolute . toIFP
 
 relative :: FilePath -> Bool
-relative = I.relative . toIFP
+relative = FPI.relative . toIFP
 
 append :: FilePath -> FilePath -> FilePath
-append x y = fromIFP (I.append (toIFP x) (toIFP y))
+append x y = fromIFP (FPI.append (toIFP x) (toIFP y))
 
 (</>) :: FilePath -> FilePath -> FilePath
 (</>) = append
 
 concat :: [FilePath] -> FilePath
-concat = fromIFP . I.concat . map toIFP
+concat = fromIFP . FPI.concat . map toIFP
 
 commonPrefix :: [FilePath] -> FilePath
-commonPrefix = fromIFP . I.commonPrefix . map toIFP
+commonPrefix = fromIFP . FPI.commonPrefix . map toIFP
 
 stripPrefix :: FilePath -> FilePath -> Maybe FilePath
-stripPrefix x y = fmap fromIFP (I.stripPrefix (toIFP x) (toIFP y))
+stripPrefix x y = fmap fromIFP (FPI.stripPrefix (toIFP x) (toIFP y))
 
 collapse :: FilePath -> FilePath
-collapse = fromIFP . I.collapse . toIFP
+collapse = fromIFP . FPI.collapse . toIFP
 
 splitDirectories :: FilePath -> [FilePath]
-splitDirectories = map fromIFP . I.splitDirectories . toIFP
+splitDirectories = map fromIFP . FPI.splitDirectories . toIFP
 
 extension :: FilePath -> Maybe T.Text
-extension = I.extension . toIFP
+extension = FPI.extension . toIFP
 
 extensions :: FilePath -> [T.Text]
-extensions = I.extensions . toIFP
+extensions = FPI.extensions . toIFP
 
 hasExtension :: FilePath -> T.Text -> Bool
-hasExtension = I.hasExtension . toIFP
+hasExtension = FPI.hasExtension . toIFP
 
 addExtension :: FilePath -> T.Text -> FilePath
-addExtension x y = fromIFP (I.addExtension (toIFP x) y)
+addExtension x y = fromIFP (FPI.addExtension (toIFP x) y)
 
 addExtensions :: FilePath -> [T.Text] -> FilePath
-addExtensions x ys = fromIFP (I.addExtensions (toIFP x) ys)
+addExtensions x ys = fromIFP (FPI.addExtensions (toIFP x) ys)
 
 (<.>) :: FilePath -> T.Text -> FilePath
 (<.>) = addExtension
 
 dropExtension :: FilePath -> FilePath
-dropExtension = fromIFP . I.dropExtension . toIFP
+dropExtension = fromIFP . FPI.dropExtension . toIFP
 
 dropExtensions :: FilePath -> FilePath
-dropExtensions = fromIFP . I.dropExtensions . toIFP
+dropExtensions = fromIFP . FPI.dropExtensions . toIFP
 
 replaceExtension :: FilePath -> T.Text -> FilePath
-replaceExtension x y = fromIFP (I.replaceExtension (toIFP x) y)
+replaceExtension x y = fromIFP (FPI.replaceExtension (toIFP x) y)
 
 replaceExtensions :: FilePath -> [T.Text] -> FilePath
-replaceExtensions x ys = fromIFP (I.replaceExtensions (toIFP x) ys)
+replaceExtensions x ys = fromIFP (FPI.replaceExtensions (toIFP x) ys)
 
 splitExtension :: FilePath -> (FilePath, Maybe T.Text)
 splitExtension x =
-  let split = I.splitExtension (toIFP x)
+  let split = FPI.splitExtension (toIFP x)
   in (fromIFP (fst split),snd split)
 
 splitExtensions :: FilePath -> (FilePath, [T.Text])
 splitExtensions x =
-  let split = I.splitExtensions (toIFP x)
+  let split = FPI.splitExtensions (toIFP x)
   in (fromIFP (fst split),snd split)
 
 --
 -- Internal
 --
 
-toIFP :: FilePath -> I.FilePath
-toIFP = I.decodeString . unFilePath
+toIFP :: FilePath -> FPI.FilePath
+toIFP = FPI.decodeString . unFilePath
 
-fromIFP :: I.FilePath -> FilePath
-fromIFP = FilePath . I.encodeString
+fromIFP :: FPI.FilePath -> FilePath
+fromIFP = FilePath . FPI.encodeString
