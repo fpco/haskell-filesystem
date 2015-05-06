@@ -153,8 +153,8 @@ decodeString :: String -> FilePath
 decodeString = fromIFP . I.decodeString
 
 validOn :: forall a.
-           Platform a -> I.FilePath -> Bool
-validOn = I.validOn . unPlatform
+           Platform a -> FilePath -> Bool
+validOn p = I.validOn (unPlatform p) . toIFP
 
 splitSearchPathOn :: forall a.
                      Platform a -> a -> [FilePath]
@@ -180,8 +180,8 @@ decodeOn :: forall a. Platform a -> a -> FilePath
 decodeOn p = fromIFP . I.decodeOn (unPlatform p)
 
 encodeStringOn :: forall a.
-                  Platform a -> I.FilePath -> String
-encodeStringOn = I.encodeStringOn . unPlatform
+                  Platform a -> FilePath -> String
+encodeStringOn p = I.encodeStringOn (unPlatform p) . toIFP
 
 decodeStringOn :: forall a.
                   Platform a -> String -> FilePath
