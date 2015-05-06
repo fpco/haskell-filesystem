@@ -69,19 +69,20 @@ module Filesystem.Path
 import           Data.Monoid
 import           Data.String
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 import qualified Filesystem.Path.Internal as I
 import           Prelude hiding (FilePath, null, concat)
 
 newtype FilePath =
-  FilePath {unFilePath :: B.ByteString}
+  FilePath {unFilePath :: String}
 
 instance Eq FilePath where
   (==) a b = toIFP a == toIFP b
 
 instance IsString FilePath where
-  fromString = FilePath . BC.pack
+  fromString = FilePath
 
 instance Monoid FilePath where
   mempty = empty
@@ -94,7 +95,7 @@ instance Ord FilePath where
             (toIFP b)
 
 instance Show FilePath where
-  show = BC.unpack . unFilePath
+  show = unFilePath
 
 newtype Platform a = Platform {unPlatform :: I.Rules a}
   deriving (Show)
@@ -188,7 +189,7 @@ decodeStringOn :: forall a.
 decodeStringOn p = fromIFP . I.decodeStringOn (unPlatform p)
 
 empty :: FilePath
-empty = FilePath BC.empty
+empty = FilePath []
 
 null :: FilePath -> Bool
 null = I.null . toIFP
@@ -283,7 +284,7 @@ splitExtensions x =
 --
 
 toIFP :: FilePath -> I.FilePath
-toIFP = I.fromText . T.pack . BC.unpack . unFilePath
+toIFP = I.decodeString . unFilePath
 
 fromIFP :: I.FilePath -> FilePath
-fromIFP = FilePath . BC.pack . T.unpack . either id id . I.toText
+fromIFP = FilePath . I.encodeString
