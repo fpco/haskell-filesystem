@@ -73,6 +73,7 @@ import qualified Data.Text.Encoding as T
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 import qualified Filesystem.Path.Internal as FPI
+import qualified System.FilePath as SF
 import           Prelude hiding (FilePath, null, concat)
 
 newtype FilePath =
