@@ -205,9 +205,7 @@ root :: FilePath -> FilePath
 root = fromIFP . FPI.root . toIFP -- TODO impl custom replacement
 
 directory :: FilePath -> FilePath
-directory =
-  addTrailingPathSeparator .
-  (fromString . SF.takeDirectory . unFilePath)
+directory = addTrailingPathSeparator . apply SF.takeDirectory
 
 parent :: FilePath -> FilePath
 parent = fromIFP . FPI.parent . toIFP -- TODO impl custom replacement
@@ -288,9 +286,7 @@ hasExtension p e = extension p == Just e
 
 addExtension :: FilePath -> T.Text -> FilePath
 addExtension x y =
-  fromString
-    (SF.addExtension (unFilePath x)
-                     (T.unpack y))
+  apply (flip SF.addExtension (T.unpack y)) x
 
 addExtensions :: FilePath -> [T.Text] -> FilePath
 addExtensions = foldl addExtension
@@ -299,16 +295,14 @@ addExtensions = foldl addExtension
 (<.>) = addExtension
 
 dropExtension :: FilePath -> FilePath
-dropExtension = fromString . SF.dropExtension . unFilePath
+dropExtension = apply SF.dropExtension
 
 dropExtensions :: FilePath -> FilePath
-dropExtensions = fromString . SF.dropExtensions . unFilePath
+dropExtensions = apply SF.dropExtensions
 
 replaceExtension :: FilePath -> T.Text -> FilePath
 replaceExtension x y =
-  fromString
-    (SF.replaceExtension (unFilePath x)
-                         (T.unpack y))
+  apply (flip SF.replaceExtension (T.unpack y)) x
 
 replaceExtensions :: FilePath -> [T.Text] -> FilePath
 replaceExtensions x ys =
@@ -332,10 +326,10 @@ splitExtensions p =
   in (fromString path,filterEmpty (splitOnExtSeparator (fromString exts)))
 
 addTrailingPathSeparator :: FilePath -> FilePath
-addTrailingPathSeparator = fromString . SF.addTrailingPathSeparator . unFilePath
+addTrailingPathSeparator = apply SF.addTrailingPathSeparator
 
 dropTrailingPathSeparator :: FilePath -> FilePath
-dropTrailingPathSeparator = fromString . SF.dropTrailingPathSeparator . unFilePath
+dropTrailingPathSeparator = apply SF.dropTrailingPathSeparator
 
 --
 -- Internal
@@ -352,3 +346,6 @@ splitOnExtSeparator = T.splitOn (T.pack [SF.extSeparator])
 
 filterEmpty :: [T.Text] -> [T.Text]
 filterEmpty = filter (T.empty /=)
+
+apply :: (SF.FilePath -> SF.FilePath) -> FilePath -> FilePath
+apply f = fromString . f . unFilePath
