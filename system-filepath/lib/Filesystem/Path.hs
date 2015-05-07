@@ -161,6 +161,8 @@ decodeString = fromIFP . FPI.decodeString
 validOn :: forall a.
            Platform a -> FilePath -> Bool
 validOn p = FPI.validOn (unPlatform p) . toIFP
+-- validOn _p | _ = Windows.isValid . unFilePath
+-- validOn _p | _ = Posix.isValid . unFilePath
 
 splitSearchPathOn :: forall a.
                      Platform a -> a -> [FilePath]
@@ -216,6 +218,10 @@ filename = fromString . SF.takeFileName . unFilePath
 
 dirname :: FilePath -> FilePath
 dirname = fromIFP . FPI.dirname . toIFP
+-- dirname p =
+--   case reverse (splitDirectories p) of
+--     [] -> p
+--     (dir:_) -> dir
 
 basename :: FilePath -> FilePath
 basename = fromString . SF.takeBaseName . unFilePath
@@ -228,6 +234,7 @@ relative = FPI.relative . toIFP
 
 append :: FilePath -> FilePath -> FilePath
 append x y = fromIFP (FPI.append (toIFP x) (toIFP y))
+  -- fromString (SF.combine (unFilePath x) (unFilePath y))
 
 (</>) :: FilePath -> FilePath -> FilePath
 (</>) = append
@@ -246,6 +253,7 @@ collapse = fromIFP . FPI.collapse . toIFP -- TODO impl custom replacement
 
 splitDirectories :: FilePath -> [FilePath]
 splitDirectories = map fromIFP . FPI.splitDirectories . toIFP
+-- splitDirectories = map fromString . SF.splitDirectories . unFilePath
 
 extension :: FilePath -> Maybe T.Text
 extension p =
