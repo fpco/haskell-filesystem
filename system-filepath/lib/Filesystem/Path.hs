@@ -255,7 +255,7 @@ extensions p =
         stripPrefix (basename p)
                     (fromString exts)
   in filterEmpty
-       (splitOnSeparator
+       (splitOnExtSeparator
           (T.pack (case suffix of
                      Nothing -> exts
                      Just suffix' -> unFilePath suffix')))
@@ -306,7 +306,7 @@ splitExtensions :: FilePath -> (FilePath, [T.Text])
 splitExtensions p =
   let (path,exts) =
         SF.splitExtensions (unFilePath p)
-  in (FilePath path,filterEmpty (splitOnSeparator (fromString exts)))
+  in (FilePath path,filterEmpty (splitOnExtSeparator (fromString exts)))
 
 --
 -- Internal
@@ -321,8 +321,8 @@ fromIFP = FilePath . FPI.encodeString
 filterSeparator :: T.Text -> T.Text
 filterSeparator = T.filter (SF.extSeparator /=)
 
-splitOnSeparator :: T.Text -> [T.Text]
-splitOnSeparator = T.splitOn (T.pack [SF.extSeparator])
+splitOnExtSeparator :: T.Text -> [T.Text]
+splitOnExtSeparator = T.splitOn (T.pack [SF.extSeparator])
 
 filterEmpty :: [T.Text] -> [T.Text]
 filterEmpty = filter (T.empty /=)
