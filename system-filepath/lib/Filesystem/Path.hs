@@ -75,6 +75,8 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 import qualified Filesystem.Path.Internal as FPI
 import qualified System.FilePath as SF
+import qualified System.FilePath.Windows as Windows
+import qualified System.FilePath.Posix as Posix
 import           Prelude hiding (FilePath, null, concat)
 import qualified Prelude as P
 
