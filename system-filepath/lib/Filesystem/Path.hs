@@ -273,7 +273,7 @@ addExtension x y =
                      (T.unpack y))
 
 addExtensions :: FilePath -> [T.Text] -> FilePath
-addExtensions x ys = foldl addExtension x (reverse ys)
+addExtensions = foldl addExtension
 
 (<.>) :: FilePath -> T.Text -> FilePath
 (<.>) = addExtension
