@@ -201,7 +201,10 @@ root :: FilePath -> FilePath
 root = fromIFP . FPI.root . toIFP
 
 directory :: FilePath -> FilePath
-directory = fromString . SF.takeDirectory . unFilePath
+directory =
+  fromString .
+  (SF.addTrailingPathSeparator . SF.takeDirectory) .
+  unFilePath
 
 parent :: FilePath -> FilePath
 parent = fromIFP . FPI.parent . toIFP
