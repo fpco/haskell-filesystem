@@ -138,7 +138,7 @@ fromText :: T.Text -> FilePath
 fromText = fromIFP . FPI.fromText
 
 valid :: FilePath -> Bool
-valid = FPI.valid . toIFP
+valid = SF.isValid . unFilePath
 
 splitSearchPath :: PLATFORM_PATH_FORMAT -> [FilePath]
 splitSearchPath = map fromIFP . FPI.splitSearchPath
