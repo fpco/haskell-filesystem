@@ -218,10 +218,18 @@ filename = fromString . SF.takeFileName . unFilePath
 
 dirname :: FilePath -> FilePath
 dirname = fromIFP . FPI.dirname . toIFP
--- dirname p =
---   case reverse (splitDirectories p) of
---     [] -> p
---     (dir:_) -> dir
+  -- case reverse (SF.splitDirectories . SF.takeDirectory . unFilePath $ p) of
+  --   [] -> p
+  --   (dir:_) -> fromString dir
+  {-
+     FIXME:
+     system-filepath: dirname ""    == ""
+     filepath:        dirname ""    == "./"
+     system-filepath: dirname "/"   == ""
+     filepath:        dirname "/"   == "/"
+     system-filepath: dirname "foo" == ""
+     filepath:        dirname "foo" == "./"
+  -}
 
 basename :: FilePath -> FilePath
 basename = fromString . SF.takeBaseName . unFilePath
