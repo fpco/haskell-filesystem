@@ -201,6 +201,9 @@ empty = fromString ""
 null :: FilePath -> Bool
 null = FPI.null . toIFP -- TODO impl custom replacement
 
+normalise :: FilePath -> FilePath
+normalise = apply SF.normalise
+
 root :: FilePath -> FilePath
 root = fromIFP . FPI.root . toIFP -- TODO impl custom replacement
 
