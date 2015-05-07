@@ -85,7 +85,7 @@ instance Eq FilePath where
   (==) a b = toIFP a == toIFP b
 
 instance IsString FilePath where
-  fromString = FilePath
+  fromString = FilePath . SF.normalise
 
 instance Monoid FilePath where
   mempty = empty
