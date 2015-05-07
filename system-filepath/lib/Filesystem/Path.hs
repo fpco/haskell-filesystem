@@ -218,7 +218,7 @@ parent :: FilePath -> FilePath
 parent = fromIFP . FPI.parent . toIFP -- TODO impl custom replacement
 
 filename :: FilePath -> FilePath
-filename = fromString . SF.takeFileName . unFilePath
+filename = apply SF.takeFileName
 
 dirname :: FilePath -> FilePath
 dirname p =
@@ -229,7 +229,7 @@ dirname p =
     (dir:_) -> dropTrailingPathSeparator dir
 
 basename :: FilePath -> FilePath
-basename = fromString . SF.takeBaseName . unFilePath
+basename = apply SF.takeBaseName
 
 absolute :: FilePath -> Bool
 absolute = FPI.absolute . toIFP
