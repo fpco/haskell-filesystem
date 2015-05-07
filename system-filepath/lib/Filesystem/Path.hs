@@ -199,7 +199,7 @@ empty :: FilePath
 empty = fromString ""
 
 null :: FilePath -> Bool
-null = FPI.null . toIFP -- TODO impl custom replacement
+null = P.null . unFilePath
 
 normalise :: FilePath -> FilePath
 normalise = apply SF.normalise
