@@ -207,8 +207,8 @@ normalise = apply SF.normalise
 root :: FilePath -> FilePath
 root p =
   case splitDirectories (directory p) of
-    [] -> fromString ""
-    ("./":_) -> fromString ""
+    [] -> ""
+    ("./":_) -> ""
     (r:_) -> r
 
 directory :: FilePath -> FilePath
@@ -223,9 +223,9 @@ filename = apply SF.takeFileName
 dirname :: FilePath -> FilePath
 dirname p =
   case (reverse . splitDirectories . directory) p of
-    [] -> fromString ""
-    ("./":_) -> fromString ""
-    ("/":_) -> fromString ""
+    [] -> ""
+    ("./":_) -> ""
+    ("/":_) -> ""
     (dir:_) -> dropTrailingPathSeparator dir
 
 basename :: FilePath -> FilePath
