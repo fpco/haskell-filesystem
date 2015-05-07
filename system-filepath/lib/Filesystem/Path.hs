@@ -206,9 +206,8 @@ root = fromIFP . FPI.root . toIFP -- TODO impl custom replacement
 
 directory :: FilePath -> FilePath
 directory =
-  fromString .
-  (SF.addTrailingPathSeparator . SF.takeDirectory) .
-  unFilePath
+  addTrailingPathSeparator .
+  (fromString . SF.takeDirectory . unFilePath)
 
 parent :: FilePath -> FilePath
 parent = fromIFP . FPI.parent . toIFP -- TODO impl custom replacement
@@ -217,19 +216,12 @@ filename :: FilePath -> FilePath
 filename = fromString . SF.takeFileName . unFilePath
 
 dirname :: FilePath -> FilePath
-dirname = fromIFP . FPI.dirname . toIFP
-  -- case reverse (SF.splitDirectories . SF.takeDirectory . unFilePath $ p) of
-  --   [] -> p
-  --   (dir:_) -> fromString dir
-  {-
-     FIXME:
-     system-filepath: dirname ""    == ""
-     filepath:        dirname ""    == "./"
-     system-filepath: dirname "/"   == ""
-     filepath:        dirname "/"   == "/"
-     system-filepath: dirname "foo" == ""
-     filepath:        dirname "foo" == "./"
-  -}
+dirname p =
+  case reverse (splitDirectories (directory p)) of
+    [] -> fromString ""
+    ("./":_) -> fromString ""
+    ("/":_) -> fromString ""
+    (dir:_) -> dropTrailingPathSeparator dir
 
 basename :: FilePath -> FilePath
 basename = fromString . SF.takeBaseName . unFilePath
@@ -338,6 +330,12 @@ splitExtensions p =
   let (path,exts) =
         SF.splitExtensions (unFilePath p)
   in (fromString path,filterEmpty (splitOnExtSeparator (fromString exts)))
+
+addTrailingPathSeparator :: FilePath -> FilePath
+addTrailingPathSeparator = fromString . SF.addTrailingPathSeparator . unFilePath
+
+dropTrailingPathSeparator :: FilePath -> FilePath
+dropTrailingPathSeparator = fromString . SF.dropTrailingPathSeparator . unFilePath
 
 --
 -- Internal
