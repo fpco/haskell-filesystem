@@ -206,7 +206,7 @@ normalise = apply SF.normalise
 
 root :: FilePath -> FilePath
 root p =
-  case splitDirectories (directory p) of
+  case (splitDirectories . directory) p of
     [] -> ""
     ("./":_) -> ""
     (r:_) -> r
