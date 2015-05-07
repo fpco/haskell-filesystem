@@ -205,7 +205,11 @@ normalise :: FilePath -> FilePath
 normalise = apply SF.normalise
 
 root :: FilePath -> FilePath
-root = fromIFP . FPI.root . toIFP -- TODO impl custom replacement
+root p =
+  case splitDirectories (directory p) of
+    [] -> fromString ""
+    ("./":_) -> fromString ""
+    (r:_) -> r
 
 directory :: FilePath -> FilePath
 directory = addTrailingPathSeparator . apply SF.takeDirectory
