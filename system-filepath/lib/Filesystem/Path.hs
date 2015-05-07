@@ -201,13 +201,13 @@ root :: FilePath -> FilePath
 root = fromIFP . FPI.root . toIFP
 
 directory :: FilePath -> FilePath
-directory = fromIFP . FPI.directory . toIFP
+directory = fromString . SF.takeDirectory . unFilePath
 
 parent :: FilePath -> FilePath
 parent = fromIFP . FPI.parent . toIFP
 
 filename :: FilePath -> FilePath
-filename = fromIFP . FPI.filename . toIFP
+filename = fromString . SF.takeFileName . unFilePath
 
 dirname :: FilePath -> FilePath
 dirname = fromIFP . FPI.dirname . toIFP
