@@ -222,7 +222,7 @@ filename = fromString . SF.takeFileName . unFilePath
 
 dirname :: FilePath -> FilePath
 dirname p =
-  case reverse (splitDirectories (directory p)) of
+  case (reverse . splitDirectories . directory) p of
     [] -> fromString ""
     ("./":_) -> fromString ""
     ("/":_) -> fromString ""
