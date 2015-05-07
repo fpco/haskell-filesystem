@@ -331,9 +331,6 @@ toIFP = FPI.decodeString . unFilePath
 fromIFP :: FPI.FilePath -> FilePath
 fromIFP = fromString . FPI.encodeString
 
-filterSeparator :: T.Text -> T.Text
-filterSeparator = T.filter (SF.extSeparator /=)
-
 splitOnExtSeparator :: T.Text -> [T.Text]
 splitOnExtSeparator = T.splitOn (T.pack [SF.extSeparator])
 
