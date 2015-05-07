@@ -262,13 +262,14 @@ collapse :: FilePath -> FilePath
 collapse = fromIFP . FPI.collapse . toIFP -- TODO impl custom replacement
 
 splitDirectories :: FilePath -> [FilePath]
-splitDirectories = map fromIFP . FPI.splitDirectories . toIFP
-  -- map fromString . SF.splitDirectories . unFilePath
-  {-
-     FIXME:
-     system-filepath: splitDirectories "/ab/cd.txt" == ["/","ab/","cd.txt"]
-     filepath:        splitDirectories "/ab/cd.txt" == ["/","ab","cd.txt"]
-  -}
+splitDirectories p =
+  case (reverse . map fromString . SF.splitDirectories . unFilePath) p of
+    [] -> []
+    (x:xs) ->
+      map addTrailingPathSeparator (reverse xs) ++
+      (if hasTrailingPathSeparator p
+          then [addTrailingPathSeparator x]
+          else [x])
 
 extension :: FilePath -> Maybe T.Text
 extension p =
