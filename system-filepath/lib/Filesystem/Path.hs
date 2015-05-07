@@ -236,13 +236,13 @@ concat :: [FilePath] -> FilePath
 concat = foldl append empty
 
 commonPrefix :: [FilePath] -> FilePath
-commonPrefix = fromIFP . FPI.commonPrefix . map toIFP
+commonPrefix = fromIFP . FPI.commonPrefix . map toIFP -- TODO impl custom replacement
 
 stripPrefix :: FilePath -> FilePath -> Maybe FilePath
-stripPrefix x y = fmap fromIFP (FPI.stripPrefix (toIFP x) (toIFP y))
+stripPrefix x y = fmap fromIFP (FPI.stripPrefix (toIFP x) (toIFP y)) -- TODO impl custom replacement
 
 collapse :: FilePath -> FilePath
-collapse = fromIFP . FPI.collapse . toIFP
+collapse = fromIFP . FPI.collapse . toIFP -- TODO impl custom replacement
 
 splitDirectories :: FilePath -> [FilePath]
 splitDirectories = map fromIFP . FPI.splitDirectories . toIFP
