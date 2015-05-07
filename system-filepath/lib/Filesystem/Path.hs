@@ -332,6 +332,9 @@ splitExtensions p =
         SF.splitExtensions (unFilePath p)
   in (fromString path,filterEmpty (splitOnExtSeparator (fromString exts)))
 
+hasTrailingPathSeparator :: FilePath -> Bool
+hasTrailingPathSeparator = SF.hasTrailingPathSeparator . unFilePath
+
 addTrailingPathSeparator :: FilePath -> FilePath
 addTrailingPathSeparator = apply SF.addTrailingPathSeparator
 
