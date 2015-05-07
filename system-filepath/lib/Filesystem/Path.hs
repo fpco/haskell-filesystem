@@ -231,7 +231,7 @@ append x y = fromIFP (FPI.append (toIFP x) (toIFP y))
 (</>) = append
 
 concat :: [FilePath] -> FilePath
-concat = fromIFP . FPI.concat . map toIFP
+concat = foldl append empty
 
 commonPrefix :: [FilePath] -> FilePath
 commonPrefix = fromIFP . FPI.commonPrefix . map toIFP
