@@ -192,7 +192,7 @@ decodeStringOn :: forall a.
 decodeStringOn p = fromIFP . FPI.decodeStringOn (unPlatform p)
 
 empty :: FilePath
-empty = FilePath []
+empty = fromString ""
 
 null :: FilePath -> Bool
 null = FPI.null . toIFP
@@ -309,7 +309,7 @@ splitExtensions :: FilePath -> (FilePath, [T.Text])
 splitExtensions p =
   let (path,exts) =
         SF.splitExtensions (unFilePath p)
-  in (FilePath path,filterEmpty (splitOnExtSeparator (fromString exts)))
+  in (fromString path,filterEmpty (splitOnExtSeparator (fromString exts)))
 
 --
 -- Internal
@@ -319,7 +319,7 @@ toIFP :: FilePath -> FPI.FilePath
 toIFP = FPI.decodeString . unFilePath
 
 fromIFP :: FPI.FilePath -> FilePath
-fromIFP = FilePath . FPI.encodeString
+fromIFP = fromString . FPI.encodeString
 
 filterSeparator :: T.Text -> T.Text
 filterSeparator = T.filter (SF.extSeparator /=)
