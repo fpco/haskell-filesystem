@@ -238,7 +238,7 @@ append x y = fromIFP (FPI.append (toIFP x) (toIFP y))
   {-
      FIXME:
      system-filepath: "a" </> "" == "a/"
-     filepath: "a" </> "" == "a"
+     filepath:        "a" </> "" == "a"
   -}
 
 (</>) :: FilePath -> FilePath -> FilePath
@@ -262,7 +262,7 @@ splitDirectories = map fromIFP . FPI.splitDirectories . toIFP
   {-
      FIXME:
      system-filepath: splitDirectories "/ab/cd.txt" == ["/","ab/","cd.txt"]
-     filepath: splitDirectories "/ab/cd.txt" == ["/","ab","cd.txt"]
+     filepath:        splitDirectories "/ab/cd.txt" == ["/","ab","cd.txt"]
   -}
 
 extension :: FilePath -> Maybe T.Text
