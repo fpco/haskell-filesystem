@@ -329,8 +329,5 @@ filterSeparator = T.filter (SF.extSeparator /=)
 splitOnExtSeparator :: T.Text -> [T.Text]
 splitOnExtSeparator = T.splitOn (T.pack [SF.extSeparator])
 
-splitOnPathSeparator :: T.Text -> [T.Text]
-splitOnPathSeparator = T.splitOn (T.pack [SF.pathSeparator])
-
 filterEmpty :: [T.Text] -> [T.Text]
 filterEmpty = filter (T.empty /=)
