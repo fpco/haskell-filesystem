@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 
 -- |
@@ -66,18 +67,19 @@ module Filesystem.Path
        , stripPrefix
        ) where
 
+import           Data.Maybe
 import           Data.Monoid
 import           Data.String
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as BC
 import qualified Filesystem.Path.Internal as FPI
 import qualified System.FilePath as SF
 import           Prelude hiding (FilePath, null, concat)
+import qualified Prelude as P
 
 newtype FilePath =
-  FilePath {unFilePath :: String}
+  FilePath {unFilePath :: SF.FilePath}
 
 instance Eq FilePath where
   (==) a b = toIFP a == toIFP b
@@ -211,7 +213,7 @@ dirname :: FilePath -> FilePath
 dirname = fromIFP . FPI.dirname . toIFP
 
 basename :: FilePath -> FilePath
-basename = fromIFP . FPI.basename . toIFP
+basename = fromString . SF.takeBaseName . unFilePath
 
 absolute :: FilePath -> Bool
 absolute = FPI.absolute . toIFP
@@ -241,44 +243,70 @@ splitDirectories :: FilePath -> [FilePath]
 splitDirectories = map fromIFP . FPI.splitDirectories . toIFP
 
 extension :: FilePath -> Maybe T.Text
-extension = FPI.extension . toIFP
+extension p =
+  case reverse (extensions p) of
+    [] -> Nothing
+    (x:_) -> Just x
 
 extensions :: FilePath -> [T.Text]
-extensions = FPI.extensions . toIFP
+extensions p =
+  let exts = SF.takeExtensions (unFilePath p)
+      suffix =
+        stripPrefix (basename p)
+                    (fromString exts)
+  in filterEmpty
+       (splitOnSeparator
+          (T.pack (case suffix of
+                     Nothing -> exts
+                     Just suffix' -> unFilePath suffix')))
 
 hasExtension :: FilePath -> T.Text -> Bool
-hasExtension = FPI.hasExtension . toIFP
+hasExtension p e = extension p == Just e
 
 addExtension :: FilePath -> T.Text -> FilePath
-addExtension x y = fromIFP (FPI.addExtension (toIFP x) y)
+addExtension x y =
+  fromString
+    (SF.addExtension (unFilePath x)
+                     (T.unpack y))
 
 addExtensions :: FilePath -> [T.Text] -> FilePath
-addExtensions x ys = fromIFP (FPI.addExtensions (toIFP x) ys)
+addExtensions x ys = foldl addExtension x (reverse ys)
 
 (<.>) :: FilePath -> T.Text -> FilePath
 (<.>) = addExtension
 
 dropExtension :: FilePath -> FilePath
-dropExtension = fromIFP . FPI.dropExtension . toIFP
+dropExtension = fromString . SF.dropExtension . unFilePath
 
 dropExtensions :: FilePath -> FilePath
-dropExtensions = fromIFP . FPI.dropExtensions . toIFP
+dropExtensions = fromString . SF.dropExtensions . unFilePath
 
 replaceExtension :: FilePath -> T.Text -> FilePath
-replaceExtension x y = fromIFP (FPI.replaceExtension (toIFP x) y)
+replaceExtension x y =
+  fromString
+    (SF.replaceExtension (unFilePath x)
+                         (T.unpack y))
 
 replaceExtensions :: FilePath -> [T.Text] -> FilePath
-replaceExtensions x ys = fromIFP (FPI.replaceExtensions (toIFP x) ys)
+replaceExtensions x ys =
+  foldl replaceExtension x ys
 
 splitExtension :: FilePath -> (FilePath, Maybe T.Text)
-splitExtension x =
-  let split = FPI.splitExtension (toIFP x)
-  in (fromIFP (fst split),snd split)
+splitExtension p =
+  let (path,exts) =
+        splitExtensions (fromString (unFilePath p))
+  in case reverse exts of
+       [] -> (path,Nothing)
+       (x:xs) ->
+         (addExtensions path
+                        (reverse xs)
+         ,Just x)
 
 splitExtensions :: FilePath -> (FilePath, [T.Text])
-splitExtensions x =
-  let split = FPI.splitExtensions (toIFP x)
-  in (fromIFP (fst split),snd split)
+splitExtensions p =
+  let (path,exts) =
+        SF.splitExtensions (unFilePath p)
+  in (FilePath path,filterEmpty (splitOnSeparator (fromString exts)))
 
 --
 -- Internal
@@ -289,3 +317,12 @@ toIFP = FPI.decodeString . unFilePath
 
 fromIFP :: FPI.FilePath -> FilePath
 fromIFP = FilePath . FPI.encodeString
+
+filterSeparator :: T.Text -> T.Text
+filterSeparator = T.filter (SF.extSeparator /=)
+
+splitOnSeparator :: T.Text -> [T.Text]
+splitOnSeparator = T.splitOn (T.pack [SF.extSeparator])
+
+filterEmpty :: [T.Text] -> [T.Text]
+filterEmpty = filter (T.empty /=)
