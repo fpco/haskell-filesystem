@@ -215,7 +215,15 @@ directory :: FilePath -> FilePath
 directory = addTrailingPathSeparator . apply SF.takeDirectory
 
 parent :: FilePath -> FilePath
-parent = fromIFP . FPI.parent . toIFP -- TODO impl custom replacement
+parent p =
+  case (directory . dropTrailingPathSeparator . normalise) p of
+    p'
+      | relative p' &&
+          (head . unFilePath) p' ==
+          '.' -> p'
+    p'
+      | relative p' -> "./" </> p'
+    p' -> p'
 
 filename :: FilePath -> FilePath
 filename = apply SF.takeFileName
