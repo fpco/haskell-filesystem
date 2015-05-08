@@ -232,10 +232,10 @@ basename :: FilePath -> FilePath
 basename = apply SF.takeBaseName
 
 absolute :: FilePath -> Bool
-absolute = FPI.absolute . toIFP
+absolute = SF.isAbsolute . unFilePath
 
 relative :: FilePath -> Bool
-relative = FPI.relative . toIFP
+relative = SF.isRelative . unFilePath
 
 append :: FilePath -> FilePath -> FilePath
 append x y = fromIFP (FPI.append (toIFP x) (toIFP y))
