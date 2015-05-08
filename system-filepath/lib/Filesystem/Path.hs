@@ -246,13 +246,9 @@ relative :: FilePath -> Bool
 relative = SF.isRelative . unFilePath
 
 append :: FilePath -> FilePath -> FilePath
-append x y = fromIFP (FPI.append (toIFP x) (toIFP y))
-  -- fromString (SF.combine (unFilePath x) (unFilePath y))
-  {-
-     FIXME:
-     system-filepath: "a" </> "" == "a/"
-     filepath:        "a" </> "" == "a"
-  -}
+append "" "" = ""
+append x "" = addTrailingPathSeparator x
+append x y = apply ((SF.combine . unFilePath) x) y
 
 (</>) :: FilePath -> FilePath -> FilePath
 (</>) = append
