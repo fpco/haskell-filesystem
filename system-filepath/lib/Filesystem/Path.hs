@@ -84,7 +84,7 @@ newtype FilePath =
   FilePath {unFilePath :: SF.FilePath}
 
 instance Eq FilePath where
-  (==) a b = toIFP a == toIFP b
+  (==) a b = unFilePath a == unFilePath b
 
 instance IsString FilePath where
   fromString = FilePath -- TODO: . SF.normalise
