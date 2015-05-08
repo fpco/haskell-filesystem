@@ -160,9 +160,12 @@ decodeString = fromIFP . FPI.decodeString -- TODO impl custom replacement
 
 validOn :: forall a.
            Platform a -> FilePath -> Bool
-validOn p = FPI.validOn (unPlatform p) . toIFP -- TODO impl custom replacement
--- validOn _p | _ = Windows.isValid . unFilePath
--- validOn _p | _ = Posix.isValid . unFilePath
+-- validOn p
+--   | FPI.rulesName (unPlatform p) `elem`
+--       ["Windows"] = Windows.isValid . unFilePath -- FAILS TESTS
+validOn p =
+  FPI.validOn (unPlatform p) .
+  toIFP -- TODO impl custom replacement
 
 splitSearchPathOn :: forall a.
                      Platform a -> a -> [FilePath]
