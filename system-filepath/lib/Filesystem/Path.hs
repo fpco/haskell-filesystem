@@ -260,7 +260,17 @@ concat :: [FilePath] -> FilePath
 concat = foldl append empty
 
 commonPrefix :: [FilePath] -> FilePath
-commonPrefix = fromIFP . FPI.commonPrefix . map toIFP -- TODO impl custom replacement
+commonPrefix =
+  foldl append empty .
+  common . map splitDirectories
+  -- TODO we need to compare partial filenames too (NOTE: can reused 'common')
+  where common [] = []
+        common lists = foldr1 matches lists
+        matches (x:xs) (y:ys)
+          | x == y =
+            x :
+            matches xs ys
+        matches _ _ = []
 
 stripPrefix :: FilePath -> FilePath -> Maybe FilePath
 stripPrefix x y = fmap fromIFP (FPI.stripPrefix (toIFP x) (toIFP y)) -- TODO impl custom replacement
