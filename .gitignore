@@ -2,3 +2,5 @@
 dist/
 tarballs/
 *.swp
+/system-filepath/cabal.sandbox.config
+/system-filepath/.cabal-sandbox/
