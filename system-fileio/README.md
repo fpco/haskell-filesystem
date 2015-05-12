@@ -1,5 +1,7 @@
 ## system-fileio
 
+Please see [deprecation announcement](https://plus.google.com/+MichaelSnoyman/posts/Ft5hnPqpgEx)
+
 This is a small wrapper around the `directory`, `unix`, and `Win32`
 packages, for use with `system-filepath`. It provides a consistent API
 to the various versions of these packages distributed with different

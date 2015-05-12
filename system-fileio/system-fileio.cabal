@@ -1,5 +1,5 @@
 name: system-fileio
-version: 0.3.16.2
+version: 0.3.16.3
 license: MIT
 license-file: license.txt
 author: John Millikin <jmillikin@gmail.com>
@@ -11,8 +11,8 @@ stability: experimental
 homepage: https://github.com/fpco/haskell-filesystem
 bug-reports: https://github.com/fpco/haskell-filesystem/issues
 
-synopsis: Consistent filesystem interaction across GHC versions
-description: Hackage documentation generation is not reliable. For up to date documentation, please see: <http://www.stackage.org/package/system-fileio>.
+synopsis: Consistent filesystem interaction across GHC versions (deprecated)
+description: Please see: https://plus.google.com/+MichaelSnoyman/posts/Ft5hnPqpgEx
 
 extra-source-files:
   README.md
