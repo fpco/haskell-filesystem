@@ -28,6 +28,9 @@ library
     , bytestring >= 0.9
     , deepseq >= 1.1 && < 1.5
     , text >= 0.11.0.6
+  if !impl(ghc >= 8.0)
+    build-depends:
+      semigroups >= 0.11 && < 0.19
 
   if os(windows)
     cpp-options: -DCABAL_OS_WINDOWS

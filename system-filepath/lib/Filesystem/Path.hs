@@ -60,10 +60,14 @@ import qualified Prelude as Prelude
 
 import           Data.List (foldl')
 import           Data.Maybe (isJust, isNothing)
+import qualified Data.Semigroup as Sem
 import qualified Data.Monoid as M
 import qualified Data.Text as T
 
 import           Filesystem.Path.Internal
+
+instance Sem.Semigroup FilePath where
+  (<>) = append
 
 instance M.Monoid FilePath where
 	mempty = empty
