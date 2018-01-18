@@ -1,3 +1,7 @@
+## 0.4.14
+
+* Add a Semigroup instance [#20 ](https://github.com/fpco/haskell-filesystem/pull/20)
+
 ## 0.4.13.3
 
 * Documentation fix for: `PLATFORM_PATH_FORMAT` promotes platform dependent code [#12](https://github.com/fpco/haskell-filesystem/issues/12)
