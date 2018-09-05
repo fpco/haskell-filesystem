@@ -1,3 +1,9 @@
+# Changelog for system-fileio
+
+## 0.3.16.4
+
+* Fix for Win32 2.6 and above [#21](https://github.com/fpco/haskell-filesystem/pull/21)
+
 ## 0.3.16.2
 
 * withHANDLE (Win32) now works on directories [#8](https://github.com/fpco/haskell-filesystem/issues/8) [#10](https://github.com/fpco/haskell-filesystem/pull/10)
