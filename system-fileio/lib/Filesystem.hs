@@ -170,7 +170,11 @@ rename old new =
 #ifdef CABAL_OS_WINDOWS
 	let old' = encodeString old in
 	let new' = encodeString new in
+#if MIN_VERSION_Win32(2,6,0)
+	Win32.moveFileEx old' (Just new') Win32.mOVEFILE_REPLACE_EXISTING
+#else
 	Win32.moveFileEx old' new' Win32.mOVEFILE_REPLACE_EXISTING
+#endif
 #else
 	withFilePath old $ \old' ->
 	withFilePath new $ \new' ->
