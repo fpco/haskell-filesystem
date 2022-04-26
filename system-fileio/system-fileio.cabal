@@ -68,7 +68,7 @@ test-suite filesystem_tests
   build-depends:
       base >= 4.0 && < 5.0
     , bytestring >= 0.9
-    , chell >= 0.4 && < 0.5
+    , chell >= 0.4 && < 0.6
     , system-fileio
     , system-filepath
     , temporary >= 1.1 && < 2.0
