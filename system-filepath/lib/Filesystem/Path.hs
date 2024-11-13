@@ -14,46 +14,46 @@
 -- compilation.
 --
 module Filesystem.Path
-	( FilePath
-	, empty
-	
-	-- * Basic properties
-	, null
-	, root
-	, directory
-	, parent
-	, filename
-	, dirname
-	, basename
-	, absolute
-	, relative
-	
-	-- * Basic operations
-	, append
-	, (</>)
-	, concat
-	, commonPrefix
-	, stripPrefix
-	, collapse
-	, splitDirectories
-	
-	-- * Extensions
-	, extension
-	, extensions
-	, hasExtension
-	
-	, addExtension
-	, (<.>)
-	, dropExtension
-	, replaceExtension
-	
-	, addExtensions
-	, dropExtensions
-	, replaceExtensions
-	
-	, splitExtension
-	, splitExtensions
-	) where
+  ( FilePath
+  , empty
+
+  -- * Basic properties
+  , null
+  , root
+  , directory
+  , parent
+  , filename
+  , dirname
+  , basename
+  , absolute
+  , relative
+
+  -- * Basic operations
+  , append
+  , (</>)
+  , concat
+  , commonPrefix
+  , stripPrefix
+  , collapse
+  , splitDirectories
+
+  -- * Extensions
+  , extension
+  , extensions
+  , hasExtension
+
+  , addExtension
+  , (<.>)
+  , dropExtension
+  , replaceExtension
+
+  , addExtensions
+  , dropExtensions
+  , replaceExtensions
+
+  , splitExtension
+  , splitExtensions
+  ) where
 
 import           Prelude hiding (FilePath, concat, null)
 import qualified Prelude as Prelude
@@ -70,9 +70,9 @@ instance Sem.Semigroup FilePath where
   (<>) = append
 
 instance M.Monoid FilePath where
-	mempty = empty
-	mappend = append
-	mconcat = concat
+  mempty = empty
+  mappend = append
+  mconcat = concat
 
 -------------------------------------------------------------------------------
 -- Basic properties
@@ -90,29 +90,29 @@ root p = empty { pathRoot = pathRoot p }
 -- directory, it is returned unchanged.
 directory :: FilePath -> FilePath
 directory p = empty
-	{ pathRoot = pathRoot p
-	, pathDirectories = let
-		dot' | isJust (pathRoot p) = []
-		     | Prelude.null (pathDirectories p) = [dot]
-		     | otherwise = []
-		in dot' ++ pathDirectories p
-	}
+  { pathRoot = pathRoot p
+  , pathDirectories = let
+    dot' | isJust (pathRoot p) = []
+         | Prelude.null (pathDirectories p) = [dot]
+         | otherwise = []
+    in dot' ++ pathDirectories p
+  }
 
 -- | Retrieves the 'FilePath'&#x2019;s parent directory.
 parent :: FilePath -> FilePath
 parent p = empty
-	{ pathRoot = pathRoot p
-	, pathDirectories = let
-		starts = map Just [dot, dots]
-		directories = if null (filename p)
-			then safeInit (pathDirectories p)
-			else pathDirectories p
-		
-		dot' | safeHead directories `elem` starts = []
-		     | isNothing (pathRoot p) = [dot]
-		     | otherwise = []
-		in dot' ++ directories
-	}
+  { pathRoot = pathRoot p
+  , pathDirectories = let
+    starts = map Just [dot, dots]
+    directories = if null (filename p)
+      then safeInit (pathDirectories p)
+      else pathDirectories p
+
+    dot' | safeHead directories `elem` starts = []
+         | isNothing (pathRoot p) = [dot]
+         | otherwise = []
+    in dot' ++ directories
+  }
 
 -- | Retrieve a 'FilePath'&#x2019;s filename component.
 --
@@ -121,9 +121,9 @@ parent p = empty
 -- @
 filename :: FilePath -> FilePath
 filename p = empty
-	{ pathBasename = pathBasename p
-	, pathExtensions = pathExtensions p
-	}
+  { pathBasename = pathBasename p
+  , pathExtensions = pathExtensions p
+  }
 
 -- | Retrieve a 'FilePath'&#x2019;s directory name. This is only the
 -- /file name/ of the directory, not its full path.
@@ -136,9 +136,9 @@ filename p = empty
 -- Since: 0.4.1
 dirname :: FilePath -> FilePath
 dirname p = case reverse (pathDirectories p) of
-	[] -> FilePath Nothing [] Nothing []
-	(d:_) -> case parseFilename d of
-		(base, exts) -> FilePath Nothing [] base exts
+  [] -> FilePath Nothing [] Nothing []
+  (d:_) -> case parseFilename d of
+    (base, exts) -> FilePath Nothing [] base exts
 
 -- | Retrieve a 'FilePath'&#x2019;s basename component.
 --
@@ -147,24 +147,24 @@ dirname p = case reverse (pathDirectories p) of
 -- @
 basename :: FilePath -> FilePath
 basename p = empty
-	{ pathBasename = pathBasename p
-	}
+  { pathBasename = pathBasename p
+  }
 
 -- | Test whether a path is absolute.
 absolute :: FilePath -> Bool
 absolute p = case pathRoot p of
-	Just RootPosix -> True
-	Just RootWindowsVolume{} -> True
-	Just RootWindowsCurrentVolume -> False
-	Just RootWindowsUnc{} -> True
-	Just RootWindowsDoubleQMark -> True
-	Nothing -> False
+  Just RootPosix -> True
+  Just RootWindowsVolume{} -> True
+  Just RootWindowsCurrentVolume -> False
+  Just RootWindowsUnc{} -> True
+  Just RootWindowsDoubleQMark -> True
+  Nothing -> False
 
 -- | Test whether a path is relative.
 relative :: FilePath -> Bool
 relative p = case pathRoot p of
-	Just _ -> False
-	_ -> True
+  Just _ -> False
+  _ -> True
 
 -------------------------------------------------------------------------------
 -- Basic operations
@@ -174,23 +174,23 @@ relative p = case pathRoot p of
 -- unchanged.
 append :: FilePath -> FilePath -> FilePath
 append x y = cased where
-	cased = case pathRoot y of
-		Just RootPosix -> y
-		Just RootWindowsVolume{} -> y
-		Just RootWindowsCurrentVolume -> case pathRoot x of
-			Just RootWindowsVolume{} -> y { pathRoot = pathRoot x }
-			_ -> y
-		Just RootWindowsUnc{} -> y
-		Just RootWindowsDoubleQMark -> y
-		Nothing -> xy
-	xy = y
-		{ pathRoot = pathRoot x
-		, pathDirectories = directories
-		}
-	directories = xDirectories ++ pathDirectories y
-	xDirectories = (pathDirectories x ++) $ if null (filename x)
-		then []
-		else [filenameChunk x]
+  cased = case pathRoot y of
+    Just RootPosix -> y
+    Just RootWindowsVolume{} -> y
+    Just RootWindowsCurrentVolume -> case pathRoot x of
+      Just RootWindowsVolume{} -> y { pathRoot = pathRoot x }
+      _ -> y
+    Just RootWindowsUnc{} -> y
+    Just RootWindowsDoubleQMark -> y
+    Nothing -> xy
+  xy = y
+    { pathRoot = pathRoot x
+    , pathDirectories = directories
+    }
+  directories = xDirectories ++ pathDirectories y
+  xDirectories = (pathDirectories x ++) $ if null (filename x)
+    then []
+    else [filenameChunk x]
 
 -- | An alias for 'append'.
 (</>) :: FilePath -> FilePath -> FilePath
@@ -205,22 +205,22 @@ concat ps = foldr1 append ps
 commonPrefix :: [FilePath] -> FilePath
 commonPrefix [] = empty
 commonPrefix ps = foldr1 step ps where
-	step x y = if pathRoot x /= pathRoot y
-		then empty
-		else let cs = commonDirectories x y in
-			if cs /= pathDirectories x || pathBasename x /= pathBasename y
-				then empty { pathRoot = pathRoot x, pathDirectories = cs }
-				else let exts = commonExtensions x y in
-					x { pathExtensions = exts }
-	
-	commonDirectories x y = common (pathDirectories x) (pathDirectories y)
-	commonExtensions x y = common (pathExtensions x) (pathExtensions y)
-	
-	common [] _ = []
-	common _ [] = []
-	common (x:xs) (y:ys) = if x == y
-		then x : common xs ys
-		else []
+  step x y = if pathRoot x /= pathRoot y
+    then empty
+    else let cs = commonDirectories x y in
+      if cs /= pathDirectories x || pathBasename x /= pathBasename y
+        then empty { pathRoot = pathRoot x, pathDirectories = cs }
+        else let exts = commonExtensions x y in
+          x { pathExtensions = exts }
+
+  commonDirectories x y = common (pathDirectories x) (pathDirectories y)
+  commonExtensions x y = common (pathExtensions x) (pathExtensions y)
+
+  common [] _ = []
+  common _ [] = []
+  common (x:xs) (y:ys) = if x == y
+    then x : common xs ys
+    else []
 
 -- | Remove a prefix from a path.
 --
@@ -241,33 +241,33 @@ commonPrefix ps = foldr1 step ps where
 -- Since: 0.4.1
 stripPrefix :: FilePath -> FilePath -> Maybe FilePath
 stripPrefix x y = if pathRoot x /= pathRoot y
-	then case pathRoot x of
-		Nothing -> Just y
-		Just _ -> Nothing
-	else do
-		dirs <- strip (pathDirectories x) (pathDirectories y)
-		case dirs of
-			[] -> case (pathBasename x, pathBasename y) of
-				(Nothing, Nothing) -> do
-					exts <- strip (pathExtensions x) (pathExtensions y)
-					return (y { pathRoot = Nothing, pathDirectories = dirs, pathExtensions = exts })
-				(Nothing, Just _) -> case pathExtensions x of
-					[] -> Just (y { pathRoot = Nothing, pathDirectories = dirs })
-					_ -> Nothing
-				(Just x_b, Just y_b) | x_b == y_b -> do
-					exts <- strip (pathExtensions x) (pathExtensions y)
-					return (empty { pathExtensions = exts })
-				_ -> Nothing
-			_ -> case (pathBasename x, pathExtensions x) of
-				(Nothing, []) -> Just (y { pathRoot = Nothing, pathDirectories = dirs })
-				_ -> Nothing
+  then case pathRoot x of
+    Nothing -> Just y
+    Just _ -> Nothing
+  else do
+    dirs <- strip (pathDirectories x) (pathDirectories y)
+    case dirs of
+      [] -> case (pathBasename x, pathBasename y) of
+        (Nothing, Nothing) -> do
+          exts <- strip (pathExtensions x) (pathExtensions y)
+          return (y { pathRoot = Nothing, pathDirectories = dirs, pathExtensions = exts })
+        (Nothing, Just _) -> case pathExtensions x of
+          [] -> Just (y { pathRoot = Nothing, pathDirectories = dirs })
+          _ -> Nothing
+        (Just x_b, Just y_b) | x_b == y_b -> do
+          exts <- strip (pathExtensions x) (pathExtensions y)
+          return (empty { pathExtensions = exts })
+        _ -> Nothing
+      _ -> case (pathBasename x, pathExtensions x) of
+        (Nothing, []) -> Just (y { pathRoot = Nothing, pathDirectories = dirs })
+        _ -> Nothing
 
 strip :: Eq a => [a] -> [a] -> Maybe [a]
 strip [] ys = Just ys
 strip _ [] = Nothing
 strip (x:xs) (y:ys) = if x == y
-	then strip xs ys
-	else Nothing
+  then strip xs ys
+  else Nothing
 
 -- | Remove intermediate @\".\"@ and @\"..\"@ directories from a path.
 --
@@ -284,32 +284,32 @@ strip (x:xs) (y:ys) = if x == y
 -- Since: 0.2
 collapse :: FilePath -> FilePath
 collapse p = p { pathDirectories = newDirs } where
-	newDirs = case pathRoot p of
-		Nothing -> reverse revNewDirs
-		Just _ -> dropWhile (\x -> x == dot || x == dots) (reverse revNewDirs)
-	(_, revNewDirs) = foldl' step (True, []) (pathDirectories p)
-	
-	step (True, acc) c = (False, c:acc)
-	step (_, acc) c | c == dot = (False, acc)
-	step (_, acc) c | c == dots = case acc of
-		[] -> (False, c:acc)
-		(h:ts) | h == dot -> (False, c:ts)
-		       | h == dots -> (False, c:acc)
-		       | otherwise -> (False, ts)
-	step (_, acc) c = (False, c:acc)
+  newDirs = case pathRoot p of
+    Nothing -> reverse revNewDirs
+    Just _ -> dropWhile (\x -> x == dot || x == dots) (reverse revNewDirs)
+  (_, revNewDirs) = foldl' step (True, []) (pathDirectories p)
+
+  step (True, acc) c = (False, c:acc)
+  step (_, acc) c | c == dot = (False, acc)
+  step (_, acc) c | c == dots = case acc of
+    [] -> (False, c:acc)
+    (h:ts) | h == dot -> (False, c:ts)
+           | h == dots -> (False, c:acc)
+           | otherwise -> (False, ts)
+  step (_, acc) c = (False, c:acc)
 
 -- | expand a FilePath into a list of the root name, directories, and file name
 --
 -- Since: 0.4.7
 splitDirectories :: FilePath -> [FilePath]
 splitDirectories p = rootName ++ dirNames ++ fileName where
-	rootName = case pathRoot p of
-		Nothing -> []
-		r -> [empty { pathRoot = r }]
-	dirNames = map (\d -> empty { pathDirectories = [d] }) (pathDirectories p)
-	fileName = case (pathBasename p, pathExtensions p) of
-		(Nothing, []) -> []
-		_ -> [filename p]
+  rootName = case pathRoot p of
+    Nothing -> []
+    r -> [empty { pathRoot = r }]
+  dirNames = map (\d -> empty { pathDirectories = [d] }) (pathDirectories p)
+  fileName = case (pathBasename p, pathExtensions p) of
+    (Nothing, []) -> []
+    _ -> [filename p]
 
 -------------------------------------------------------------------------------
 -- Extensions
@@ -319,8 +319,8 @@ splitDirectories p = rootName ++ dirNames ++ fileName where
 -- extensions.
 extension :: FilePath -> Maybe T.Text
 extension p = case extensions p of
-	[] -> Nothing
-	es -> Just (last es)
+  [] -> Nothing
+  es -> Just (last es)
 
 -- | Get a 'FilePath'&#x2019;s full extension list.
 extensions :: FilePath -> [T.Text]
@@ -338,7 +338,7 @@ addExtension p ext = addExtensions p [ext]
 -- | Append many extensions to the end of a 'FilePath'.
 addExtensions :: FilePath -> [T.Text] -> FilePath
 addExtensions p exts = p { pathExtensions = newExtensions } where
-	newExtensions = pathExtensions p ++ map escape exts
+  newExtensions = pathExtensions p ++ map escape exts
 
 -- | An alias for 'addExtension'.
 (<.>) :: FilePath -> T.Text -> FilePath
@@ -375,8 +375,8 @@ splitExtensions p = (dropExtensions p, extensions p)
 
 safeInit :: [a] -> [a]
 safeInit xs = case xs of
-	[] -> []
-	_ -> init xs
+  [] -> []
+  _ -> init xs
 
 safeHead :: [a] -> Maybe a
 safeHead [] = Nothing

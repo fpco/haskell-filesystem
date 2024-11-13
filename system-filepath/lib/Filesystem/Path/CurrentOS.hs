@@ -15,22 +15,22 @@
 -- Also enables 'Show' and 'S.IsString' instances for 'F.FilePath'.
 --
 module Filesystem.Path.CurrentOS
-	( module Filesystem.Path
-	, currentOS
-	
-	-- * Type conversions
-	, toText
-	, fromText
-	, encode
-	, decode
-	, encodeString
-	, decodeString
-	
-	-- * Rule&#x2010;specific path properties
-	, valid
-	, splitSearchPath
-	, splitSearchPathString
-	) where
+  ( module Filesystem.Path
+  , currentOS
+
+  -- * Type conversions
+  , toText
+  , fromText
+  , encode
+  , decode
+  , encodeString
+  , decodeString
+
+  -- * Rule&#x2010;specific path properties
+  , valid
+  , splitSearchPath
+  , splitSearchPathString
+  ) where
 
 import           Prelude hiding (FilePath)
 
@@ -72,13 +72,13 @@ currentOS = R.posix
 #endif
 
 instance S.IsString F.FilePath where
-	fromString = R.fromText currentOS . T.pack
+  fromString = R.fromText currentOS . T.pack
 
 instance Show F.FilePath where
-	showsPrec d path = showParen (d > 10) (ss "FilePath " . s txt) where
-		s = shows
-		ss = showString
-		txt = either id id (toText path)
+  showsPrec d path = showParen (d > 10) (ss "FilePath " . s txt) where
+    s = shows
+    ss = showString
+    txt = either id id (toText path)
 
 -- | Attempt to convert a 'F.FilePath' to human&#x2010;readable text.
 --

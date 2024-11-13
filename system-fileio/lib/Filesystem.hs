@@ -16,62 +16,62 @@
 -- In particular, they do not require POSIX file paths to be valid strings,
 -- and can therefore open paths regardless of the current locale encoding.
 module Filesystem
-	(
-	-- * Exports from System.IO
-	  IO.Handle
-	, IO.IOMode(..)
-	
-	-- * Files
-	, isFile
-	, getModified
-	, getSize
-	, copyFile
-	, copyFileContent
-	, copyPermissions
-	, removeFile
-	
-	-- ** Binary files
-	, openFile
-	, withFile
-	, readFile
-	, writeFile
-	, appendFile
-	
-	-- ** Text files
-	, openTextFile
-	, withTextFile
-	, readTextFile
-	, writeTextFile
-	, appendTextFile
-	
-	-- * Directories
-	, isDirectory
-	, canonicalizePath
-	, listDirectory
-	
-	-- ** Creating directories
-	, createDirectory
-	, createTree
-	
-	-- ** Removing directories
-	, removeDirectory
-	, removeTree
-	
-	-- ** Current working directory
-	, getWorkingDirectory
-	, setWorkingDirectory
-	
-	-- ** Commonly used paths
-	, getHomeDirectory
-	, getDesktopDirectory
-	, getDocumentsDirectory
-	, getAppDataDirectory
-	, getAppCacheDirectory
-	, getAppConfigDirectory
-	
-	-- * Other
-	, rename
-	) where
+  (
+  -- * Exports from System.IO
+    IO.Handle
+  , IO.IOMode(..)
+
+  -- * Files
+  , isFile
+  , getModified
+  , getSize
+  , copyFile
+  , copyFileContent
+  , copyPermissions
+  , removeFile
+
+  -- ** Binary files
+  , openFile
+  , withFile
+  , readFile
+  , writeFile
+  , appendFile
+
+  -- ** Text files
+  , openTextFile
+  , withTextFile
+  , readTextFile
+  , writeTextFile
+  , appendTextFile
+
+  -- * Directories
+  , isDirectory
+  , canonicalizePath
+  , listDirectory
+
+  -- ** Creating directories
+  , createDirectory
+  , createTree
+
+  -- ** Removing directories
+  , removeDirectory
+  , removeTree
+
+  -- ** Current working directory
+  , getWorkingDirectory
+  , setWorkingDirectory
+
+  -- ** Commonly used paths
+  , getHomeDirectory
+  , getDesktopDirectory
+  , getDocumentsDirectory
+  , getAppDataDirectory
+  , getAppCacheDirectory
+  , getAppConfigDirectory
+
+  -- * Other
+  , rename
+  ) where
 
 import           Prelude hiding (FilePath, readFile, writeFile, appendFile)
 
@@ -138,10 +138,10 @@ isFile :: FilePath -> IO Bool
 isFile path = SD.doesFileExist (encodeString path)
 #else
 isFile path = Exc.catch
-	(do
-		stat <- posixStat "isFile" path
-		return (not (Posix.isDirectory stat)))
-	((\_ -> return False) :: IOError -> IO Bool)
+  (do
+    stat <- posixStat "isFile" path
+    return (not (Posix.isDirectory stat)))
+  ((\_ -> return False) :: IOError -> IO Bool)
 #endif
 
 -- | Check if a directory exists at the given path.
@@ -154,10 +154,10 @@ isDirectory :: FilePath -> IO Bool
 isDirectory path = SD.doesDirectoryExist (encodeString path)
 #else
 isDirectory path = Exc.catch
-	(do
-		stat <- posixStat "isDirectory" path
-		return (Posix.isDirectory stat))
-	((\_ -> return False) :: IOError -> IO Bool)
+  (do
+    stat <- posixStat "isDirectory" path
+    return (Posix.isDirectory stat))
+  ((\_ -> return False) :: IOError -> IO Bool)
 #endif
 
 -- | Rename a filesystem object.
@@ -168,20 +168,20 @@ isDirectory path = Exc.catch
 rename :: FilePath -> FilePath -> IO ()
 rename old new =
 #ifdef CABAL_OS_WINDOWS
-	let old' = encodeString old in
-	let new' = encodeString new in
+  let old' = encodeString old in
+  let new' = encodeString new in
 #if MIN_VERSION_Win32(2,6,0)
-	Win32.moveFileEx old' (Just new') Win32.mOVEFILE_REPLACE_EXISTING
+  Win32.moveFileEx old' (Just new') Win32.mOVEFILE_REPLACE_EXISTING
 #else
-	Win32.moveFileEx old' new' Win32.mOVEFILE_REPLACE_EXISTING
+  Win32.moveFileEx old' new' Win32.mOVEFILE_REPLACE_EXISTING
 #endif
 #else
-	withFilePath old $ \old' ->
-	withFilePath new $ \new' ->
-	throwErrnoPathIfMinus1_ "rename" old (c_rename old' new')
+  withFilePath old $ \old' ->
+  withFilePath new $ \new' ->
+  throwErrnoPathIfMinus1_ "rename" old (c_rename old' new')
 
 foreign import ccall unsafe "rename"
-	c_rename :: CString -> CString -> IO CInt
+  c_rename :: CString -> CString -> IO CInt
 
 #endif
 
@@ -199,41 +199,41 @@ foreign import ccall unsafe "rename"
 -- Since: 0.1.1
 canonicalizePath :: FilePath -> IO FilePath
 canonicalizePath path =
-	fmap (preserveFinalSlash path) $
-	let path' = encodeString path in
+  fmap (preserveFinalSlash path) $
+  let path' = encodeString path in
 #ifdef CABAL_OS_WINDOWS
-	fmap decodeString $
+  fmap decodeString $
 #if MIN_VERSION_Win32(2,2,1)
-	Win32.getFullPathName path'
+  Win32.getFullPathName path'
 #else
-	Win32.withTString path' $ \c_name -> do
-		Win32.try "getFullPathName" (\buf len ->
-			c_GetFullPathNameW c_name len buf nullPtr) 512
+  Win32.withTString path' $ \c_name -> do
+    Win32.try "getFullPathName" (\buf len ->
+      c_GetFullPathNameW c_name len buf nullPtr) 512
 #endif
 #else
-	withFilePath path $ \cPath -> do
-		cOut <- Posix.throwErrnoPathIfNull "canonicalizePath" path' (c_realpath cPath nullPtr)
-		bytes <- B.packCString cOut
-		c_free cOut
-		return (R.decode R.posix bytes)
+  withFilePath path $ \cPath -> do
+    cOut <- Posix.throwErrnoPathIfNull "canonicalizePath" path' (c_realpath cPath nullPtr)
+    bytes <- B.packCString cOut
+    c_free cOut
+    return (R.decode R.posix bytes)
 #endif
 
 preserveFinalSlash :: FilePath -> FilePath -> FilePath
 preserveFinalSlash orig out = if Path.null (Path.filename orig)
-	then Path.append out Path.empty
-	else out
+  then Path.append out Path.empty
+  else out
 
 #ifdef CABAL_OS_WINDOWS
 #if MIN_VERSION_Win32(2,2,1)
 #else
 foreign import stdcall unsafe "GetFullPathNameW"
-	c_GetFullPathNameW :: Win32.LPCTSTR -> Win32.DWORD -> Win32.LPTSTR -> Ptr Win32.LPTSTR -> IO Win32.DWORD
+  c_GetFullPathNameW :: Win32.LPCTSTR -> Win32.DWORD -> Win32.LPTSTR -> Ptr Win32.LPTSTR -> IO Win32.DWORD
 #endif
 #endif
 
 #ifndef CABAL_OS_WINDOWS
 foreign import ccall unsafe "realpath"
-	c_realpath :: CString -> CString -> IO CString
+  c_realpath :: CString -> CString -> IO CString
 #endif
 
 -- | Create a directory at a given path. The user may choose whether it is
@@ -246,33 +246,33 @@ createDirectory :: Bool -- ^ Succeed if the directory already exists
                 -> FilePath -> IO ()
 createDirectory succeedIfExists path =
 #ifdef CABAL_OS_WINDOWS
-	let path' = encodeString path in
-	if succeedIfExists
-		then SD.createDirectoryIfMissing False path'
-		else Win32.createDirectory path' Nothing
+  let path' = encodeString path in
+  if succeedIfExists
+    then SD.createDirectoryIfMissing False path'
+    else Win32.createDirectory path' Nothing
 #else
-	withFilePath path $ \cPath ->
-	throwErrnoPathIfMinus1Retry_ "createDirectory" path $ if succeedIfExists
-		then mkdirIfMissing path cPath 0o777
-		else c_mkdir cPath 0o777
+  withFilePath path $ \cPath ->
+  throwErrnoPathIfMinus1Retry_ "createDirectory" path $ if succeedIfExists
+    then mkdirIfMissing path cPath 0o777
+    else c_mkdir cPath 0o777
 
 mkdirIfMissing :: FilePath -> CString -> CInt -> IO CInt
 mkdirIfMissing path cPath mode = do
-	rc <- c_mkdir cPath mode
-	if rc == -1
-		then do
-			errno <- CError.getErrno
-			if errno == CError.eEXIST
-				then do
-					dirExists <- isDirectory path
-					if dirExists
-						then return 0
-						else return rc
-				else return rc
-		else return rc
+  rc <- c_mkdir cPath mode
+  if rc == -1
+    then do
+      errno <- CError.getErrno
+      if errno == CError.eEXIST
+        then do
+          dirExists <- isDirectory path
+          if dirExists
+            then return 0
+            else return rc
+        else return rc
+    else return rc
 
 foreign import ccall unsafe "mkdir"
-	c_mkdir :: CString -> CInt -> IO CInt
+  c_mkdir :: CString -> CInt -> IO CInt
 #endif
 
 -- | Create a directory at a given path, including any parents which might
@@ -286,11 +286,11 @@ createTree :: FilePath -> IO ()
 createTree path = SD.createDirectoryIfMissing True (encodeString path)
 #else
 createTree path = do
-	let parent = Path.parent path
-	parentExists <- isDirectory parent
-	unless parentExists (createTree parent)
-	withFilePath path $ \cPath ->
-		throwErrnoPathIfMinus1Retry_ "createTree" path (mkdirIfMissing path cPath 0o777)
+  let parent = Path.parent path
+  parentExists <- isDirectory parent
+  unless parentExists (createTree parent)
+  withFilePath path $ \cPath ->
+    throwErrnoPathIfMinus1Retry_ "createTree" path (mkdirIfMissing path cPath 0o777)
 #endif
 
 -- | List objects in a directory, excluding @\".\"@ and @\"..\"@. Each
@@ -303,71 +303,71 @@ createTree path = do
 listDirectory :: FilePath -> IO [FilePath]
 #ifdef CABAL_OS_WINDOWS
 listDirectory root = fmap cleanup contents where
-	contents = SD.getDirectoryContents (encodeString root)
-	cleanup = map (append root) . map decodeString . filter (`notElem` [".", ".."])
+  contents = SD.getDirectoryContents (encodeString root)
+  cleanup = map (append root) . map decodeString . filter (`notElem` [".", ".."])
 #else
 listDirectory root = Exc.bracket alloc free list where
-	alloc = do
-		dir <- openDir root
-		let Dir _ dirp = dir
-		dirent <- c_alloc_dirent dirp
-		return (dirent, dir)
-	free (dirent, dir) = do
-		c_free_dirent dirent
-		closeDir dir
-	list (dirent, dir) = loop where
-		loop = do
-			next <- readDir dir dirent
-			case next of
-				Nothing -> return []
-				Just bytes | ignore bytes -> loop
-				Just bytes -> do
-					let name = append root (R.decode R.posix bytes)
-					names <- loop
-					return (name:names)
+  alloc = do
+    dir <- openDir root
+    let Dir _ dirp = dir
+    dirent <- c_alloc_dirent dirp
+    return (dirent, dir)
+  free (dirent, dir) = do
+    c_free_dirent dirent
+    closeDir dir
+  list (dirent, dir) = loop where
+    loop = do
+      next <- readDir dir dirent
+      case next of
+        Nothing -> return []
+        Just bytes | ignore bytes -> loop
+        Just bytes -> do
+          let name = append root (R.decode R.posix bytes)
+          names <- loop
+          return (name:names)
 
 ignore :: B.ByteString -> Bool
 ignore = ignore' where
-	dot = B.pack [46]
-	dotdot = B.pack [46, 46]
-	ignore' b = b == dot || b == dotdot
+  dot = B.pack [46]
+  dotdot = B.pack [46, 46]
+  ignore' b = b == dot || b == dotdot
 
 data Dir = Dir FilePath (Ptr ())
 
 openDir :: FilePath -> IO Dir
 openDir root = withFilePath root $ \cRoot -> do
-	p <- throwErrnoPathIfNullRetry "listDirectory" root (c_opendir cRoot)
-	return (Dir root p)
+  p <- throwErrnoPathIfNullRetry "listDirectory" root (c_opendir cRoot)
+  return (Dir root p)
 
 closeDir :: Dir -> IO ()
 closeDir (Dir _ p) = CError.throwErrnoIfMinus1Retry_ "listDirectory" (c_closedir p)
 
 readDir :: Dir -> Ptr () -> IO (Maybe B.ByteString)
 readDir (Dir _ p) dirent = do
-	rc <- CError.throwErrnoIfMinus1Retry "listDirectory" (c_readdir p dirent)
-	if rc == 0
-		then do
-			bytes <- c_dirent_name dirent >>= B.packCString
-			return (Just bytes)
-		else return Nothing
+  rc <- CError.throwErrnoIfMinus1Retry "listDirectory" (c_readdir p dirent)
+  if rc == 0
+    then do
+      bytes <- c_dirent_name dirent >>= B.packCString
+      return (Just bytes)
+    else return Nothing
 
 foreign import ccall unsafe "opendir"
-	c_opendir :: CString -> IO (Ptr ())
+  c_opendir :: CString -> IO (Ptr ())
 
 foreign import ccall unsafe "closedir"
-	c_closedir :: Ptr () -> IO CInt
+  c_closedir :: Ptr () -> IO CInt
 
 foreign import ccall unsafe "hssystemfileio_alloc_dirent"
-	c_alloc_dirent :: Ptr () -> IO (Ptr ())
+  c_alloc_dirent :: Ptr () -> IO (Ptr ())
 
 foreign import ccall unsafe "hssystemfileio_free_dirent"
-	c_free_dirent :: Ptr () -> IO ()
+  c_free_dirent :: Ptr () -> IO ()
 
 foreign import ccall unsafe "hssystemfileio_readdir"
-	c_readdir :: Ptr () -> Ptr () -> IO CInt
+  c_readdir :: Ptr () -> Ptr () -> IO CInt
 
 foreign import ccall unsafe "hssystemfileio_dirent_name"
-	c_dirent_name :: Ptr () -> IO CString
+  c_dirent_name :: Ptr () -> IO CString
 
 #endif
 
@@ -382,13 +382,13 @@ foreign import ccall unsafe "hssystemfileio_dirent_name"
 removeFile :: FilePath -> IO ()
 removeFile path =
 #ifdef CABAL_OS_WINDOWS
-	Win32.deleteFile (encodeString path)
+  Win32.deleteFile (encodeString path)
 #else
-	withFilePath path $ \cPath ->
-	throwErrnoPathIfMinus1_ "removeFile" path (c_unlink cPath)
+  withFilePath path $ \cPath ->
+  throwErrnoPathIfMinus1_ "removeFile" path (c_unlink cPath)
 
 foreign import ccall unsafe "unlink"
-	c_unlink :: CString -> IO CInt
+  c_unlink :: CString -> IO CInt
 #endif
 
 -- | Remove an empty directory.
@@ -399,13 +399,13 @@ foreign import ccall unsafe "unlink"
 removeDirectory :: FilePath -> IO ()
 removeDirectory path =
 #ifdef CABAL_OS_WINDOWS
-	Win32.removeDirectory (encodeString path)
+  Win32.removeDirectory (encodeString path)
 #else
-	withFilePath path $ \cPath ->
-	throwErrnoPathIfMinus1Retry_ "removeDirectory" path (c_rmdir cPath)
+  withFilePath path $ \cPath ->
+  throwErrnoPathIfMinus1Retry_ "removeDirectory" path (c_rmdir cPath)
 
 foreign import ccall unsafe "rmdir"
-	c_rmdir :: CString -> IO CInt
+  c_rmdir :: CString -> IO CInt
 #endif
 
 -- | Recursively remove a directory tree rooted at the given path.
@@ -424,15 +424,15 @@ removeTree :: FilePath -> IO ()
 removeTree root = SD.removeDirectoryRecursive (encodeString root)
 #else
 removeTree root = do
-	items <- listDirectory root
-	forM_ items $ \item -> Exc.catch
-		(removeFile item)
-		(\exc -> do
-			isDir <- isRealDir item
-			if isDir
-				then removeTree item
-				else Exc.throwIO (exc :: IOError))
-	removeDirectory root
+  items <- listDirectory root
+  forM_ items $ \item -> Exc.catch
+    (removeFile item)
+    (\exc -> do
+      isDir <- isRealDir item
+      if isDir
+        then removeTree item
+        else Exc.throwIO (exc :: IOError))
+  removeDirectory root
 
 -- Check whether a path is a directory, and not just a symlink to a directory.
 --
@@ -440,11 +440,11 @@ removeTree root = do
 -- itself cannot be deleted.
 isRealDir :: FilePath -> IO Bool
 isRealDir path = withFilePath path $ \cPath -> do
-	rc <- throwErrnoPathIfMinus1Retry "removeTree" path (c_isrealdir cPath)
-	return (rc == 1)
+  rc <- throwErrnoPathIfMinus1Retry "removeTree" path (c_isrealdir cPath)
+  return (rc == 1)
 
 foreign import ccall unsafe "hssystemfileio_isrealdir"
-	c_isrealdir :: CString -> IO CInt
+  c_isrealdir :: CString -> IO CInt
 
 #endif
 
@@ -457,18 +457,18 @@ getWorkingDirectory :: IO FilePath
 getWorkingDirectory = do
 #ifdef CABAL_OS_WINDOWS
 #if MIN_VERSION_Win32(2,2,1)
-	fmap decodeString Win32.getCurrentDirectory
+  fmap decodeString Win32.getCurrentDirectory
 #else
-	fmap decodeString (Win32.try "getWorkingDirectory" (flip c_GetCurrentDirectoryW) 512)
+  fmap decodeString (Win32.try "getWorkingDirectory" (flip c_GetCurrentDirectoryW) 512)
 #endif
 #else
-	buf <- CError.throwErrnoIfNull "getWorkingDirectory" c_getcwd
-	bytes <- B.packCString buf
-	c_free buf
-	return (R.decode R.posix bytes)
+  buf <- CError.throwErrnoIfNull "getWorkingDirectory" c_getcwd
+  bytes <- B.packCString buf
+  c_free buf
+  return (R.decode R.posix bytes)
 
 foreign import ccall unsafe "hssystemfileio_getcwd"
-	c_getcwd :: IO CString
+  c_getcwd :: IO CString
 
 #endif
 
@@ -476,7 +476,7 @@ foreign import ccall unsafe "hssystemfileio_getcwd"
 #if MIN_VERSION_Win32(2,2,1)
 #else
 foreign import stdcall unsafe "GetCurrentDirectoryW"
-	c_GetCurrentDirectoryW :: Win32.DWORD -> Win32.LPTSTR -> IO Win32.UINT
+  c_GetCurrentDirectoryW :: Win32.DWORD -> Win32.LPTSTR -> IO Win32.UINT
 #endif
 #endif
 
@@ -488,13 +488,13 @@ foreign import stdcall unsafe "GetCurrentDirectoryW"
 setWorkingDirectory :: FilePath -> IO ()
 setWorkingDirectory path =
 #ifdef CABAL_OS_WINDOWS
-	Win32.setCurrentDirectory (encodeString path)
+  Win32.setCurrentDirectory (encodeString path)
 #else
-	withFilePath path $ \cPath ->
-	throwErrnoPathIfMinus1Retry_ "setWorkingDirectory" path (c_chdir cPath)
+  withFilePath path $ \cPath ->
+  throwErrnoPathIfMinus1Retry_ "setWorkingDirectory" path (c_chdir cPath)
 
 foreign import ccall unsafe "chdir"
-	c_chdir :: CString -> IO CInt
+  c_chdir :: CString -> IO CInt
 
 #endif
 
@@ -518,12 +518,12 @@ getHomeDirectory :: IO FilePath
 getHomeDirectory = fmap decodeString SD.getHomeDirectory
 #else
 getHomeDirectory = do
-	path <- getenv "HOME"
-	case path of
-		Just p -> return p
-		Nothing -> do
-			-- use getEnv to throw the right exception type
-			fmap decodeString (SE.getEnv "HOME")
+  path <- getenv "HOME"
+  case path of
+    Just p -> return p
+    Nothing -> do
+      -- use getEnv to throw the right exception type
+      fmap decodeString (SE.getEnv "HOME")
 #endif
 
 -- | Get the user&#x2019;s desktop directory. This is a good starting point for
@@ -535,7 +535,7 @@ getHomeDirectory = do
 -- why the failure occured.
 getDesktopDirectory :: IO FilePath
 getDesktopDirectory = xdg "XDG_DESKTOP_DIR" Nothing
-	(homeSlash "Desktop")
+  (homeSlash "Desktop")
 
 -- | Get the user&#x2019;s documents directory. This is a good place to save
 -- user&#8208;created files. For data files the user does not explicitly
@@ -547,9 +547,9 @@ getDesktopDirectory = xdg "XDG_DESKTOP_DIR" Nothing
 getDocumentsDirectory :: IO FilePath
 getDocumentsDirectory = xdg "XDG_DOCUMENTS_DIR" Nothing
 #ifdef CABAL_OS_WINDOWS
-	(fmap decodeString SD.getUserDocumentsDirectory)
+  (fmap decodeString SD.getUserDocumentsDirectory)
 #else
-	(homeSlash "Documents")
+  (homeSlash "Documents")
 #endif
 
 -- | Get the user&#x2019;s application data directory, given an application
@@ -562,9 +562,9 @@ getDocumentsDirectory = xdg "XDG_DOCUMENTS_DIR" Nothing
 getAppDataDirectory :: T.Text -> IO FilePath
 getAppDataDirectory label = xdg "XDG_DATA_HOME" (Just label)
 #ifdef CABAL_OS_WINDOWS
-	(fmap decodeString (SD.getAppUserDataDirectory ""))
+  (fmap decodeString (SD.getAppUserDataDirectory ""))
 #else
-	(homeSlash ".local/share")
+  (homeSlash ".local/share")
 #endif
 
 -- | Get the user&#x2019;s application cache directory, given an application
@@ -577,9 +577,9 @@ getAppDataDirectory label = xdg "XDG_DATA_HOME" (Just label)
 getAppCacheDirectory :: T.Text -> IO FilePath
 getAppCacheDirectory label = xdg "XDG_CACHE_HOME" (Just label)
 #ifdef CABAL_OS_WINDOWS
-	(homeSlash "Local Settings\\Cache")
+  (homeSlash "Local Settings\\Cache")
 #else
-	(homeSlash ".cache")
+  (homeSlash ".cache")
 #endif
 
 -- | Get the user&#x2019;s application configuration directory, given an
@@ -592,46 +592,46 @@ getAppCacheDirectory label = xdg "XDG_CACHE_HOME" (Just label)
 getAppConfigDirectory :: T.Text -> IO FilePath
 getAppConfigDirectory label = xdg "XDG_CONFIG_HOME" (Just label)
 #ifdef CABAL_OS_WINDOWS
-	(homeSlash "Local Settings")
+  (homeSlash "Local Settings")
 #else
-	(homeSlash ".config")
+  (homeSlash ".config")
 #endif
 
 homeSlash :: String -> IO FilePath
 homeSlash path = do
-	home <- getHomeDirectory
-	return (append home (decodeString path))
+  home <- getHomeDirectory
+  return (append home (decodeString path))
 
 getenv :: String -> IO (Maybe FilePath)
 #ifdef CABAL_OS_WINDOWS
 getenv key = Exc.catch
-	(fmap (Just . decodeString) (SE.getEnv key))
-	(\e -> if isDoesNotExistError e
-		then return Nothing
-		else Exc.throwIO e)
+  (fmap (Just . decodeString) (SE.getEnv key))
+  (\e -> if isDoesNotExistError e
+    then return Nothing
+    else Exc.throwIO e)
 #else
 getenv key = withCAString key $ \cKey -> do
-	ret <- c_getenv cKey
-	if ret == nullPtr
-		then return Nothing
-		else do
-			bytes <- B.packCString ret
-			return (Just (R.decode R.posix bytes))
+  ret <- c_getenv cKey
+  if ret == nullPtr
+    then return Nothing
+    else do
+      bytes <- B.packCString ret
+      return (Just (R.decode R.posix bytes))
 
 foreign import ccall unsafe "getenv"
-	c_getenv :: CString -> IO CString
+  c_getenv :: CString -> IO CString
 
 #endif
 
 xdg :: String -> Maybe T.Text -> IO FilePath -> IO FilePath
 xdg envkey label fallback = do
-	env <- getenv envkey
-	dir <- case env of
-		Just var -> return var
-		Nothing -> fallback
-	return $ case label of
-		Just text -> append dir (R.fromText currentOS text)
-		Nothing -> dir
+  env <- getenv envkey
+  dir <- case env of
+    Just var -> return var
+    Nothing -> fallback
+  return $ case label of
+    Just text -> append dir (R.fromText currentOS text)
+    Nothing -> dir
 
 -- | Copy the content of a file to a new entry in the filesystem. If a
 -- file already exists at the new location, it will be replaced. Copying
@@ -646,9 +646,9 @@ copyFileContent :: FilePath -- ^ Old location
                 -> FilePath -- ^ New location
                 -> IO ()
 copyFileContent oldPath newPath =
-	withFile oldPath IO.ReadMode $ \old ->
-	withFile newPath IO.WriteMode $ \new ->
-	BL.hGetContents old >>= BL.hPut new
+  withFile oldPath IO.ReadMode $ \old ->
+  withFile newPath IO.WriteMode $ \new ->
+  BL.hGetContents old >>= BL.hPut new
 
 -- | Copy the permissions from one path to another. Both paths must already
 -- exist.
@@ -662,20 +662,20 @@ copyPermissions :: FilePath -- ^ Old location
                 -> FilePath -- ^ New location
                 -> IO ()
 copyPermissions oldPath newPath =
-	withFilePath oldPath $ \cOldPath ->
-	withFilePath newPath $ \cNewPath ->
-	CError.throwErrnoIfMinus1Retry_ "copyPermissions" $
-	c_copy_permissions cOldPath cNewPath
+  withFilePath oldPath $ \cOldPath ->
+  withFilePath newPath $ \cNewPath ->
+  CError.throwErrnoIfMinus1Retry_ "copyPermissions" $
+  c_copy_permissions cOldPath cNewPath
 
 #ifdef CABAL_OS_WINDOWS
 
 foreign import ccall unsafe "hssystemfileio_copy_permissions"
-	c_copy_permissions :: CWString -> CWString -> IO CInt
+  c_copy_permissions :: CWString -> CWString -> IO CInt
 
 #else
 
 foreign import ccall unsafe "hssystemfileio_copy_permissions"
-	c_copy_permissions :: CString -> CString -> IO CInt
+  c_copy_permissions :: CString -> CString -> IO CInt
 
 #endif
 
@@ -692,10 +692,10 @@ copyFile :: FilePath -- ^ Old location
          -> FilePath -- ^ New location
          -> IO ()
 copyFile oldPath newPath = do
-	copyFileContent oldPath newPath
-	Exc.catch
-		(copyPermissions oldPath newPath)
-		((\_ -> return ()) :: IOError -> IO ())
+  copyFileContent oldPath newPath
+  Exc.catch
+    (copyPermissions oldPath newPath)
+    ((\_ -> return ()) :: IOError -> IO ())
 
 -- | Get when the object at a given path was last modified.
 --
@@ -707,28 +707,28 @@ copyFile oldPath newPath = do
 getModified :: FilePath -> IO UTCTime
 getModified path = do
 #ifdef CABAL_OS_WINDOWS
-	info <- withHANDLE path Win32.getFileInformationByHandle
-	let ftime = Win32.bhfiLastWriteTime info
-	stime <- Win32.fileTimeToSystemTime ftime
-	
-	let date = fromGregorian
-		(fromIntegral (Win32.wYear stime))
-		(fromIntegral (Win32.wMonth stime))
-		(fromIntegral (Win32.wDay stime))
-	
-	let seconds = secondsToDiffTime $
-		(toInteger (Win32.wHour stime) * 3600) +
-		(toInteger (Win32.wMinute stime) * 60) +
-		(toInteger (Win32.wSecond stime))
-	
-	let msecs = picosecondsToDiffTime $
-		(toInteger (Win32.wMilliseconds stime) * 1000000000)
-	
-	return (UTCTime date (seconds + msecs))
+  info <- withHANDLE path Win32.getFileInformationByHandle
+  let ftime = Win32.bhfiLastWriteTime info
+  stime <- Win32.fileTimeToSystemTime ftime
+
+  let date = fromGregorian
+    (fromIntegral (Win32.wYear stime))
+    (fromIntegral (Win32.wMonth stime))
+    (fromIntegral (Win32.wDay stime))
+
+  let seconds = secondsToDiffTime $
+    (toInteger (Win32.wHour stime) * 3600) +
+    (toInteger (Win32.wMinute stime) * 60) +
+    (toInteger (Win32.wSecond stime))
+
+  let msecs = picosecondsToDiffTime $
+    (toInteger (Win32.wMilliseconds stime) * 1000000000)
+
+  return (UTCTime date (seconds + msecs))
 #else
-	stat <- posixStat "getModified" path
-	let mtime = Posix.modificationTime stat
-	return (posixSecondsToUTCTime (realToFrac mtime))
+  stat <- posixStat "getModified" path
+  let mtime = Posix.modificationTime stat
+  return (posixSecondsToUTCTime (realToFrac mtime))
 #endif
 
 -- | Get the size of an object at a given path. For special objects like
@@ -743,11 +743,11 @@ getModified path = do
 getSize :: FilePath -> IO Integer
 getSize path = do
 #ifdef CABAL_OS_WINDOWS
-	info <- withHANDLE path Win32.getFileInformationByHandle
-	return (toInteger (Win32.bhfiSize info))
+  info <- withHANDLE path Win32.getFileInformationByHandle
+  return (toInteger (Win32.bhfiSize info))
 #else
-	stat <- posixStat "getSize" path
-	return (toInteger (Posix.fileSize stat))
+  stat <- posixStat "getSize" path
+  return (toInteger (Posix.fileSize stat))
 #endif
 
 -- | Open a file in binary mode, and return an open 'Handle'. The 'Handle'
@@ -783,7 +783,7 @@ withFile path mode = Exc.bracket (openFile path mode) IO.hClose
 -- why the failure occured.
 readFile :: FilePath -> IO B.ByteString
 readFile path = withFile path IO.ReadMode
-	(\h -> IO.hFileSize h >>= B.hGet h . fromIntegral)
+  (\h -> IO.hFileSize h >>= B.hGet h . fromIntegral)
 
 -- | Replace the entire content of a binary file with the provided
 -- 'B.ByteString'.
@@ -793,7 +793,7 @@ readFile path = withFile path IO.ReadMode
 -- why the failure occured.
 writeFile :: FilePath -> B.ByteString -> IO ()
 writeFile path bytes = withFile path IO.WriteMode
-	(\h -> B.hPut h bytes)
+  (\h -> B.hPut h bytes)
 
 -- | Append a 'B.ByteString' to a file. If the file does not exist, it will
 -- be created.
@@ -803,7 +803,7 @@ writeFile path bytes = withFile path IO.WriteMode
 -- why the failure occured.
 appendFile :: FilePath -> B.ByteString -> IO ()
 appendFile path bytes = withFile path IO.AppendMode
-	(\h -> B.hPut h bytes)
+  (\h -> B.hPut h bytes)
 
 -- | Open a file in text mode, and return an open 'Handle'. The 'Handle'
 -- should be closed with 'IO.hClose' when it is no longer needed.
@@ -847,7 +847,7 @@ readTextFile path = openTextFile path IO.ReadMode >>= T.hGetContents
 -- why the failure occured.
 writeTextFile :: FilePath -> T.Text -> IO ()
 writeTextFile path text = withTextFile path IO.WriteMode
-	(\h -> T.hPutStr h text)
+  (\h -> T.hPutStr h text)
 
 -- | Append 'T.Text' to a file. If the file does not exist, it will
 -- be created.
@@ -857,46 +857,46 @@ writeTextFile path text = withTextFile path IO.WriteMode
 -- why the failure occured.
 appendTextFile :: FilePath -> T.Text -> IO ()
 appendTextFile path text = withTextFile path IO.AppendMode
-	(\h -> T.hPutStr h text)
+  (\h -> T.hPutStr h text)
 
 #ifdef SYSTEMFILEIO_LOCAL_OPEN_FILE
 -- | Copied from GHC.IO.FD.openFile
 openFile' :: String -> FilePath -> IO.IOMode -> (Maybe IO.TextEncoding) -> IO IO.Handle
 openFile' loc path mode codec = open where
-	sys_c_open = System.Posix.Internals.c_open
-	sys_c_close = System.Posix.Internals.c_close
-	flags = iomodeFlags mode
-	open = withFilePath path $ \cPath -> do
-		c_fd <- throwErrnoPathIfMinus1Retry loc path (sys_c_open cPath flags 0o666)
-		(fd, fd_type) <- Exc.onException
-			(mkFD c_fd mode Nothing False True)
-			(sys_c_close c_fd)
-		when (mode == IO.WriteMode && fd_type == GHC.IO.Device.RegularFile) $ do
-			GHC.IO.Device.setSize fd 0
-		Exc.onException
-			(mkHandleFromFD fd fd_type (encodeString path) mode False codec)
-			(GHC.IO.Device.close fd)
+  sys_c_open = System.Posix.Internals.c_open
+  sys_c_close = System.Posix.Internals.c_close
+  flags = iomodeFlags mode
+  open = withFilePath path $ \cPath -> do
+    c_fd <- throwErrnoPathIfMinus1Retry loc path (sys_c_open cPath flags 0o666)
+    (fd, fd_type) <- Exc.onException
+      (mkFD c_fd mode Nothing False True)
+      (sys_c_close c_fd)
+    when (mode == IO.WriteMode && fd_type == GHC.IO.Device.RegularFile) $ do
+      GHC.IO.Device.setSize fd 0
+    Exc.onException
+      (mkHandleFromFD fd fd_type (encodeString path) mode False codec)
+      (GHC.IO.Device.close fd)
 
 iomodeFlags :: IO.IOMode -> CInt
 iomodeFlags mode = cased .|. commonFlags where
-	cased = case mode of
-		IO.ReadMode -> flagsR
+  cased = case mode of
+    IO.ReadMode -> flagsR
 #ifdef mingw32_HOST_OS
-		IO.WriteMode -> flagsW .|. System.Posix.Internals.o_TRUNC
+    IO.WriteMode -> flagsW .|. System.Posix.Internals.o_TRUNC
 #else
-		IO.WriteMode -> flagsW
+    IO.WriteMode -> flagsW
 #endif
-		IO.ReadWriteMode -> flagsRW
-		IO.AppendMode -> flagsA
-	
-	flagsR  = System.Posix.Internals.o_RDONLY
-	flagsW  = outputFlags .|. System.Posix.Internals.o_WRONLY
-	flagsRW = outputFlags .|. System.Posix.Internals.o_RDWR
-	flagsA  = flagsW      .|. System.Posix.Internals.o_APPEND
-	
-	commonFlags = System.Posix.Internals.o_NOCTTY .|.
-	              System.Posix.Internals.o_NONBLOCK
-	outputFlags = System.Posix.Internals.o_CREAT
+    IO.ReadWriteMode -> flagsRW
+    IO.AppendMode -> flagsA
+
+  flagsR  = System.Posix.Internals.o_RDONLY
+  flagsW  = outputFlags .|. System.Posix.Internals.o_WRONLY
+  flagsRW = outputFlags .|. System.Posix.Internals.o_RDWR
+  flagsA  = flagsW      .|. System.Posix.Internals.o_APPEND
+
+  commonFlags = System.Posix.Internals.o_NOCTTY .|.
+                System.Posix.Internals.o_NONBLOCK
+  outputFlags = System.Posix.Internals.o_CREAT
 
 #endif
 
@@ -906,15 +906,15 @@ iomodeFlags mode = cased .|. commonFlags where
 -- See issue #8.
 withHANDLE :: FilePath -> (Win32.HANDLE -> IO a) -> IO a
 withHANDLE path = Exc.bracket open close where
-	open = Win32.createFile
-		(encodeString path)
-		0
-		(Win32.fILE_SHARE_READ .|. Win32.fILE_SHARE_WRITE)
-		Nothing
-		Win32.oPEN_EXISTING
-		Win32.fILE_FLAG_BACKUP_SEMANTICS
-		Nothing
-	close = Win32.closeHandle
+  open = Win32.createFile
+    (encodeString path)
+    0
+    (Win32.fILE_SHARE_READ .|. Win32.fILE_SHARE_WRITE)
+    Nothing
+    Win32.oPEN_EXISTING
+    Win32.fILE_FLAG_BACKUP_SEMANTICS
+    Nothing
+  close = Win32.closeHandle
 
 withFilePath :: FilePath -> (CWString -> IO a) -> IO a
 withFilePath path = withCWString (encodeString path)
@@ -941,20 +941,20 @@ throwErrnoPathIfMinus1Retry_ = throwErrnoPathIfRetry_ (== -1)
 
 throwErrnoPathIfRetry :: (a -> Bool) -> String -> FilePath -> IO a -> IO a
 throwErrnoPathIfRetry failed loc path io = loop where
-	loop = do
-		a <- io
-		if failed a
-			then do
-				errno <- CError.getErrno
-				if errno == CError.eINTR
-					then loop
-					else CError.throwErrnoPath loc (encodeString path)
-			else return a
+  loop = do
+    a <- io
+    if failed a
+      then do
+        errno <- CError.getErrno
+        if errno == CError.eINTR
+          then loop
+          else CError.throwErrnoPath loc (encodeString path)
+      else return a
 
 throwErrnoPathIfRetry_ :: (a -> Bool) -> String -> FilePath -> IO a -> IO ()
 throwErrnoPathIfRetry_ failed loc path io = do
-	_ <- throwErrnoPathIfRetry failed loc path io
-	return ()
+  _ <- throwErrnoPathIfRetry failed loc path io
+  return ()
 
 posixStat :: String -> FilePath -> IO Posix.FileStatus
 #if MIN_VERSION_unix(2,5,1)
@@ -964,17 +964,17 @@ posixStat loc path = withFd loc path Posix.getFdStatus
 
 withFd :: String -> FilePath -> (Posix.Fd -> IO a) -> IO a
 withFd fnName path = Exc.bracket open close where
-	open = withFilePath path $ \cpath -> do
-		fd <- throwErrnoPathIfMinus1 fnName path (c_open_nonblocking cpath 0)
-		return (Posix.Fd fd)
-	close = Posix.closeFd
+  open = withFilePath path $ \cpath -> do
+    fd <- throwErrnoPathIfMinus1 fnName path (c_open_nonblocking cpath 0)
+    return (Posix.Fd fd)
+  close = Posix.closeFd
 
 foreign import ccall unsafe "hssystemfileio_open_nonblocking"
-	c_open_nonblocking :: CString -> CInt -> IO CInt
+  c_open_nonblocking :: CString -> CInt -> IO CInt
 
 #endif
 
 foreign import ccall unsafe "free"
-	c_free :: Ptr a -> IO ()
+  c_free :: Ptr a -> IO ()
 
 #endif

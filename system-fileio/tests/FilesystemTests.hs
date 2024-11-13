@@ -7,9 +7,9 @@
 --
 -- See license.txt for details
 module Main
-	( tests
-	, main
-	) where
+  ( tests
+  , main
+  ) where
 
 import           Test.Chell
 
