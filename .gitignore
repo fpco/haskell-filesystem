@@ -1,4 +1,7 @@
 /.shelly/
 dist/
+dist-newstyle/
 tarballs/
 *.swp
+.stack-work/
+stack*.yaml.lock
