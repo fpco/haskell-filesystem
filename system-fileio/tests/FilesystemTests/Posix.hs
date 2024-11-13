@@ -661,15 +661,22 @@ test_ListDirectoryLeaksFds = assertionsWithTemp "listDirectory-leaks-fds" $ \tmp
   let dir_path = tmp </> "subdir"
   mkdir_ffi dir_path
 
-  nullfd1 <- liftIO $ PosixIO.openFd "/dev/null" PosixIO.ReadOnly Nothing PosixIO.defaultFileFlags
+  nullfd1 <- liftIO openDevNull
   liftIO $ PosixIO.closeFd nullfd1
 
-  subdirContents <- liftIO $ listDirectory dir_path
+  _subdirContents <- liftIO $ listDirectory dir_path
 
-  nullfd2 <- liftIO $ PosixIO.openFd "/dev/null" PosixIO.ReadOnly Nothing PosixIO.defaultFileFlags
+  nullfd2 <- liftIO openDevNull
   liftIO $ PosixIO.closeFd nullfd2
 
   $assert (equal nullfd1 nullfd2)
+  where
+    openDevNull =
+#if MIN_VERSION_unix(2,8,0)
+      PosixIO.openFd "/dev/null" PosixIO.ReadOnly PosixIO.defaultFileFlags
+#else
+      PosixIO.openFd "/dev/null" PosixIO.ReadOnly Nothing PosixIO.defaultFileFlags
+#endif
 
 withPathCString :: FilePath -> (CString -> IO a) -> IO a
 withPathCString p = Data.ByteString.useAsCString (encode p)
