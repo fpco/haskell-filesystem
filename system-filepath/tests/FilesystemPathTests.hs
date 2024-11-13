@@ -63,11 +63,13 @@ tests = suite "tests" $
     [ test_ToText
     , test_FromText
     ])
-  ++ suiteTests (suite "validity"
-    [ property "posix" (forAll posixPaths (valid posix))
-    , property "windows" (forAll windowsPaths (valid windows))
-    , test_UncValidity
-    ])
+  ++ suiteTests (suite "validity" $
+      -- -- Andreas Abel, 2024-11-13, the following test is broken
+      -- -- because the generator produces paths with \NUL characters inside.
+      -- property "posix" (forAll posixPaths (valid posix)) :
+      property "windows" (forAll windowsPaths (valid windows)) :
+      test_UncValidity :
+      [])
 
 test_Empty :: Test
 test_Empty = assertions "empty" $ do
