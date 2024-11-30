@@ -1,5 +1,12 @@
 # Changelog for system-fileio
 
+## 0.3.16.6
+
+* Fix building on Windows ([issue #31](https://github.com/fpco/haskell-filesystem/issues/31), regression in 0.3.16.5).
+* Tested with:
+  - Cabal and GHC 8.0 - 9.12.0 on Linux
+  - Stack and GHC 9.8.2 on Linux, macOS and Windows.
+
 ## 0.3.16.5
 
 * Fix building of the testsuite with `unix-2.8`.

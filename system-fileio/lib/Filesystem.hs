@@ -710,20 +710,17 @@ getModified path = do
   info <- withHANDLE path Win32.getFileInformationByHandle
   let ftime = Win32.bhfiLastWriteTime info
   stime <- Win32.fileTimeToSystemTime ftime
-
-  let date = fromGregorian
-    (fromIntegral (Win32.wYear stime))
-    (fromIntegral (Win32.wMonth stime))
-    (fromIntegral (Win32.wDay stime))
-
-  let seconds = secondsToDiffTime $
-    (toInteger (Win32.wHour stime) * 3600) +
-    (toInteger (Win32.wMinute stime) * 60) +
-    (toInteger (Win32.wSecond stime))
-
-  let msecs = picosecondsToDiffTime $
-    (toInteger (Win32.wMilliseconds stime) * 1000000000)
-
+  let
+    date = fromGregorian
+      (fromIntegral (Win32.wYear stime))
+      (fromIntegral (Win32.wMonth stime))
+      (fromIntegral (Win32.wDay stime))
+    seconds = secondsToDiffTime $
+      (toInteger (Win32.wHour stime) * 3600) +
+      (toInteger (Win32.wMinute stime) * 60) +
+      (toInteger (Win32.wSecond stime))
+    msecs = picosecondsToDiffTime $
+      (toInteger (Win32.wMilliseconds stime) * 1000000000)
   return (UTCTime date (seconds + msecs))
 #else
   stat <- posixStat "getModified" path
