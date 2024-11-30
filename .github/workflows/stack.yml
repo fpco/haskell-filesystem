@@ -1,0 +1,66 @@
+name: stack
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  stack:
+    name: Stack ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    env:
+      stack: 'stack --system-ghc --no-install-ghc'
+
+    steps:
+
+    - uses: actions/checkout@v4
+
+    - name: Install GHC and stack with haskell-actions/setup
+      uses: haskell-actions/setup@v2
+      id:   setup
+      with:
+        ## Keep the GHC version in sync with stack.yaml
+        ghc-version: 9.8.2
+        enable-stack: true
+        cabal-update: false
+
+    - name: Restore cached dependencies
+      uses: actions/cache/restore@v4
+      id:   cache
+      with:
+        path: |
+          ${{ steps.setup.outputs.stack-root }}
+        key: ${{ runner.os }}-stack-${{ steps.setup.outputs.stack-version }}-ghc-${{ steps.setup.outputs.ghc-version }}-hash-${{ github.sha }}
+        restore-keys: |
+             ${{ runner.os }}-stack-${{ steps.setup.outputs.stack-version }}-ghc-${{ steps.setup.outputs.ghc-version }}-
+
+    - name: Build dependencies
+      if:   steps.cache.outputs.cache-hit != 'true'
+      run:  ${{ env.stack }} test --dependencies-only
+
+    - name: Build w/ tests
+      run: ${{ env.stack }} test --no-run-tests
+
+    - name: Run tests
+      run: ${{ env.stack }} test
+
+    - name: Cache dependencies
+      if:   always() && steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          ${{ steps.setup.outputs.stack-root }}
+        key:  ${{ steps.cache.outputs.cache-primary-key }}

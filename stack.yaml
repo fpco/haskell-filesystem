@@ -1,4 +1,5 @@
 resolver: nightly-2024-10-21
+# If you update the snapshot, also update .github/workflows/stack.yml to the matching GHC version
 
 packages:
 - system-fileio
