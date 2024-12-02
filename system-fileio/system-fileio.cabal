@@ -1,6 +1,6 @@
 cabal-version: 1.18
 name: system-fileio
-version: 0.3.16.5
+version: 0.3.16.6
 license: MIT
 license-file: license.txt
 author: John Millikin <jmillikin@gmail.com>
@@ -68,7 +68,7 @@ library
     build-depends:
         unix >= 2.3
     c-sources: lib/hssystemfileio-unix.c
-    if impl(ghc >= 7.2.0) && impl(ghc < 7.4.0)
+    if impl(ghc >= 7.2.0) && impl(ghc < 7.4)
       cpp-options: -DSYSTEMFILEIO_LOCAL_OPEN_FILE
 
   exposed-modules:
