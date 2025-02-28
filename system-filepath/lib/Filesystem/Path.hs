@@ -71,7 +71,7 @@ instance Sem.Semigroup FilePath where
 
 instance M.Monoid FilePath where
   mempty = empty
-  mappend = append
+  mappend = (<>)
   mconcat = concat
 
 -------------------------------------------------------------------------------
