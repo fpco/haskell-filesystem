@@ -104,9 +104,10 @@ test-suite filesystem_tests
   if os(darwin)
     cpp-options: -DCABAL_OS_DARWIN
 
-  other-modules:
-    FilesystemTests.Posix
-    FilesystemTests.Util
-    FilesystemTests.Windows
+  other-modules:    FilesystemTests.Util
+  if os(windows)
+    other-modules:  FilesystemTests.Windows
+  else
+    other-modules:  FilesystemTests.Posix
 
   default-language: Haskell2010
