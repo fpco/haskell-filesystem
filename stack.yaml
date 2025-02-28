@@ -1,4 +1,4 @@
-resolver: nightly-2024-10-21
+resolver: nightly-2025-02-28
 # If you update the snapshot, also update .github/workflows/stack.yml to the matching GHC version
 
 packages:
@@ -9,3 +9,4 @@ extra-deps:
 - chell-0.5.0.2
 - chell-quickcheck-0.2.5.4
 - patience-0.3
+- QuickCheck-2.14.3

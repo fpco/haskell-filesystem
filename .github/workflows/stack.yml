@@ -33,7 +33,7 @@ jobs:
       id:   setup
       with:
         ## Keep the GHC version in sync with stack.yaml
-        ghc-version: 9.8.2
+        ghc-version: 9.10.1
         enable-stack: true
         cabal-update: false
 
