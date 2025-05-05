@@ -4,7 +4,7 @@
 struct dirent;
 
 struct dirent *
-hssystemfileio_alloc_dirent();
+hssystemfileio_alloc_dirent(void *void_dir);
 
 void
 hssystemfileio_free_dirent(struct dirent *);
