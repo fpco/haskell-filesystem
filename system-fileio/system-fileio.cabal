@@ -1,6 +1,6 @@
 cabal-version: 1.18
 name: system-fileio
-version: 0.3.16.6
+version: 0.3.16.7
 license: MIT
 license-file: license.txt
 author: John Millikin <jmillikin@gmail.com>
